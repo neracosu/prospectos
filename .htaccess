@@ -1,4 +1,3 @@
-
 # php -- BEGIN cPanel-generated handler, do not edit
 # Set the “ea-php82” package as the default “PHP” programming language.
 <IfModule mime_module>
@@ -7,12 +6,25 @@
 # php -- END cPanel-generated handler, do not edit
 
 # ---------------------------------------------------------------------------
-# CERRADO HASTA QUE EXISTA LA APP (2026-09-16)
-# Este directorio es el docroot publico del subdominio y tambien el repo del
-# proyecto: sin esta regla Apache serviria CLAUDE.md y docs/ a cualquiera.
-# Se deja pasar solo /.well-known/ para que AutoSSL emita el certificado.
-# Cuando la app corra, este bloque se reemplaza por el proxy a Next (ver spec).
+# PROXY A NEXT (PM2 "prospectos", 127.0.0.1:3013). Activado el 2026-09-16.
+# Todo entra por Apache: HTTPS forzado, HSTS, y /.well-known/ pasa directo
+# para que AutoSSL renueve. Nada del directorio se sirve como archivo:
+# CLAUDE.md, docs/, src/, plantillas/ y .superpowers/ quedan detras del proxy
+# (Next no los conoce y responde 404).
+#
+# NUNCA agregar `RewriteCond %{REQUEST_FILENAME} !-f` a la regla del proxy:
+# esa condicion haria que Apache sirviera el codigo y los documentos del repo.
 # ---------------------------------------------------------------------------
+DirectoryIndex disabled
 RewriteEngine On
-RewriteRule ^\.well-known/ - [L]
-RewriteRule ^ - [F]
+RewriteCond %{REQUEST_URI} !^/\.well-known/
+RewriteCond %{HTTPS} off
+RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
+<IfModule mod_headers.c>
+  Header always set Strict-Transport-Security "max-age=31536000"
+</IfModule>
+<IfModule mod_expires.c>
+  ExpiresActive Off
+</IfModule>
+RewriteCond %{REQUEST_URI} !^/\.well-known/
+RewriteRule ^(.*)$ http://127.0.0.1:3013/$1 [P,L]

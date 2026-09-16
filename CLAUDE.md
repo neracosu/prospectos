@@ -1,7 +1,8 @@
 # Panel de prospección NERACOSU — Notas para Claude
 
-Panel interno de Neri para prospectar por nicho (hoteles, farmacias, …): cola del día, embudo,
-enlace de propuesta personalizado por prospecto y registro de envíos. Entra con PIN.
+Plataforma de Neri para prospectar por nicho y llevar los proyectos vendidos. Pieza 1 (panel de
+prospección: cola del día, embudo, propuesta por enlace, seguimientos) en producción en
+`prospectos.neracosu.com`. Entra con PIN.
 
 ## Cómo retomar
 
@@ -19,14 +20,28 @@ acá a pedido de Neri y esa misma tarde se amplió de un panel a una plataforma 
 
 Orden de construcción: **1 → 3 → 2 → 4 → 5**. Cada pieza sale a producción cuando termina.
 
-Estado al 16-sep (tarde):
+Estado al 16-sep (noche): **pieza 1 construida y en producción.**
 
-- Todavía **no hay código**: ni `package.json`, ni Prisma, ni proceso PM2.
-- Repo en GitHub: `git@github.com:neracosu/prospectos.git` (`origin`).
-- Siguiente paso: ejecutar `docs/superpowers/plans/2026-09-16-pieza-1-panel-prospeccion.md` (13 tareas, TDD,
-  tarea 0 = prerrequisitos de cPanel). Un plan por pieza.
-- La lista de «Decisiones abiertas» al final del spec de la pieza 1 tiene lo que falta resolver con
-  él; la de **precios de farmacias bloquea la propuesta de ese nicho**.
+- Código en `main` (rama `pieza-1` ya fusionada). Proceso PM2 **`prospectos`**, puerto 3013 en
+  `127.0.0.1`, proxy en el `.htaccess` (ver abajo). Repo: `git@github.com:neracosu/prospectos.git`.
+- Base real con 2 nichos, 132 hoteles + Farmahogar, y un usuario `dueno` (Neri).
+- **Redesplegar:** `git pull && npm ci && npx prisma migrate deploy && npm run build && pm2 restart prospectos`
+  con el env cargado (`set -a; . ~/.config/prospectos/env; set +a`). **No exportar `NODE_ENV=production`
+  antes de `npm ci`**: se perderían `typescript` y `playwright` (el PDF quedaría en 503 permanente).
+  `pm2 list` antes; `pm2 save` solo con los cinco procesos `online`.
+- **Tests:** `npm test` corre solo la parte pura (los archivos con base se saltan); **`npm run test:db`
+  es la suite real** (contra `neracosu_prospectos_test`). Ambos antes de cualquier merge.
+- **`.htaccess` es el proxy.** Todo va a Next salvo `/.well-known/`; por eso `CLAUDE.md`, `docs/`,
+  `src/` y `plantillas/` responden 404 por el dominio. **Nunca** agregarle
+  `RewriteCond %{REQUEST_FILENAME} !-f`: Apache serviría el repo entero.
+- Scripts útiles (PIN siempre por stdin, nunca en la línea de comandos): `scripts/crear-usuario.mjs`,
+  `scripts/cambiar-pin.mjs <id>`, `scripts/pin-en-uso.mjs`, `scripts/verificar-flujo.mts` (Playwright
+  a 390 px contra el dominio), `scripts/sembrar-nichos.mjs`, `scripts/importar-hoteles.mts`.
+- Siguiente pieza: **3 (Proyectos y cobros)**, luego 2, 4 y 5. Plan nuevo por pieza en
+  `docs/superpowers/plans/`.
+- Pendientes de Neri: rotar la contraseña de la base (spec, decisiones abiertas) y decidir los precios
+  de farmacias (bloquea la propuesta de ese nicho; hoy `farmacias` no tiene plantilla y la ficha no
+  muestra enlace de propuesta).
 
 Decisiones de Neri del 16-sep que no se deducen del código: el buscador **no hace scraping masivo de
 Google** (bloquea la IP compartida con Adastram); el portal del cliente **no muestra horas ni tarifa**;

@@ -29,7 +29,7 @@ const NichoZ = z.object({
 export async function guardarNicho(formData: FormData): Promise<Resultado> {
   await exigirRol("dueno");
   const e = NichoZ.safeParse(Object.fromEntries(formData));
-  if (!e.success) return fallo("Revisa: el mensaje inicial, y los días van de 1 a 30.");
+  if (!e.success) return fallo("Revisa el mensaje inicial (entre 10 y 2000 caracteres) y los días de seguimiento (de 1 a 30).");
   try {
     const { id, ...data } = e.data;
     // {enlace} solo hace falta si el nicho tiene plantilla de propuesta: sin
