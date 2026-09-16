@@ -1143,6 +1143,14 @@ EOF
 
 ### Task 6: Acceso con PIN — usuarios, sesión, bloqueo, `/entrar` y `/salir`
 
+> **Corregido en ejecución (16-sep, revisión de la tarea):** el código de abajo se implementó tal cual y la revisión
+> encontró defectos del propio plan, corregidos en el commit de la ronda 1: `ipCliente` toma el **último** salto de
+> `X-Forwarded-For` (Apache anexa la IP real; el primero lo escribe el cliente); el limitador cuenta **solo fallos**
+> (`bloqueado` / `registrarFallo` / `olvidarFallos`), se limpia al acertar y el bloqueo dura 15 min completos desde el
+> quinto fallo, con tope real de entradas; `entrar()` envuelve todo en try/catch salvo `redirect()`; la unicidad del
+> PIN es sobre **todas** las cuentas y `buscarPorPin` ordena por `id`; `jwtVerify` fija `HS256` y `SESION_SECRET`
+> debe tener ≥ 32 caracteres; `/salir` redirige con `Location` relativa. El código vigente es el del repo.
+
 **Files:**
 - Create: `src/lib/rate-limit.ts`, `src/lib/auth.ts`, `src/lib/sesion.ts`, `src/lib/usuarios.ts`, `src/lib/ip.ts`, `src/acciones/resultado.ts`, `src/acciones/entrar.ts`, `src/componentes/TecladoPin.tsx`, `src/app/entrar/page.tsx`, `src/app/salir/route.ts`, `scripts/crear-usuario.mjs`, `tests/usuarios.test.ts`, `tests/rate-limit.test.ts`
 
