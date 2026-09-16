@@ -10,11 +10,14 @@ describe("dinero", () => {
     expect(formatoUSD(1500)).toBe("$1.500,00");
     expect(formatoUSD(0.5)).toBe("$0,50");
     expect(formatoUSD(1234567.891)).toBe("$1.234.567,89");
+    expect(formatoUSD(-1500)).toBe("-$1.500,00");
   });
   it("lee montos de texto con punto o coma", () => {
     expect(montoDesdeTexto("1500")).toBe(1500);
     expect(montoDesdeTexto("1500,50")).toBe(1500.5);
-    expect(montoDesdeTexto("1.500")).toBe(1.5); // un punto es decimal, no miles
+    expect(montoDesdeTexto("1.500")).toBeNull(); // "1.500" es ambiguo (mil quinientos vs 1,5): se rechaza
+    expect(montoDesdeTexto("12.500")).toBeNull();
+    expect(montoDesdeTexto("1500,5")).toBe(1500.5);
     expect(montoDesdeTexto("abc")).toBeNull();
     expect(montoDesdeTexto("-5")).toBeNull();
     expect(montoDesdeTexto("0")).toBe(0);

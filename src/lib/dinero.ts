@@ -4,14 +4,16 @@ export function redondear2(n: number): number {
 }
 
 export function formatoUSD(n: number): string {
-  const [ent, dec] = redondear2(n).toFixed(2).split(".");
-  return `$${ent.replace(/\B(?=(\d{3})+(?!\d))/g, ".")},${dec}`;
+  const v = redondear2(n);
+  const signo = v < 0 ? "-" : "";
+  const [ent, dec] = Math.abs(v).toFixed(2).split(".");
+  return `${signo}$${ent.replace(/\B(?=(\d{3})+(?!\d))/g, ".")},${dec}`;
 }
 
-// La cantidad de decimales no se limita a 2: un texto como "1.500" debe
-// leerse como 1,5 (el punto es el separador decimal, no de miles), y el
-// redondeo final a centavos corre por cuenta de montoDesdeTexto.
-export const MONTO_TEXTO = /^\d{1,8}([.,]\d+)?$/;
+// Los decimales se limitan a 2: un tercer digito se rechaza porque "1.500"
+// seria un separador de miles (mil quinientos), no un decimal, y los
+// formularios piden el monto sin separador de miles.
+export const MONTO_TEXTO = /^\d{1,8}([.,]\d{1,2})?$/;
 
 export function montoDesdeTexto(s: string): number | null {
   const t = s.trim();
