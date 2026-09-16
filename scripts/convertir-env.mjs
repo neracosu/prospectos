@@ -13,12 +13,15 @@ if (/^DATABASE_URL=/m.test(texto)) {
 const v = {};
 for (const linea of texto.split("\n")) {
   const m = linea.match(/^([A-Z_]+)=(.*)$/);
-  if (m) v[m[1]] = m[2].trim().replace(/^"|"$/g, "");
+  if (m) v[m[1]] = m[2].trim().replace(/^(['"])(.*)\1$/, "$2");
 }
 for (const k of ["DB_USER", "DB_NAME", "DB_PASS"]) {
   if (!v[k]) { console.error(`Falta ${k} en ${RUTA}`); process.exit(1); }
 }
-const pass = encodeURIComponent(v.DB_PASS);
+// encodeURIComponent deja sin escapar ! ' ( ) *, y una contrasena de URL no
+// puede llevarlos crudos: se codifican a mano los cinco.
+const codificar = (s) => encodeURIComponent(s).replace(/[!'()*]/g, (c) => "%" + c.charCodeAt(0).toString(16).toUpperCase());
+const pass = codificar(v.DB_PASS);
 const url = (base) => `mysql://${v.DB_USER}:${pass}@localhost:3306/${base}`;
 const salida = [
   "# Generado por scripts/convertir-env.mjs el " + new Date().toISOString().slice(0, 10),
