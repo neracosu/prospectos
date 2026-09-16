@@ -23,7 +23,8 @@ Estado al 16-sep (tarde):
 
 - Todavía **no hay código**: ni `package.json`, ni Prisma, ni proceso PM2.
 - Repo en GitHub: `git@github.com:neracosu/prospectos.git` (`origin`).
-- Siguiente paso: ejecutar el plan de la pieza 1 en `docs/superpowers/plans/`. Un plan por pieza.
+- Siguiente paso: ejecutar `docs/superpowers/plans/2026-09-16-pieza-1-panel-prospeccion.md` (13 tareas, TDD,
+  tarea 0 = prerrequisitos de cPanel). Un plan por pieza.
 - La lista de «Decisiones abiertas» al final del spec de la pieza 1 tiene lo que falta resolver con
   él; la de **precios de farmacias bloquea la propuesta de ese nicho**.
 
