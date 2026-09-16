@@ -30,6 +30,7 @@ describe.runIf(DB_HABILITADA)("ajustes", () => {
     sesionFalsa.actual = { id: ids.prospectadorId, nombre: "María", rol: "prospectador" };
     await expect(guardarNicho(fd({ id: String(ids.nichoId), mensajeInicial: "x", mensajeSeguimiento: "y", diasSeguimiento: "2" }))).rejects.toThrow("REDIRECT:/hoy");
     await expect(guardarUsuario(fd({ nombre: "Z", rol: "prospectador", pin: "111111", metaDiaria: "3" }))).rejects.toThrow("REDIRECT:/hoy");
+    await expect(restablecerPin(ids.usuarioId, "999999")).rejects.toThrow("REDIRECT:/hoy");
   });
   it("guardarNicho exige {enlace} en el mensaje inicial y dias entre 1 y 30", async () => {
     expect((await guardarNicho(fd({ id: String(ids.nichoId), mensajeInicial: "sin enlace {nombre}", mensajeSeguimiento: "y {enlace}", diasSeguimiento: "3" }))).ok).toBe(false);
@@ -45,6 +46,14 @@ describe.runIf(DB_HABILITADA)("ajustes", () => {
     expect((await guardarUsuario(fd({ id: String(pedro.id), nombre: "Pedro P.", rol: "prospectador", metaDiaria: "6", activo: "" }))).ok).toBe(true);
     expect(await buscarPorPin("222222")).toBeNull(); // desactivado
     expect(await prisma.usuario.count()).toBe(3);
+  });
+  it("el dueno no puede desactivarse ni quitarse el rol de dueno a si mismo", async () => {
+    const r1 = await guardarUsuario(fd({ id: String(ids.usuarioId), nombre: "Neri", rol: "dueno", metaDiaria: "10", activo: "" }));
+    expect(r1).toEqual({ ok: false, mensaje: expect.stringContaining("desactivarte") });
+    const r2 = await guardarUsuario(fd({ id: String(ids.usuarioId), nombre: "Neri", rol: "prospectador", metaDiaria: "10", activo: "on" }));
+    expect(r2.ok).toBe(false);
+    const yo = await prisma.usuario.findUniqueOrThrow({ where: { id: ids.usuarioId } });
+    expect(yo).toMatchObject({ activo: true, rol: "dueno" });
   });
   it("un PIN repetido se rechaza con mensaje claro", async () => {
     const r = await guardarUsuario(fd({ nombre: "Otra", rol: "prospectador", pin: PIN_DUENO, metaDiaria: "1" }));
