@@ -51,8 +51,8 @@ describe("mensualidades", () => {
   });
   it("toca la del mes que vence en 7 dias o menos y recupera las perdidas de 60 dias atras", () => {
     const p = { estado: "activo", diaCobroMensual: 20, fechaInicio: "2026-08-01" }; // julio queda fuera por fechaInicio
-    expect(mensualidadesQueTocan(p, "2026-09-16", [])).toEqual([
-      { mes: "2026-08", vence: "2026-08-20" }, // perdida (dentro de 60 dias)
+    expect(mensualidadesQueTocan(p, "2026-09-16", ["2026-07"])).toEqual([
+      { mes: "2026-08", vence: "2026-08-20" }, // perdida (dentro de 60 dias, ya existe alguna mensualidad)
       { mes: "2026-09", vence: "2026-09-20" }, // en 4 dias
     ]);
     expect(mensualidadesQueTocan(p, "2026-09-16", ["2026-08"])).toEqual([{ mes: "2026-09", vence: "2026-09-20" }]);
@@ -60,7 +60,17 @@ describe("mensualidades", () => {
   });
   it("no genera antes de fechaInicio ni fuera de activo", () => {
     expect(mensualidadesQueTocan({ estado: "activo", diaCobroMensual: 5, fechaInicio: "2026-09-10" }, "2026-09-16", [])).toEqual([]);
-    expect(mensualidadesQueTocan({ estado: "activo", diaCobroMensual: 5, fechaInicio: "2026-09-01" }, "2026-09-30", [])).toEqual([{ mes: "2026-09", vence: "2026-09-05" }, { mes: "2026-10", vence: "2026-10-05" }]);
+    // sin mensualidad previa (existentes vacio) no se rescata el mes ya vencido de septiembre
+    expect(mensualidadesQueTocan({ estado: "activo", diaCobroMensual: 5, fechaInicio: "2026-09-01" }, "2026-09-30", [])).toEqual([{ mes: "2026-10", vence: "2026-10-05" }]);
     expect(mensualidadesQueTocan({ estado: "pausado", diaCobroMensual: 5, fechaInicio: "2026-01-01" }, "2026-09-16", [])).toEqual([]);
+  });
+  it("en la primera activacion (sin mensualidad previa) no nace con cobros vencidos; con alguna ya existente, si rescata", () => {
+    const p = { estado: "activo", diaCobroMensual: 5, fechaInicio: "2024-01-01" };
+    expect(mensualidadesQueTocan(p, "2026-09-16", [])).toEqual([]); // el de septiembre ya vencio y es la primera vez
+    expect(mensualidadesQueTocan(p, "2026-09-30", [])).toEqual([{ mes: "2026-10", vence: "2026-10-05" }]);
+    expect(mensualidadesQueTocan(p, "2026-09-16", ["2026-07"])).toEqual([
+      { mes: "2026-08", vence: "2026-08-05" },
+      { mes: "2026-09", vence: "2026-09-05" },
+    ]); // ya existe una mensualidad: se restaura el rescate de 60 dias
   });
 });

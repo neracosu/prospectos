@@ -49,6 +49,8 @@ Nada se borra. Un cobro equivocado se anula con motivo; un proyecto que no va se
   está `activo` y faltan 7 días o menos para `diaCobroMensual`. Es idempotente: no crea dos para el
   mismo proyecto y mes. En `pausado` y `cerrado` no genera.
 - Un `extra` se crea a mano (trabajo fuera de alcance).
+- En la primera activación solo se generan mensualidades que vencen desde hoy; el rescate de 60
+  días aplica cuando ya existe alguna.
 
 ## Pantallas (390 px primero)
 
@@ -63,7 +65,8 @@ Nada se borra. Un cobro equivocado se anula con motivo; un proyecto que no va se
      `mensaje_cobro_vencido` según el caso; deja `Evento` `recordatorio`) y **Anular** (motivo).
      Botón **Agregar cobro** para extras y cuotas nuevas.
    - **Pendientes**: lista con casilla, interruptor «visible al cliente», `fechaEstimada` opcional,
-     arrastrar para ordenar. Arriba el % de avance visible (hechos / visibles).
+     subir/bajar con botones (arrastrar no funciona bien en el teléfono). Arriba el % de avance
+     visible (hechos / visibles).
    - **Horas**: formulario «fecha (hoy por defecto) · horas · qué hice» y abajo **cotizadas vs.
      reales**, con la diferencia en horas y en dólares a `TARIFA_HORA` (se lee de Configuración,
      valor inicial 17, igual que la calculadora del sitio).

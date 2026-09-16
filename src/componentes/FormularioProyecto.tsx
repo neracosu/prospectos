@@ -3,14 +3,13 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { crearProyecto } from "@/acciones/proyectos";
 
-type Props = { nichos: { id: number; nombre: string }[]; clientes: { id: number; nombre: string }[]; prospecto?: { id: number; nombre: string; nichoId: number; codigo: string } };
+type Props = { nichos: { id: number; nombre: string }[]; clientes: { id: number; nombre: string }[]; prospecto?: { id: number; nombre: string; nichoId: number; codigo: string }; hoy: string };
 
-export function FormularioProyecto({ nichos, clientes, prospecto }: Props) {
+export function FormularioProyecto({ nichos, clientes, prospecto, hoy }: Props) {
   const [error, setError] = useState("");
   const [formaPago, setFormaPago] = useState<"completo" | "cuotas">("completo");
   const [pendiente, empezar] = useTransition();
   const router = useRouter();
-  const hoy = new Date(Date.now() - 4 * 3600 * 1000).toISOString().slice(0, 10);
   return (
     <form className="tarjeta" action={(fd) => empezar(async () => { const r = await crearProyecto(fd); if (r.ok) { router.push(`/proyectos/${r.datos.id}`); router.refresh(); } else setError(r.mensaje); })}>
       {prospecto ? (

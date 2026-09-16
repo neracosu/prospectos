@@ -1,5 +1,6 @@
 import { exigirRol } from "@/lib/sesion";
 import { prisma } from "@/lib/db";
+import { hoyCaracas } from "@/lib/fecha-caracas";
 import { listarNichos } from "@/lib/prospectos";
 import { listarClientes } from "@/lib/clientes";
 import { FormularioProyecto } from "@/componentes/FormularioProyecto";
@@ -14,5 +15,5 @@ export default async function NuevoProyecto({ searchParams }: { searchParams: Pr
     listarNichos(), listarClientes(),
     prospectoId ? prisma.prospecto.findUnique({ where: { id: prospectoId, etapa: "ganado" }, select: { id: true, nombre: true, nichoId: true, codigo: true } }) : null,
   ]);
-  return (<><h1 className="titulo">Nuevo proyecto</h1><FormularioProyecto nichos={nichos} clientes={clientes.map((c) => ({ id: c.id, nombre: c.nombre }))} prospecto={prospecto ?? undefined} /></>);
+  return (<><h1 className="titulo">Nuevo proyecto</h1><FormularioProyecto nichos={nichos} clientes={clientes.map((c) => ({ id: c.id, nombre: c.nombre }))} prospecto={prospecto ?? undefined} hoy={hoyCaracas()} /></>);
 }

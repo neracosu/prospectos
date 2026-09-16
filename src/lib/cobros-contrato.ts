@@ -68,11 +68,14 @@ function mesSiguiente(mes: string): string {
 
 // Que mensualidades hay que crear hoy: las que vencen entre hoy-60 y hoy+7, del proyecto activo,
 // no antes de fechaInicio y que no existan ya. Idempotente por construccion.
+// El rescate de 60 dias atras solo aplica si ya existe alguna mensualidad generada: un cliente
+// que recien se activa no debe nacer con cobros vencidos fantasma (meses que nunca se avisaron
+// porque el proyecto no estaba activo todavia).
 export function mensualidadesQueTocan(
   p: { estado: string; diaCobroMensual: number; fechaInicio: string }, hoy: string, existentes: string[],
 ): { mes: string; vence: string }[] {
   if (p.estado !== "activo") return [];
-  const desde = sumarDias(hoy, -60), hasta = sumarDias(hoy, DIAS_AVISO);
+  const desde = existentes.length === 0 ? hoy : sumarDias(hoy, -60), hasta = sumarDias(hoy, DIAS_AVISO);
   const salida = [];
   let mes = mesDe(desde);
   const tope = mesDe(hasta);

@@ -80,13 +80,16 @@ export async function editarVersion(formData: FormData): Promise<Resultado> {
   }
 }
 
-export async function marcarAvisada(versionId: number): Promise<Resultado<{ href: string | null }>> {
+export async function marcarAvisada(versionId: number): Promise<Resultado<{ href: string }>> {
   const u = await exigirRol("dueno");
   const e = z.number().int().positive().safeParse(versionId);
   if (!e.success) return fallo(ERROR);
   try {
     const v = await prisma.version.findUnique({ where: { id: e.data }, include: { cambios: { orderBy: { orden: "asc" } }, proyecto: { include: { cliente: true } } } });
     if (!v) return fallo("Esa versión no existe.");
+    // Sin WhatsApp no hay a quien avisar: se corta antes de la transaccion para
+    // no dejar la version marcada como avisada sin haber avisado a nadie.
+    if (!v.proyecto.cliente.whatsapp) return fallo("El cliente no tiene WhatsApp cargado. Agrégalo en su ficha antes de avisar.");
     // Update y evento van juntos: si el evento fallara, avisadoEn tampoco queda a medias
     // (una version marcada avisada sin su evento seria irrecuperable).
     await prisma.$transaction(async (tx) => {
@@ -97,7 +100,8 @@ export async function marcarAvisada(versionId: number): Promise<Resultado<{ href
     const lineas = v.cambios.map((c) => `• ${ETIQUETA_CAMBIO[c.tipo as keyof typeof ETIQUETA_CAMBIO] ?? c.tipo}: ${c.texto}`).join("\n");
     const quien = v.proyecto.cliente.contactoNombre || v.proyecto.cliente.nombre;
     const mensaje = `Buenas, ${quien}. Publicamos la versión ${v.version} de ${v.proyecto.nombre}:\n${lineas}\nCualquier duda me escribe por aquí.`;
-    const href = enlaceWhatsappCobro(v.proyecto.cliente.whatsapp, mensaje);
+    // El whatsapp ya se valido arriba, asi que el enlace nunca sale nulo.
+    const href = enlaceWhatsappCobro(v.proyecto.cliente.whatsapp, mensaje)!;
     refrescar(v.proyectoId);
     return exito({ href });
   } catch (err) {

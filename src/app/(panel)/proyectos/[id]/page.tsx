@@ -17,7 +17,7 @@ import { canalesDisponibles } from "@/lib/canales-contrato";
 
 export const dynamic = "force-dynamic";
 const PESTANAS = [{ clave: "cobros", texto: "Cobros" }, { clave: "pendientes", texto: "Pendientes" }, { clave: "horas", texto: "Horas" }, { clave: "versiones", texto: "Versiones" }, { clave: "cliente", texto: "Cliente" }];
-const TEXTO_EVENTO: Record<string, string> = { proyecto_creado: "Proyecto creado", proyecto_estado: "Estado", cobro_pagado: "Cobro pagado", cobro_anulado: "Cobro anulado", cobro_agregado: "Cobro agregado", recordatorio: "Recordatorio enviado", hito_cumplido: "Hito cumplido", version_publicada: "Versión publicada", aviso_cliente: "Aviso al cliente", horas: "Horas" };
+const TEXTO_EVENTO: Record<string, string> = { proyecto_creado: "Proyecto creado", proyecto_estado: "Estado", proyecto_editado: "Proyecto editado", cobro_pagado: "Cobro pagado", cobro_anulado: "Cobro anulado", cobro_agregado: "Cobro agregado", recordatorio: "Recordatorio enviado", hito_cumplido: "Hito cumplido", version_publicada: "Versión publicada", aviso_cliente: "Aviso al cliente", horas: "Horas" };
 
 export default async function Proyecto({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<Record<string, string | undefined>> }) {
   await exigirRol("dueno");
@@ -25,7 +25,8 @@ export default async function Proyecto({ params, searchParams }: { params: Promi
   const hoy = hoyCaracas();
   const [p, tarifa] = await Promise.all([Number.isInteger(id) ? fichaProyecto(id, hoy) : null, leerTarifaHora()]);
   if (!p) notFound();
-  const t = (await searchParams).t ?? "cobros";
+  const tParam = (await searchParams).t;
+  const t = tParam && PESTANAS.some((pestana) => pestana.clave === tParam) ? tParam : "cobros";
   const base = `/proyectos/${p.id}`;
   return (
     <>

@@ -134,12 +134,19 @@ describe.runIf(DB_HABILITADA)("clientes y proyectos", () => {
     expect(await fichaProyecto(999999, hoy)).toBeNull();
   });
 
-  it("editarProyecto cambia lo editable y crearCliente normaliza", async () => {
+  it("editarProyecto cambia lo editable, deja un evento con lo que cambio y no repite si nada cambio", async () => {
     const p = await prisma.proyecto.findFirstOrThrow({ where: { nombre: "PMS Hotel" } });
     expect((await editarProyecto(fd({ id: String(p.id), nombre: "PMS Hotel v2", mensualidad: "120", horasCotizadas: "170", fechaEntregaEstimada: "2026-11-30", diaCobroMensual: "7" }))).ok).toBe(true);
     const d = await prisma.proyecto.findUniqueOrThrow({ where: { id: p.id } });
     expect(d).toMatchObject({ nombre: "PMS Hotel v2", diaCobroMensual: 7, fechaEntregaEstimada: "2026-11-30" });
     expect(Number(d.mensualidad)).toBe(120);
+    const eventos = await prisma.evento.findMany({ where: { proyectoId: p.id, tipo: "proyecto_editado" } });
+    expect(eventos).toHaveLength(1);
+    expect(eventos[0].texto).toContain("mensualidad");
+    expect(eventos[0].texto).toContain("día de cobro");
+    // repetir el mismo llamado (nada cambia) no debe crear un segundo evento
+    expect((await editarProyecto(fd({ id: String(p.id), nombre: "PMS Hotel v2", mensualidad: "120", horasCotizadas: "170", fechaEntregaEstimada: "2026-11-30", diaCobroMensual: "7" }))).ok).toBe(true);
+    expect(await prisma.evento.count({ where: { proyectoId: p.id, tipo: "proyecto_editado" } })).toBe(1);
     const r = await crearCliente(fd({ nombre: "Farmacia Sol", contactoNombre: "Ana", whatsapp: "0414 555 12 34", rif: "j-1234", instagram: "@farmasol" }));
     expect(r.ok).toBe(true);
     const cl = (await listarClientes("sol"))[0];

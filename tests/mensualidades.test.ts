@@ -19,6 +19,8 @@ describe.runIf(DB_HABILITADA)("generarMensualidades", () => {
     await limpiarBase(); ids = await sembrarBasico();
     const c = await sembrarCliente();
     activo = (await sembrarProyecto(c.id, ids.nichoId, { nombre: "Activo", estado: "activo", fechaInicio: "2026-08-01", diaCobroMensual: 20, mensualidad: "120.00" })).id;
+    // Mensualidad previa de julio: sin esta, la primera activacion no rescataria agosto (ya vencido).
+    await prisma.cobro.create({ data: { proyectoId: activo, concepto: "mensualidad", detalle: "Mensualidad de julio 2026", monto: "120.00", vence: "2026-07-20", mes: "2026-07" } });
     pausado = (await sembrarProyecto(c.id, ids.nichoId, { nombre: "Pausado", estado: "pausado", fechaInicio: "2026-08-01", diaCobroMensual: 20 })).id;
     cero = (await sembrarProyecto(c.id, ids.nichoId, { nombre: "SoloPagoUnico", estado: "activo", fechaInicio: "2026-08-01", diaCobroMensual: 20, mensualidad: "0.00" })).id;
     cerrado = (await sembrarProyecto(c.id, ids.nichoId, { nombre: "Cerrado", estado: "cerrado", fechaInicio: "2026-08-01", diaCobroMensual: 20 })).id;
@@ -30,6 +32,7 @@ describe.runIf(DB_HABILITADA)("generarMensualidades", () => {
     expect(r1).toEqual({ creadas: 2, proyectos: 2 }); // agosto (perdida) y septiembre (en 4 dias); activo + cero cuentan como activos
     const cobros = await prisma.cobro.findMany({ where: { proyectoId: activo }, orderBy: { vence: "asc" } });
     expect(cobros.map((c) => [c.concepto, c.mes, c.vence, Number(c.monto), c.detalle])).toEqual([
+      ["mensualidad", "2026-07", "2026-07-20", 120, "Mensualidad de julio 2026"], // sembrada a mano en el beforeAll
       ["mensualidad", "2026-08", "2026-08-20", 120, "Mensualidad de agosto 2026"],
       ["mensualidad", "2026-09", "2026-09-20", 120, "Mensualidad de septiembre 2026"],
     ]);

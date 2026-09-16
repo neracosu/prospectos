@@ -70,4 +70,17 @@ describe.runIf(DB_HABILITADA)("versiones", () => {
     expect(d.avisadoEn).not.toBeNull();
     expect(d.cambios[0].texto).toBe("Tilde en reportes");
   });
+
+  it("no avisa si el cliente no tiene WhatsApp cargado: no marca avisadoEn ni deja el evento", async () => {
+    const c = await sembrarCliente({ nombre: "Cliente Sin WhatsApp", whatsapp: "" });
+    const otroProyectoId = (await sembrarProyecto(c.id, ids.nichoId, { estado: "activo", nombre: "Sin WhatsApp" })).id;
+    await publicarVersion(fd({ proyectoId: String(otroProyectoId), version: "1.0.0", fecha: "2026-09-10", markdown: "### Nuevo\n- Primera versión" }));
+    const v = await prisma.version.findFirstOrThrow({ where: { proyectoId: otroProyectoId } });
+    const r = await marcarAvisada(v.id);
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.mensaje).toContain("WhatsApp");
+    const d = await prisma.version.findUniqueOrThrow({ where: { id: v.id } });
+    expect(d.avisadoEn).toBeNull();
+    expect(await prisma.evento.count({ where: { proyectoId: otroProyectoId, tipo: "aviso_cliente" } })).toBe(0);
+  });
 });

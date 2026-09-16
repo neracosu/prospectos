@@ -2924,7 +2924,7 @@ curl -s -o /dev/null -w '%{http_code}\n' https://prospectos.neracosu.com/entrar 
 pm2 logs prospectos --lines 30 --nostream | grep -E 'mensualidades|Error' | tail -5   # el cron arranco sin error
 ```
 
-Expected: `prospectos` `online` con el contador de reinicios **+1** (el restart) y nada más; log sin errores; `[mensualidades]` solo aparece si creó algo.
+Expected: `prospectos` `online` con el contador de reinicios **+1** (el restart) y nada más; log sin errores; la línea `[mensualidades] <fecha>: N creadas de M activos` aparece en cada corrida (también con ceros); si no aparece, el cron no arrancó.
 
 - [ ] **Step 2: recorrido real a 390 px**
 

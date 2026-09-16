@@ -6,7 +6,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { exigirRol } from "@/lib/sesion";
 import { esFechaIso, hoyCaracas } from "@/lib/fecha-caracas";
-import { MONTO_TEXTO, montoDesdeTexto } from "@/lib/dinero";
+import { MONTO_TEXTO, montoDesdeTexto, formatoUSD } from "@/lib/dinero";
 import { generarCuotas } from "@/lib/cobros-contrato";
 import { ESTADOS_PROYECTO, puedePasarProyecto, type EstadoProyecto } from "@/lib/proyectos-contrato";
 import { clienteDesdeProspecto } from "@/lib/clientes";
@@ -97,13 +97,31 @@ const EditarZ = z.object({
   diaCobroMensual: z.coerce.number().int().min(1).max(28),
 });
 export async function editarProyecto(formData: FormData): Promise<Resultado> {
-  await exigirRol("dueno");
+  const u = await exigirRol("dueno");
   const e = EditarZ.safeParse(Object.fromEntries(formData));
   if (!e.success) return fallo("Revisa nombre, montos, fecha y día de cobro (1 a 28).");
   const d = e.data;
   try {
-    // Cambiar diaCobroMensual no toca cobros ya generados (aplica desde el mes siguiente).
-    await prisma.proyecto.update({ where: { id: d.id }, data: { nombre: d.nombre, mensualidad: new Prisma.Decimal(d.mensualidad.replace(",", ".")), horasCotizadas: new Prisma.Decimal(d.horasCotizadas.replace(",", ".")), fechaEntregaEstimada: d.fechaEntregaEstimada ?? null, diaCobroMensual: d.diaCobroMensual } });
+    const actual = await prisma.proyecto.findUnique({ where: { id: d.id }, select: { nombre: true, mensualidad: true, horasCotizadas: true, fechaEntregaEstimada: true, diaCobroMensual: true } });
+    if (!actual) return fallo("Ese proyecto no existe.");
+    const mensualidadNueva = Number(d.mensualidad.replace(",", "."));
+    const horasNuevas = Number(d.horasCotizadas.replace(",", "."));
+    const entregaNueva = d.fechaEntregaEstimada ?? null;
+    // Solo se deja rastro de lo que de verdad cambio; nada de "editado" sin decir que.
+    const cambios: string[] = [];
+    if (actual.nombre !== d.nombre) cambios.push(`nombre: ${actual.nombre} → ${d.nombre}`);
+    if (Number(actual.mensualidad) !== mensualidadNueva) cambios.push(`mensualidad: ${formatoUSD(Number(actual.mensualidad))} → ${formatoUSD(mensualidadNueva)}`);
+    if (Number(actual.horasCotizadas) !== horasNuevas) cambios.push(`horas: ${Number(actual.horasCotizadas)} → ${horasNuevas}`);
+    if ((actual.fechaEntregaEstimada ?? null) !== entregaNueva) cambios.push(`entrega: ${actual.fechaEntregaEstimada ?? "—"} → ${entregaNueva ?? "—"}`);
+    if (actual.diaCobroMensual !== d.diaCobroMensual) cambios.push(`día de cobro: ${actual.diaCobroMensual} → ${d.diaCobroMensual}`);
+    if (cambios.length === 0) return exito();
+    const texto = cambios.join(" · ");
+    // Update y evento van juntos: si el evento fallara, el cambio tampoco queda a medias.
+    await prisma.$transaction([
+      // Cambiar diaCobroMensual no toca cobros ya generados (aplica desde el mes siguiente).
+      prisma.proyecto.update({ where: { id: d.id }, data: { nombre: d.nombre, mensualidad: new Prisma.Decimal(d.mensualidad.replace(",", ".")), horasCotizadas: new Prisma.Decimal(d.horasCotizadas.replace(",", ".")), fechaEntregaEstimada: entregaNueva, diaCobroMensual: d.diaCobroMensual } }),
+      prisma.evento.create({ data: { proyectoId: d.id, usuarioId: u.id, tipo: "proyecto_editado", texto } }),
+    ]);
     refrescar(d.id);
     return exito();
   } catch (err) { console.error("editarProyecto", err); return fallo(ERROR); }
