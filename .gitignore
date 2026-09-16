@@ -4,3 +4,4 @@ node_modules/
 *.log
 cgi-bin/
 pdf/
+.well-known/
