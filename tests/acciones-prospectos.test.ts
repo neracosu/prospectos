@@ -48,6 +48,11 @@ describe.runIf(DB_HABILITADA)("acciones de prospectos", () => {
     expect(await marcarEnviado(p.id, "paloma" as any)).toEqual({ ok: false, mensaje: expect.stringContaining("canal") });
   });
 
+  it("marcarEnviado dice en que etapa esta si no es por_contactar", async () => {
+    const p = await crearProspectoDePrueba(ids.nichoId, { etapa: "ganado", whatsapp: "584120000098" });
+    expect(await marcarEnviado(p.id, "whatsapp")).toEqual({ ok: false, mensaje: expect.stringContaining("Ganado") });
+  });
+
   it("saltar manda al final de la cola y deja evento", async () => {
     const p = await crearProspectoDePrueba(ids.nichoId, { ordenCola: 1 });
     await crearProspectoDePrueba(ids.nichoId, { ordenCola: 50 });
@@ -56,12 +61,27 @@ describe.runIf(DB_HABILITADA)("acciones de prospectos", () => {
     expect(await prisma.evento.count({ where: { prospectoId: p.id, tipo: "saltado" } })).toBe(1);
   });
 
+  it("saltar no mueve un prospecto que ya no esta por contactar", async () => {
+    const p = await crearProspectoDePrueba(ids.nichoId, { etapa: "enviado", ordenCola: 5 });
+    expect((await saltar(p.id)).ok).toBe(false);
+    const d = await prisma.prospecto.findUniqueOrThrow({ where: { id: p.id } });
+    expect(d.ordenCola).toBe(5);
+    expect(await prisma.evento.count({ where: { prospectoId: p.id, tipo: "saltado" } })).toBe(0);
+  });
+
   it("escribirDeNuevo corre el seguimiento y registra el evento sin cambiar la etapa", async () => {
     const p = await crearProspectoDePrueba(ids.nichoId, { whatsapp: "584120000003", etapa: "enviado", proximoSeguimiento: "2026-09-01" });
     expect((await escribirDeNuevo(p.id, "whatsapp")).ok).toBe(true);
     const d = await prisma.prospecto.findUniqueOrThrow({ where: { id: p.id } });
     expect(d.etapa).toBe("enviado");
     expect(d.proximoSeguimiento).toBe(sumarDias(hoyCaracas(), 3));
+    expect(await prisma.evento.count({ where: { prospectoId: p.id, tipo: "seguimiento" } })).toBe(1);
+  });
+
+  it("escribirDeNuevo: dos toques concurrentes cuentan uno solo", async () => {
+    const p = await crearProspectoDePrueba(ids.nichoId, { whatsapp: "584120000097", etapa: "enviado", proximoSeguimiento: "2026-09-01" });
+    const [a, b] = await Promise.all([escribirDeNuevo(p.id, "whatsapp"), escribirDeNuevo(p.id, "whatsapp")]);
+    expect([a.ok, b.ok].filter(Boolean).length).toBe(1);
     expect(await prisma.evento.count({ where: { prospectoId: p.id, tipo: "seguimiento" } })).toBe(1);
   });
 
@@ -91,10 +111,15 @@ describe.runIf(DB_HABILITADA)("acciones de prospectos", () => {
     expect((await guardarNota(p.id, "solo cobra en efectivo")).ok).toBe(true);
     expect((await editarSeguimiento(p.id, "2026-02-30")).ok).toBe(false);
     expect((await editarSeguimiento(p.id, "2026-10-01")).ok).toBe(true);
+    expect(await prisma.evento.findFirst({ where: { prospectoId: p.id, tipo: "nota", texto: "Seguimiento movido a 2026-10-01" } })).not.toBeNull();
     expect((await editarSeguimiento(p.id, "")).ok).toBe(true);
+    expect(await prisma.evento.findFirst({ where: { prospectoId: p.id, tipo: "nota", texto: "Seguimiento quitado" } })).not.toBeNull();
     const d = await prisma.prospecto.findUniqueOrThrow({ where: { id: p.id } });
     expect(d.nota).toBe("solo cobra en efectivo");
     expect(d.proximoSeguimiento).toBeNull();
+
+    const ganado = await crearProspectoDePrueba(ids.nichoId, { etapa: "ganado" });
+    expect((await editarSeguimiento(ganado.id, "2026-10-01")).ok).toBe(false);
   });
 
   it("crearProspecto normaliza y no duplica", async () => {

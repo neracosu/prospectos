@@ -21,5 +21,6 @@ export type ProspectoTarjeta = ContactoProspecto & {
 
 export function enlacePropuesta(codigo: string): string {
   const base = (process.env.PROSPECTOS_URL_PUBLICA ?? "").replace(/\/+$/, "");
+  if (!base) throw new Error("Falta PROSPECTOS_URL_PUBLICA");
   return `${base}/p/${codigo}`;
 }
