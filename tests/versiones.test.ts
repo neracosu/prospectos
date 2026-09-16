@@ -36,6 +36,7 @@ describe.runIf(DB_HABILITADA)("versiones", () => {
     expect((await publicarVersion(fd({ proyectoId: String(proyectoId), version: "1.0.0", fecha: "2026-09-10", markdown: "" }))).ok).toBe(false); // sin cambios
     const r = await publicarVersion(fd({ proyectoId: String(proyectoId), version: "1.0.0", fecha: "2026-09-10", markdown: md }));
     expect(r.ok).toBe(true);
+    expect(await prisma.evento.count({ where: { proyectoId, tipo: "version_publicada" } })).toBe(1); // version y evento van juntos (misma transaccion)
     expect((await publicarVersion(fd({ proyectoId: String(proyectoId), version: "1.0.0", fecha: "2026-09-11", markdown: md }))).ok).toBe(false); // repetida
     expect((await publicarVersion(fd({ proyectoId: String(proyectoId), version: "0.9.0", fecha: "2026-09-11", markdown: md }))).ok).toBe(false); // menor
     const f = (await fichaProyecto(proyectoId, "2026-09-16"))!;
@@ -59,11 +60,14 @@ describe.runIf(DB_HABILITADA)("versiones", () => {
     const a = await marcarAvisada(v.id);
     expect(a.ok).toBe(true);
     if (a.ok) { expect(a.datos.href).toMatch(/^https:\/\/wa\.me\/584127777777\?text=/); expect(decodeURIComponent(a.datos.href!)).toContain("1.10.1"); }
-    expect((await marcarAvisada(v.id)).ok).toBe(false); // ya avisada
+    expect(await prisma.evento.count({ where: { proyectoId, tipo: "aviso_cliente" } })).toBe(1); // update y evento van juntos (misma transaccion)
+    const otra = await marcarAvisada(v.id);
+    expect(otra.ok).toBe(false);
+    if (!otra.ok) expect(otra.mensaje).toBe("Esta versión ya se avisó."); // ya avisada, sin duplicar el evento
+    expect(await prisma.evento.count({ where: { proyectoId, tipo: "aviso_cliente" } })).toBe(1);
     expect((await editarVersion(fd({ id: String(v.id), proyectoId: String(proyectoId), version: "1.10.1", fecha: "2026-09-14", cambios: JSON.stringify([{ tipo: "arreglo", texto: "otra" }]) }))).ok).toBe(false);
     const d = await prisma.version.findUniqueOrThrow({ where: { id: v.id }, include: { cambios: true } });
     expect(d.avisadoEn).not.toBeNull();
     expect(d.cambios[0].texto).toBe("Tilde en reportes");
-    expect(await prisma.evento.count({ where: { proyectoId, tipo: "aviso_cliente" } })).toBe(1);
   });
 });

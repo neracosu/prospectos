@@ -38,8 +38,11 @@ export async function marcarPendiente(id: number, hecho: boolean): Promise<Resul
   try {
     const p = await prisma.pendiente.findUnique({ where: { id: e.data.id } });
     if (!p) return fallo("Ese pendiente ya no existe.");
-    const r = await prisma.pendiente.updateMany({ where: { id: p.id, hecho: !e.data.hecho }, data: { hecho: e.data.hecho, hechoEn: e.data.hecho ? new Date() : null } });
-    if (r.count === 1 && e.data.hecho && p.visibleCliente) await prisma.evento.create({ data: { proyectoId: p.proyectoId, usuarioId: u.id, tipo: "hito_cumplido", texto: p.texto } });
+    // Update y evento van juntos: un hito visible nunca queda cumplido sin su rastro.
+    await prisma.$transaction(async (tx) => {
+      const r = await tx.pendiente.updateMany({ where: { id: p.id, hecho: !e.data.hecho }, data: { hecho: e.data.hecho, hechoEn: e.data.hecho ? new Date() : null } });
+      if (r.count === 1 && e.data.hecho && p.visibleCliente) await tx.evento.create({ data: { proyectoId: p.proyectoId, usuarioId: u.id, tipo: "hito_cumplido", texto: p.texto } });
+    });
     refrescar(p.proyectoId);
     return exito();
   } catch (err) { console.error("marcarPendiente", err); return fallo(ERROR); }

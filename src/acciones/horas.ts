@@ -26,8 +26,11 @@ export async function registrarHoras(formData: FormData): Promise<Resultado> {
   if (horas < 0.25) return fallo("Mínimo 0,25 horas.");
   if (d.fecha > hoyCaracas()) return fallo("La fecha no puede ser futura.");
   try {
-    await prisma.horas.create({ data: { proyectoId: d.proyectoId, fecha: d.fecha, horas: new Prisma.Decimal(horas.toFixed(2)), descripcion: d.descripcion, usuarioId: u.id } });
-    await prisma.evento.create({ data: { proyectoId: d.proyectoId, usuarioId: u.id, tipo: "horas", texto: `${horas} h: ${d.descripcion}` } });
+    // Horas y evento van juntos: unas horas nunca quedan sin su rastro.
+    await prisma.$transaction(async (tx) => {
+      await tx.horas.create({ data: { proyectoId: d.proyectoId, fecha: d.fecha, horas: new Prisma.Decimal(horas.toFixed(2)), descripcion: d.descripcion, usuarioId: u.id } });
+      await tx.evento.create({ data: { proyectoId: d.proyectoId, usuarioId: u.id, tipo: "horas", texto: `${horas} h: ${d.descripcion}` } });
+    });
     revalidatePath(`/proyectos/${d.proyectoId}`);
     return exito();
   } catch (err) { console.error("registrarHoras", err); return fallo(ERROR); }

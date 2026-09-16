@@ -45,7 +45,7 @@ describe.runIf(DB_HABILITADA)("pendientes y horas", () => {
     expect(f.pendientes.map((p) => p.texto)).toEqual(["Refactorizar cron", "Módulo de reservas"]);
     expect((await marcarPendiente(b.datos.id, true)).ok).toBe(true); // interno: sin evento
     expect((await marcarPendiente(a.datos.id, true)).ok).toBe(true); // visible: evento hito_cumplido
-    expect(await prisma.evento.count({ where: { proyectoId, tipo: "hito_cumplido" } })).toBe(1);
+    expect(await prisma.evento.count({ where: { proyectoId, tipo: "hito_cumplido" } })).toBe(1); // update y evento van juntos (misma transaccion)
     f = (await fichaProyecto(proyectoId, hoyCaracas()))!;
     expect(f.avance).toBe(100);
     expect((await alternarVisible(b.datos.id)).ok).toBe(true);
@@ -62,6 +62,7 @@ describe.runIf(DB_HABILITADA)("pendientes y horas", () => {
     expect((await registrarHoras(fd({ proyectoId: String(proyectoId), fecha: hoy, horas: "0.1", descripcion: "x" }))).ok).toBe(false);
     expect((await registrarHoras(fd({ proyectoId: String(proyectoId), fecha: hoy, horas: "2.3", descripcion: "x" }))).ok).toBe(false);
     expect((await registrarHoras(fd({ proyectoId: String(proyectoId), fecha: hoy, horas: "2.5", descripcion: "Reservas" }))).ok).toBe(true);
+    expect(await prisma.evento.count({ where: { proyectoId, tipo: "horas" } })).toBe(1); // horas y evento van juntos (misma transaccion)
     expect((await registrarHoras(fd({ proyectoId: String(proyectoId), fecha: "2026-09-01", horas: "8", descripcion: "Base de datos" }))).ok).toBe(true);
     const f = (await fichaProyecto(proyectoId, hoy))!;
     expect(f.horasReales).toBe(10.5);

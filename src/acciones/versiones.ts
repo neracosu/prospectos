@@ -5,10 +5,12 @@ import { prisma } from "@/lib/db";
 import { exigirRol } from "@/lib/sesion";
 import { esFechaIso } from "@/lib/fecha-caracas";
 import { esSemver, compararSemver, parsearChangelog, TIPOS_CAMBIO, ETIQUETA_CAMBIO } from "@/lib/semver-contrato";
+import { enlaceWhatsappCobro } from "@/lib/mensajes-cobro";
 import { fallo, exito, type Resultado } from "@/acciones/resultado";
 
 // exigirRol("dueno") FUERA del try/catch. Una version avisada al cliente no se edita: se corrige con otra.
 const ERROR = "No se pudo guardar. Intenta de nuevo.";
+const VERSION_YA_AVISADA = "VERSION_YA_AVISADA";
 const CambioZ = z.object({ tipo: z.enum(TIPOS_CAMBIO), texto: z.string().trim().min(2).max(300) });
 const BaseZ = z.object({
   proyectoId: z.coerce.number().int().positive(),
@@ -41,8 +43,12 @@ export async function publicarVersion(formData: FormData): Promise<Resultado<{ i
     const actual = await prisma.version.findMany({ where: { proyectoId: d.proyectoId }, select: { version: true } });
     const mayor = actual.map((v) => v.version).sort(compararSemver).at(-1);
     if (mayor && compararSemver(d.version, mayor) <= 0) return fallo(`La versión debe ser mayor que la actual (${mayor}).`);
-    const v = await prisma.version.create({ data: { proyectoId: d.proyectoId, version: d.version, fecha: d.fecha, cambios: { create: cambios.map((c, i) => ({ ...c, orden: i })) } }, select: { id: true } });
-    await prisma.evento.create({ data: { proyectoId: d.proyectoId, usuarioId: u.id, tipo: "version_publicada", texto: d.version } });
+    // Version (con sus cambios) y evento van juntos: una version publicada nunca queda sin su rastro.
+    const v = await prisma.$transaction(async (tx) => {
+      const nueva = await tx.version.create({ data: { proyectoId: d.proyectoId, version: d.version, fecha: d.fecha, cambios: { create: cambios.map((c, i) => ({ ...c, orden: i })) } }, select: { id: true } });
+      await tx.evento.create({ data: { proyectoId: d.proyectoId, usuarioId: u.id, tipo: "version_publicada", texto: d.version } });
+      return nueva;
+    });
     refrescar(d.proyectoId);
     return exito({ id: v.id });
   } catch (err) {
@@ -81,14 +87,21 @@ export async function marcarAvisada(versionId: number): Promise<Resultado<{ href
   try {
     const v = await prisma.version.findUnique({ where: { id: e.data }, include: { cambios: { orderBy: { orden: "asc" } }, proyecto: { include: { cliente: true } } } });
     if (!v) return fallo("Esa versión no existe.");
-    const r = await prisma.version.updateMany({ where: { id: v.id, avisadoEn: null }, data: { avisadoEn: new Date() } });
-    if (r.count === 0) return fallo("Esta versión ya se avisó.");
-    await prisma.evento.create({ data: { proyectoId: v.proyectoId, usuarioId: u.id, tipo: "aviso_cliente", texto: `versión ${v.version}` } });
+    // Update y evento van juntos: si el evento fallara, avisadoEn tampoco queda a medias
+    // (una version marcada avisada sin su evento seria irrecuperable).
+    await prisma.$transaction(async (tx) => {
+      const r = await tx.version.updateMany({ where: { id: v.id, avisadoEn: null }, data: { avisadoEn: new Date() } });
+      if (r.count === 0) throw new Error(VERSION_YA_AVISADA);
+      await tx.evento.create({ data: { proyectoId: v.proyectoId, usuarioId: u.id, tipo: "aviso_cliente", texto: `versión ${v.version}` } });
+    });
     const lineas = v.cambios.map((c) => `• ${ETIQUETA_CAMBIO[c.tipo as keyof typeof ETIQUETA_CAMBIO] ?? c.tipo}: ${c.texto}`).join("\n");
     const quien = v.proyecto.cliente.contactoNombre || v.proyecto.cliente.nombre;
     const mensaje = `Buenas, ${quien}. Publicamos la versión ${v.version} de ${v.proyecto.nombre}:\n${lineas}\nCualquier duda me escribe por aquí.`;
-    const href = v.proyecto.cliente.whatsapp ? `https://wa.me/${v.proyecto.cliente.whatsapp}?text=${encodeURIComponent(mensaje)}` : null;
+    const href = enlaceWhatsappCobro(v.proyecto.cliente.whatsapp, mensaje);
     refrescar(v.proyectoId);
     return exito({ href });
-  } catch (err) { console.error("marcarAvisada", err); return fallo(ERROR); }
+  } catch (err) {
+    if (err instanceof Error && err.message === VERSION_YA_AVISADA) return fallo("Esta versión ya se avisó.");
+    console.error("marcarAvisada", err); return fallo(ERROR);
+  }
 }
