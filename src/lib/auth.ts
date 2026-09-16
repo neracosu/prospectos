@@ -1,0 +1,27 @@
+// src/lib/auth.ts — token firmado (HS256) que va en la cookie. 30 dias.
+import { SignJWT, jwtVerify } from "jose";
+import { z } from "zod";
+
+export type SesionUsuario = { id: number; nombre: string; rol: "dueno" | "prospectador" };
+
+const secreto = () => {
+  const s = process.env.SESION_SECRET;
+  if (!s) throw new Error("Falta SESION_SECRET");
+  return new TextEncoder().encode(s);
+};
+
+const Payload = z.object({ id: z.number(), nombre: z.string(), rol: z.enum(["dueno", "prospectador"]) });
+
+export async function crearToken(u: SesionUsuario): Promise<string> {
+  return new SignJWT({ ...u }).setProtectedHeader({ alg: "HS256" }).setIssuedAt().setExpirationTime("30d").sign(secreto());
+}
+
+export async function verificarToken(token: string): Promise<SesionUsuario | null> {
+  try {
+    const { payload } = await jwtVerify(token, secreto());
+    const p = Payload.safeParse(payload);
+    return p.success ? p.data : null;
+  } catch {
+    return null;
+  }
+}
