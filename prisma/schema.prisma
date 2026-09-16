@@ -12,12 +12,13 @@ datasource db {
 model Usuario {
   id         Int      @id @default(autoincrement())
   nombre     String
-  rol        String   // dueno | prospectador | cliente (pieza 5)
+  rol        String // dueno | prospectador | cliente (pieza 5)
   activo     Boolean  @default(true)
   pinHash    String
   metaDiaria Int      @default(10)
   creadoEn   DateTime @default(now())
   eventos    Evento[]
+  horas      Horas[]
 }
 
 model Nicho {
@@ -31,37 +32,39 @@ model Nicho {
   plantillaPropuesta String      @default("")
   diasSeguimiento    Int         @default(3)
   prospectos         Prospecto[]
+  proyectos          Proyecto[]
 }
 
 model Prospecto {
-  id                 Int       @id @default(autoincrement())
+  id                 Int      @id @default(autoincrement())
   nichoId            Int
-  nicho              Nicho     @relation(fields: [nichoId], references: [id])
+  nicho              Nicho    @relation(fields: [nichoId], references: [id])
   nombre             String
   ciudad             String
-  estado             String    @default("")
-  region             String    @default("")
-  tipo               String    @default("")
-  tamano             String    @default("")
-  telefono           String    @default("")
-  whatsapp           String    @default("") // 58XXXXXXXXXX o vacio
-  email              String    @default("")
-  web                String    @default("")
-  instagram          String    @default("")
-  facebook           String    @default("")
-  tiktok             String    @default("")
-  nota               String    @default("") @db.Text
-  fuentes            Json      // lista de URLs (pieza 2 suma {campo: url})
-  origen             String    @default("importado") // importado | manual | overpass | web | maps
-  etapa              String    @default("por_contactar")
+  estado             String   @default("")
+  region             String   @default("")
+  tipo               String   @default("")
+  tamano             String   @default("")
+  telefono           String   @default("")
+  whatsapp           String   @default("") // 58XXXXXXXXXX o vacio
+  email              String   @default("")
+  web                String   @default("")
+  instagram          String   @default("")
+  facebook           String   @default("")
+  tiktok             String   @default("")
+  nota               String   @default("") @db.Text
+  fuentes            Json // lista de URLs (pieza 2 suma {campo: url})
+  origen             String   @default("importado") // importado | manual | overpass | web | maps
+  etapa              String   @default("por_contactar")
   // Texto ISO YYYY-MM-DD en dia de Caracas. Nulo = sin seguimiento pendiente.
   proximoSeguimiento String?
-  codigo             String    @unique // 16 bytes base64url, para /p/<codigo>
-  ordenCola          Int       @default(0)
+  codigo             String   @unique // 16 bytes base64url, para /p/<codigo>
+  ordenCola          Int      @default(0)
   // nombre+ciudad normalizados: reimportar no duplica
   clave              String
-  creadoEn           DateTime  @default(now())
+  creadoEn           DateTime @default(now())
   eventos            Evento[]
+  cliente            Cliente?
 
   @@unique([nichoId, clave])
   @@index([etapa, ordenCola])
@@ -69,24 +72,158 @@ model Prospecto {
 }
 
 model Evento {
-  id          Int       @id @default(autoincrement())
-  prospectoId Int
-  prospecto   Prospecto @relation(fields: [prospectoId], references: [id])
+  id          Int        @id @default(autoincrement())
+  prospectoId Int?
+  prospecto   Prospecto? @relation(fields: [prospectoId], references: [id])
+  proyectoId  Int?
+  proyecto    Proyecto?  @relation(fields: [proyectoId], references: [id])
+  cobroId     Int?
+  cobro       Cobro?     @relation(fields: [cobroId], references: [id])
   usuarioId   Int?
-  usuario     Usuario?  @relation(fields: [usuarioId], references: [id])
-  // etapa | enviado | abierto | nota | saltado | importado | seguimiento
+  usuario     Usuario?   @relation(fields: [usuarioId], references: [id])
+  // etapa | enviado | abierto | nota | saltado | importado | seguimiento |
+  // proyecto_creado | proyecto_estado | cobro_pagado | cobro_anulado | cobro_agregado |
+  // recordatorio | hito_cumplido | version_publicada | aviso_cliente | horas
   tipo        String
-  de          String    @default("")
-  a           String    @default("")
-  canal       String    @default("")
-  texto       String    @default("") @db.Text
-  creadoEn    DateTime  @default(now())
+  de          String     @default("")
+  a           String     @default("")
+  canal       String     @default("")
+  texto       String     @default("") @db.Text
+  creadoEn    DateTime   @default(now())
 
   @@index([prospectoId, creadoEn])
   @@index([tipo, creadoEn])
+  @@index([proyectoId, creadoEn])
 }
 
 model Configuracion {
   clave String @id
   valor String @db.Text
+}
+
+model Cliente {
+  id             Int        @id @default(autoincrement())
+  nombre         String
+  contactoNombre String     @default("")
+  whatsapp       String     @default("") // 58XXXXXXXXXX o vacio
+  email          String     @default("")
+  rif            String     @default("")
+  instagram      String     @default("")
+  facebook       String     @default("")
+  tiktok         String     @default("")
+  prospectoId    Int?       @unique
+  prospecto      Prospecto? @relation(fields: [prospectoId], references: [id])
+  // Para el portal (pieza 5): 16 bytes base64url. Se genera al crear el cliente.
+  codigo         String     @unique
+  creadoEn       DateTime   @default(now())
+  proyectos      Proyecto[]
+}
+
+model Proyecto {
+  id                   Int         @id @default(autoincrement())
+  clienteId            Int
+  cliente              Cliente     @relation(fields: [clienteId], references: [id])
+  nombre               String
+  nichoId              Int
+  nicho                Nicho       @relation(fields: [nichoId], references: [id])
+  pagoUnico            Decimal     @db.Decimal(10, 2)
+  mensualidad          Decimal     @db.Decimal(10, 2)
+  horasCotizadas       Decimal     @default(0) @db.Decimal(8, 2)
+  // Fechas de negocio: texto ISO YYYY-MM-DD en dia de Caracas (como Prospecto.proximoSeguimiento)
+  fechaInicio          String
+  fechaEntregaEstimada String?
+  fechaEntregaReal     String?
+  // en_construccion -> entregado -> activo -> pausado | cerrado
+  estado               String      @default("en_construccion")
+  diaCobroMensual      Int         @default(1)
+  propuestaCodigo      String      @default("")
+  creadoEn             DateTime    @default(now())
+  cobros               Cobro[]
+  pendientes           Pendiente[]
+  horas                Horas[]
+  versiones            Version[]
+  eventos              Evento[]
+
+  @@index([estado])
+}
+
+model Cobro {
+  id               Int       @id @default(autoincrement())
+  proyectoId       Int
+  proyecto         Proyecto  @relation(fields: [proyectoId], references: [id])
+  // pago_unico | cuota | mensualidad | extra
+  concepto         String
+  detalle          String    @default("")
+  monto            Decimal   @db.Decimal(10, 2)
+  moneda           String    @default("USD")
+  vence            String // YYYY-MM-DD
+  pagadoEn         DateTime?
+  // zelle | pago_movil | efectivo | binance | transferencia | otro
+  canal            String    @default("")
+  referencia       String    @default("")
+  nota             String    @default("") @db.Text
+  anuladoEn        DateTime?
+  anuladoMotivo    String    @default("")
+  // Mensualidad: "YYYY-MM" del mes que cubre; unico por proyecto (idempotencia del cron)
+  mes              String?
+  reciboNumero     String    @default("")
+  reciboGeneradoEn DateTime?
+  creadoEn         DateTime  @default(now())
+  eventos          Evento[]
+
+  @@unique([proyectoId, mes])
+  @@index([proyectoId, vence])
+  @@index([vence, pagadoEn])
+}
+
+model Pendiente {
+  id             Int       @id @default(autoincrement())
+  proyectoId     Int
+  proyecto       Proyecto  @relation(fields: [proyectoId], references: [id])
+  texto          String
+  hecho          Boolean   @default(false)
+  hechoEn        DateTime?
+  visibleCliente Boolean   @default(false)
+  orden          Int       @default(0)
+  fechaEstimada  String?
+  creadoEn       DateTime  @default(now())
+
+  @@index([proyectoId, orden])
+}
+
+model Horas {
+  id          Int      @id @default(autoincrement())
+  proyectoId  Int
+  proyecto    Proyecto @relation(fields: [proyectoId], references: [id])
+  fecha       String // YYYY-MM-DD
+  horas       Decimal  @db.Decimal(6, 2)
+  descripcion String   @default("")
+  usuarioId   Int?
+  usuario     Usuario? @relation(fields: [usuarioId], references: [id])
+  creadoEn    DateTime @default(now())
+
+  @@index([proyectoId, fecha])
+}
+
+model Version {
+  id         Int       @id @default(autoincrement())
+  proyectoId Int
+  proyecto   Proyecto  @relation(fields: [proyectoId], references: [id])
+  version    String // MAYOR.MENOR.PARCHE
+  fecha      String // YYYY-MM-DD
+  avisadoEn  DateTime?
+  creadoEn   DateTime  @default(now())
+  cambios    Cambio[]
+
+  @@unique([proyectoId, version])
+}
+
+model Cambio {
+  id        Int     @id @default(autoincrement())
+  versionId Int
+  version   Version @relation(fields: [versionId], references: [id])
+  // nuevo | mejora | arreglo
+  tipo      String
+  texto     String
+  orden     Int     @default(0)
 }

@@ -17,7 +17,8 @@ type FilaProspecto = Prisma.ProspectoGetPayload<{ select: typeof SELECT }>;
 async function abrieron(ids: number[]): Promise<Set<number>> {
   if (!ids.length) return new Set();
   const ev = await prisma.evento.findMany({ where: { prospectoId: { in: ids }, tipo: "abierto" }, select: { prospectoId: true }, distinct: ["prospectoId"] });
-  return new Set(ev.map((e) => e.prospectoId));
+  // El where ya filtra por prospectoId en la lista (nunca null); se filtra aqui solo para el tipo.
+  return new Set(ev.map((e) => e.prospectoId).filter((id): id is number => id !== null));
 }
 
 function aTarjeta(f: FilaProspecto, abrio: boolean, plantilla: "inicial" | "seguimiento"): ProspectoTarjeta & { ordenCola: number } {
