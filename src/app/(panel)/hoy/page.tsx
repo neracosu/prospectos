@@ -2,7 +2,7 @@ import Link from "next/link";
 import { exigirSesion } from "@/lib/sesion";
 import { hoyCaracas } from "@/lib/fecha-caracas";
 import { resumenHoy, seguimientosQueTocan, colaDelDia } from "@/lib/prospectos";
-import { prisma } from "@/lib/db";
+import { ganadosSinProyecto as listarGanadosSinProyecto } from "@/lib/proyectos";
 import { TarjetaCola } from "@/componentes/TarjetaCola";
 import { TarjetaSeguimiento } from "@/componentes/TarjetaSeguimiento";
 
@@ -11,10 +11,8 @@ export const dynamic = "force-dynamic";
 export default async function Hoy() {
   const u = await exigirSesion();
   const hoy = hoyCaracas();
-  const [resumen, seguimientos, cola, ganadosSinProyecto] = await Promise.all([
-    resumenHoy(hoy), seguimientosQueTocan(hoy), colaDelDia(10),
-    // Pieza 3: cuando exista Proyecto, esta consulta pasa a contar ganados sin proyecto.
-    prisma.prospecto.count({ where: { etapa: "ganado" } }),
+  const [resumen, seguimientos, cola, ganados] = await Promise.all([
+    resumenHoy(hoy), seguimientosQueTocan(hoy), colaDelDia(10), listarGanadosSinProyecto(),
   ]);
   const mio = resumen.porUsuario.find((x) => x.id === u.id) ?? { enviados: 0, meta: 0, nombre: u.nombre, id: u.id };
   const otros = resumen.porUsuario.filter((x) => x.id !== u.id);
@@ -32,7 +30,15 @@ export default async function Hoy() {
           <div><b>{resumen.embudo.respondio}</b>respondieron</div>
           <div><b>{resumen.embudo.reunion}</b>reuniones</div>
         </div>
-        {ganadosSinProyecto > 0 && u.rol === "dueno" && <p className="suave">{ganadosSinProyecto} ganado(s): el módulo de proyectos llega en la pieza 3.</p>}
+        {ganados.length > 0 && u.rol === "dueno" && (
+          <div className="suave">
+            {ganados.map((g) => (
+              <div key={g.id}>
+                {g.nombre} ({g.ciudad}) ganó y no tiene proyecto. <Link href={`/proyectos/nuevo?prospecto=${g.id}`}>Crear proyecto</Link>
+              </div>
+            ))}
+          </div>
+        )}
       </section>
 
       <h2 className="titulo">Seguimientos que tocan ({seguimientos.length})</h2>
