@@ -1,8 +1,7 @@
 # Pieza 1 — Panel de prospección — diseño
 
-**Fecha:** 2026-09-16 · **Dueño:** Neri Colón · **Estado:** partes 1 y 2 aprobadas en la sesión del
-16-sep; la parte 3 (seguridad, errores, pruebas) quedó escrita pero **sin aprobar**. Ver
-«Decisiones abiertas» al final. Es la pieza 1 de cinco: ver
+**Fecha:** 2026-09-16 · **Dueño:** Neri Colón · **Estado:** aprobada completa (partes 1, 2 y 3) en la
+sesión del 16-sep. Ver «Decisiones abiertas» al final. Es la pieza 1 de cinco: ver
 `2026-09-16-plataforma-vision-general.md` para roles, canales, navegación y orden de construcción.
 
 **Cambios del 16-sep (tarde), acordados al diseñar las otras piezas:** dos roles (`dueno`,
@@ -44,7 +43,7 @@ Quedan como trabajo de contenido, no de código, y siguen pendientes:
 
 **Dónde corre**
 
-- Código en `/home/neracosu/public_html/prospectos.neracosu` (docroot del subdominio
+- Código en `/home/neracosu/public_html/prospectos.neracosu.com` (docroot del subdominio
   `prospectos.neracosu.com`, creado en cPanel el 16-sep), con git, igual que Hotel Marte.
 - Proceso PM2 **`prospectos`**, puerto **3013** (libres al 16-sep: los usados eran 3000–3006, 3009,
   3011, 3012; **reconfirmar con `ss -ltn` antes de usarlo**). Apache hace de proxy con `.htaccess`,
@@ -152,7 +151,7 @@ Proyectos ni Ajustes, solo «Mi PIN»). «Nuevo» es un botón dentro de Prospec
 
 ---
 
-## Parte 3 — Seguridad, errores y pruebas (PENDIENTE DE APROBAR)
+## Parte 3 — Seguridad, errores y pruebas (APROBADA)
 
 **Seguridad**
 
@@ -206,7 +205,7 @@ Proyectos ni Ajustes, solo «Mi PIN»). «Nuevo» es un botón dentro de Prospec
 
 ## Decisiones abiertas (antes o durante la implementación)
 
-1. **Aprobar la parte 3** (arriba).
+1. ~~Aprobar la parte 3~~ — aprobada el 16-sep.
 2. **Precios de farmacias — bloquea la pieza 3.** La propuesta a Farmahogar dice A: USD 2.500 +
    80/mes y B: USD 4.500 + 150/mes. `neracosu.com/para/comercio-y-tienda.html` (que lista farmacia)
    publica $2.500 + 100, $4.000 + 130, $6.200 + 170. La regla del sitio (`public_html/CLAUDE.md`,

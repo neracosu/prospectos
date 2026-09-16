@@ -11,7 +11,7 @@ acá a pedido de Neri y esa misma tarde se amplió de un panel a una plataforma 
 
 | # | Pieza | Spec | Estado |
 |---|---|---|---|
-| 1 | Panel de prospección | `2026-09-16-panel-prospeccion-design.md` | Partes 1 y 2 aprobadas; **parte 3 sin aprobar** |
+| 1 | Panel de prospección | `2026-09-16-panel-prospeccion-design.md` | Aprobada completa |
 | 3 | Proyectos y cobros | `2026-09-16-proyectos-cobros-design.md` | Aprobada |
 | 2 | Buscador e importación | `2026-09-16-buscador-importacion-design.md` | Aprobada |
 | 4 | Recibos de pago | `2026-09-16-recibos-design.md` | Aprobada |
@@ -23,9 +23,7 @@ Estado al 16-sep (tarde):
 
 - Todavía **no hay código**: ni `package.json`, ni Prisma, ni proceso PM2.
 - Repo en GitHub: `git@github.com:neracosu/prospectos.git` (`origin`).
-- Siguiente paso: que Neri apruebe la parte 3 del spec de la pieza 1 y revise los specs nuevos;
-  luego armar el plan de implementación de la pieza 1 (skill `superpowers:writing-plans`), guardado en
-  `docs/superpowers/plans/`. Un plan por pieza.
+- Siguiente paso: ejecutar el plan de la pieza 1 en `docs/superpowers/plans/`. Un plan por pieza.
 - La lista de «Decisiones abiertas» al final del spec de la pieza 1 tiene lo que falta resolver con
   él; la de **precios de farmacias bloquea la propuesta de ese nicho**.
 
