@@ -9,7 +9,7 @@ import { enlacePropuesta, type ProspectoTarjeta } from "@/lib/prospectos-contrat
 const SELECT = {
   id: true, nombre: true, ciudad: true, nota: true, web: true, tipo: true, tamano: true, etapa: true, proximoSeguimiento: true, codigo: true,
   whatsapp: true, telefono: true, email: true, instagram: true, facebook: true, tiktok: true, ordenCola: true,
-  nicho: { select: { nombre: true, slug: true, mensajeInicial: true, mensajeSeguimiento: true } },
+  nicho: { select: { nombre: true, slug: true, mensajeInicial: true, mensajeSeguimiento: true, plantillaPropuesta: true } },
 } as const;
 
 type FilaProspecto = Prisma.ProspectoGetPayload<{ select: typeof SELECT }>;
@@ -22,11 +22,15 @@ async function abrieron(ids: number[]): Promise<Set<number>> {
 
 function aTarjeta(f: FilaProspecto, abrio: boolean, plantilla: "inicial" | "seguimiento"): ProspectoTarjeta & { ordenCola: number } {
   const enlace = enlacePropuesta(f.codigo);
+  const tienePropuesta = f.nicho.plantillaPropuesta !== "";
   const base = plantilla === "inicial" ? f.nicho.mensajeInicial : f.nicho.mensajeSeguimiento;
+  // Sin plantilla no hay enlace que ofrecer: se rellena {enlace} con vacio y
+  // se recorta para que no quede un ": " o similar colgando en el mensaje.
+  const mensaje = rellenar(base, { nombre: f.nombre, enlace: tienePropuesta ? enlace : "" }).trim();
   return {
     id: f.id, nombre: f.nombre, ciudad: f.ciudad, nichoNombre: f.nicho.nombre, nichoSlug: f.nicho.slug, nota: f.nota, web: f.web, tipo: f.tipo, tamano: f.tamano,
-    etapa: f.etapa as Etapa, proximoSeguimiento: f.proximoSeguimiento, abrio, codigo: f.codigo, enlace,
-    mensaje: rellenar(base, { nombre: f.nombre, enlace }),
+    etapa: f.etapa as Etapa, proximoSeguimiento: f.proximoSeguimiento, abrio, codigo: f.codigo, enlace, tienePropuesta,
+    mensaje,
     whatsapp: f.whatsapp, telefono: f.telefono, email: f.email, instagram: f.instagram, facebook: f.facebook, tiktok: f.tiktok, ordenCola: f.ordenCola,
   };
 }

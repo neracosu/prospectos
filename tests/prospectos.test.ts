@@ -67,4 +67,18 @@ describe.runIf(DB_HABILITADA)("consultas de prospectos", () => {
     const f = await fichaProspecto(p.id);
     expect(f?.web).toBe("https://ejemplo.test/");
   });
+  it("un nicho sin plantilla de propuesta no ofrece enlace ni {enlace} en el mensaje", async () => {
+    // etapa "ganado": no altera los conteos ni la cola de los tests de arriba.
+    const sinPlantilla = await prisma.nicho.create({
+      data: {
+        slug: "farmacias-sin-plantilla", nombre: "Farmacias", plantillaPropuesta: "",
+        mensajeInicial: "Buenas, {nombre}. Cuando quiera le mando la propuesta.",
+        mensajeSeguimiento: "Hola de nuevo, {nombre}.", diasSeguimiento: 3,
+      },
+    });
+    const p = await crearProspectoDePrueba(sinPlantilla.id, { nombre: "Farmacia Sin Plantilla", etapa: "ganado" });
+    const f = await fichaProspecto(p.id);
+    expect(f?.tienePropuesta).toBe(false);
+    expect(f?.mensaje).not.toContain("/p/");
+  });
 });

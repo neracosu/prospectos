@@ -1,9 +1,12 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { readFileSync, statSync } from "node:fs";
+import path from "node:path";
 import { prisma } from "@/lib/db";
 import { DB_HABILITADA, limpiarBase, sembrarBasico, crearProspectoDePrueba } from "./ayuda-db";
 import { generarPdf, hashDe, leerPlantilla, _generacionesParaTests } from "@/lib/propuesta";
 import { renderPropuesta } from "@/lib/propuesta-contrato";
+
+const RUTA_PLANTILLA_HOTELES = path.join(import.meta.dirname, "..", "plantillas", "hoteles.html");
 
 describe.runIf(DB_HABILITADA)("propuesta", () => {
   let nichoId: number;
@@ -20,7 +23,7 @@ describe.runIf(DB_HABILITADA)("propuesta", () => {
 
   it("generarPdf produce un A4 real, no regenera con el mismo html y cambia de archivo si el html cambia", async () => {
     const p = await crearProspectoDePrueba(nichoId, { nombre: "Hotel PDF" });
-    const plantilla = readFileSync("plantillas/hoteles.html", "utf8");
+    const plantilla = readFileSync(RUTA_PLANTILLA_HOTELES, "utf8");
     const html = renderPropuesta(plantilla, "Hotel PDF", "#");
     const ruta = await generarPdf(p.codigo, html, hashDe(html));
     expect(statSync(ruta).size).toBeGreaterThan(50_000);
@@ -36,7 +39,7 @@ describe.runIf(DB_HABILITADA)("propuesta", () => {
 
   it("generarPdf concurrente para el mismo html no duplica el trabajo de Chromium", async () => {
     const p = await crearProspectoDePrueba(nichoId, { nombre: "Hotel Concurrente" });
-    const plantilla = readFileSync("plantillas/hoteles.html", "utf8");
+    const plantilla = readFileSync(RUTA_PLANTILLA_HOTELES, "utf8");
     const html = renderPropuesta(plantilla, "Hotel Concurrente", "#");
     const antes = _generacionesParaTests();
     const [r1, r2, r3] = await Promise.all([

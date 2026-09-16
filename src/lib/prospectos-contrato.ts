@@ -17,6 +17,9 @@ export type ProspectoTarjeta = ContactoProspecto & {
   abrio: boolean;
   codigo: string;
   enlace: string;
+  // Si el nicho no tiene plantilla de propuesta (plantillaPropuesta === ""),
+  // el enlace /p/<codigo> no sirve nada: no se ofrece.
+  tienePropuesta: boolean;
   mensaje: string;
 };
 

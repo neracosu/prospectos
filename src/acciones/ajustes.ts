@@ -21,7 +21,7 @@ function mensajePin(err: unknown): string | null {
 
 const NichoZ = z.object({
   id: z.coerce.number().int().positive(),
-  mensajeInicial: z.string().trim().min(10).max(2000).refine((s) => s.includes("{enlace}"), "falta {enlace}"),
+  mensajeInicial: z.string().trim().min(10).max(2000),
   mensajeSeguimiento: z.string().trim().min(10).max(2000),
   diasSeguimiento: z.coerce.number().int().min(1).max(30),
 });
@@ -29,9 +29,16 @@ const NichoZ = z.object({
 export async function guardarNicho(formData: FormData): Promise<Resultado> {
   await exigirRol("dueno");
   const e = NichoZ.safeParse(Object.fromEntries(formData));
-  if (!e.success) return fallo("Revisa: el mensaje inicial lleva {enlace}, y los días van de 1 a 30.");
+  if (!e.success) return fallo("Revisa: el mensaje inicial, y los días van de 1 a 30.");
   try {
     const { id, ...data } = e.data;
+    // {enlace} solo hace falta si el nicho tiene plantilla de propuesta: sin
+    // ella el enlace no sirve nada (ver src/lib/prospectos.ts, aTarjeta).
+    const nicho = await prisma.nicho.findUnique({ where: { id }, select: { plantillaPropuesta: true } });
+    if (!nicho) return fallo(ERROR);
+    if (nicho.plantillaPropuesta !== "" && !data.mensajeInicial.includes("{enlace}")) {
+      return fallo("Revisa: el mensaje inicial lleva {enlace}.");
+    }
     await prisma.nicho.update({ where: { id }, data });
     revalidatePath("/ajustes");
     revalidatePath("/hoy");

@@ -1,4 +1,4 @@
-// Farmahogar ya recibio propuesta el 15-sep: entra en `enviado` con seguimiento vencido.
+// Farmahogar ya recibio propuesta el 15-sep: entra en `enviado` con seguimiento el 2026-09-18.
 import { prisma } from "../src/lib/db";
 import { importarProspectos } from "../src/lib/importar";
 import { sumarDias } from "../src/lib/fecha-caracas";

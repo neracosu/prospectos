@@ -13,10 +13,33 @@ const BASE_RED = {
   tiktok: (u: string) => `https://www.tiktok.com/@${u}`,
 } as const;
 
+const DOMINIO_RED: Record<keyof typeof BASE_RED, string> = {
+  instagram: "instagram.com",
+  facebook: "facebook.com",
+  tiktok: "tiktok.com",
+};
+
+// Si `v` empieza por el dominio de esta red (con o sin protocolo, con o sin
+// www), devuelve lo que sigue despues de la barra; si no, null.
+function trasDominio(v: string, dominio: string): string | null {
+  const re = new RegExp(`^(?:https?:\\/\\/)?(?:www\\.)?${dominio.replace(/\./g, "\\.")}\\/+`, "i");
+  const m = re.exec(v);
+  return m ? v.slice(m[0].length) : null;
+}
+
+// Acepta @usuario, usuario suelto, o la URL completa en cualquier forma
+// (con/sin protocolo, con/sin www, con/sin barra final) y siempre devuelve la
+// URL canonica. Una URL con protocolo que NO es de esta red (la web propia
+// del negocio, por ejemplo) se deja tal cual: no hay usuario que extraerle.
 export function normalizarRed(valor: string, red: keyof typeof BASE_RED): string {
   const v = (valor ?? "").trim();
   if (!v) return "";
-  if (/^https?:\/\//i.test(v)) return v;
-  const usuario = v.replace(/^@/, "").replace(/\/+$/, "");
+  const resto = trasDominio(v, DOMINIO_RED[red]);
+  if (resto === null) {
+    if (/^https?:\/\//i.test(v)) return v;
+    const usuario = v.replace(/^@/, "").replace(/\/+$/, "");
+    return usuario ? BASE_RED[red](usuario) : "";
+  }
+  const usuario = resto.replace(/^@/, "").replace(/\/+$/, "");
   return usuario ? BASE_RED[red](usuario) : "";
 }

@@ -1,12 +1,14 @@
 "use client";
 import { useState, useTransition } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import type { Canal } from "@/lib/canales-contrato";
 import type { ProspectoTarjeta } from "@/lib/prospectos-contrato";
 import { marcarEnviado, saltar } from "@/acciones/prospectos";
 import { BotonesCanal } from "./BotonesCanal";
 
 export function TarjetaCola({ p }: { p: ProspectoTarjeta }) {
+  const router = useRouter();
   const [canal, setCanal] = useState<Canal | null>(null);
   const [error, setError] = useState("");
   const [oculta, setOculta] = useState(false);
@@ -17,7 +19,7 @@ export function TarjetaCola({ p }: { p: ProspectoTarjeta }) {
     if (!si || !canal) return setCanal(null);
     empezar(async () => {
       const r = await marcarEnviado(p.id, canal);
-      if (r.ok) setOculta(true); else setError(r.mensaje);
+      if (r.ok) { setOculta(true); router.refresh(); } else setError(r.mensaje);
     });
   }
 
@@ -38,7 +40,7 @@ export function TarjetaCola({ p }: { p: ProspectoTarjeta }) {
         <>
           <BotonesCanal contacto={p} mensaje={p.mensaje} onAbierto={setCanal} />
           <div className="fila-botones">
-            <button className="boton" disabled={pendiente} onClick={() => empezar(async () => { const r = await saltar(p.id); if (r.ok) setOculta(true); else setError(r.mensaje); })}>Saltar</button>
+            <button className="boton" disabled={pendiente} onClick={() => empezar(async () => { const r = await saltar(p.id); if (r.ok) { setOculta(true); router.refresh(); } else setError(r.mensaje); })}>Saltar</button>
           </div>
         </>
       )}

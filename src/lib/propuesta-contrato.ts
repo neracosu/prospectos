@@ -39,7 +39,9 @@ const SCRIPT_DESCARGA = `
       document.body.appendChild(enlace);
       enlace.click();
       enlace.remove();
-      URL.revokeObjectURL(url);
+      // Revocar de una vez puede cortar la descarga en algunos navegadores
+      // (todavia no terminaron de leer el blob); se espera un poco.
+      setTimeout(function(){ URL.revokeObjectURL(url); }, 2000);
       aviso.textContent = "PDF descargado.";
     } catch (e) {
       location.href = href;

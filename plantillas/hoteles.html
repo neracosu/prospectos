@@ -698,13 +698,14 @@
 </div>
 
 <script>
-  // Personalizacion: ?hotel=Nombre en la direccion, o el nombre que el
-  // generador del PDF deja en data-nombre del documento.
+  // Personalizacion: el nombre que el generador del PDF deja en data-nombre
+  // del documento manda; ?hotel=Nombre en la direccion es solo respaldo
+  // cuando no hay data-nombre (por ejemplo, al abrir el archivo suelto).
   (function () {
     var nombre = "";
-    try { nombre = new URLSearchParams(location.search).get("hotel") || ""; } catch (e) {}
     var doc = document.querySelector(".documento");
-    if (!nombre && doc && doc.dataset.nombre) nombre = doc.dataset.nombre;
+    if (doc && doc.dataset.nombre) nombre = doc.dataset.nombre;
+    if (!nombre) { try { nombre = new URLSearchParams(location.search).get("hotel") || ""; } catch (e) {} }
     nombre = nombre.trim().slice(0, 60);
     if (!nombre) return;
     document.querySelectorAll("[data-hotel]").forEach(function (el) { el.textContent = nombre; });

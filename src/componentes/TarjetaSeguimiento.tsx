@@ -1,12 +1,14 @@
 "use client";
 import { useState, useTransition } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import type { Canal } from "@/lib/canales-contrato";
 import type { ProspectoTarjeta } from "@/lib/prospectos-contrato";
 import { escribirDeNuevo, marcarRespondio, descartar } from "@/acciones/prospectos";
 import { BotonesCanal } from "./BotonesCanal";
 
 export function TarjetaSeguimiento({ p }: { p: ProspectoTarjeta }) {
+  const router = useRouter();
   const [modo, setModo] = useState<"normal" | "escribir" | "pregunta" | "descartar">("normal");
   const [canal, setCanal] = useState<Canal | null>(null);
   const [motivo, setMotivo] = useState("");
@@ -14,7 +16,7 @@ export function TarjetaSeguimiento({ p }: { p: ProspectoTarjeta }) {
   const [oculta, setOculta] = useState(false);
   const [pendiente, empezar] = useTransition();
   if (oculta) return null;
-  const correr = (fn: () => Promise<{ ok: boolean; mensaje?: string }>) => empezar(async () => { const r = await fn(); if (r.ok) setOculta(true); else setError(r.mensaje ?? "Error"); });
+  const correr = (fn: () => Promise<{ ok: boolean; mensaje?: string }>) => empezar(async () => { const r = await fn(); if (r.ok) { setOculta(true); router.refresh(); } else setError(r.mensaje ?? "Error"); });
 
   return (
     <article className="tarjeta">

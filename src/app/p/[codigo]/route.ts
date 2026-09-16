@@ -6,8 +6,8 @@ import { permitirIntento } from "@/lib/rate-limit";
 import { ipCliente } from "@/lib/ip";
 import { leerPlantilla } from "@/lib/propuesta";
 import { renderPropuesta } from "@/lib/propuesta-contrato";
+import { CODIGO_VALIDO } from "@/lib/codigo";
 
-const CODIGO_RE = /^[A-Za-z0-9_-]{22}$/;
 const MINUTOS_DEDUPE = 30;
 
 // Bots que piden el enlace para armar la vista previa (WhatsApp la busca apenas
@@ -30,7 +30,7 @@ async function tieneSesion(): Promise<boolean> {
 }
 
 async function encontrarProspecto(codigo: string) {
-  if (!CODIGO_RE.test(codigo)) return null;
+  if (!CODIGO_VALIDO.test(codigo)) return null;
   const p = await prisma.prospecto.findUnique({ where: { codigo }, select: { id: true, nombre: true, nicho: { select: { plantillaPropuesta: true } } } });
   if (!p || !p.nicho.plantillaPropuesta) return null;
   const plantilla = await leerPlantilla(p.nicho.plantillaPropuesta);
@@ -41,8 +41,8 @@ async function encontrarProspecto(codigo: string) {
 // Deja un Evento "abierto", salvo que quien abre tenga sesion (Neri revisando
 // su propio enlace), sea un bot de vista previa, o ya haya una apertura reciente
 // de la misma IP (refrescos o reintentos del propio navegador no deben sumar
-// aperturas nuevas cada vez). El texto guarda la IP: dato interno para agrupar,
-// nunca se muestra en el panel.
+// aperturas nuevas cada vez). El texto guarda la IP solo para deduplicar; la
+// ficha del prospecto la oculta (no imprime el texto de eventos "abierto").
 async function registrarAbiertoSiHaceFalta(prospectoId: number, req: Request): Promise<void> {
   if (BOT_UA.test(req.headers.get("user-agent") ?? "")) return;
   if (await tieneSesion()) return;
@@ -64,15 +64,22 @@ async function registrarAbiertoSiHaceFalta(prospectoId: number, req: Request): P
 // La unica ruta publica. Solo expone el nombre del negocio.
 export async function GET(req: Request, ctx: { params: Promise<{ codigo: string }> }) {
   const { codigo } = await ctx.params;
-  if (!CODIGO_RE.test(codigo)) return new Response("No encontrado", { status: 404 });
+  if (!CODIGO_VALIDO.test(codigo)) return new Response("No encontrado", { status: 404 });
   // Un codigo invalido y uno que agoto el limite de intentos responden igual
   // (404): no hay forma de distinguir "existe pero estas apurando" desde afuera.
   if (!permitirIntento(`p:${await ipCliente()}`, 60, 60_000)) return new Response("No encontrado", { status: 404 });
   const p = await encontrarProspecto(codigo);
   if (!p) return new Response("No encontrado", { status: 404 });
   await registrarAbiertoSiHaceFalta(p.id, req);
-  const html = renderPropuesta(p.plantilla, p.nombre, `/p/${codigo}/pdf`);
-  return new Response(html, { headers: encabezados() });
+  try {
+    const html = renderPropuesta(p.plantilla, p.nombre, `/p/${codigo}/pdf`);
+    return new Response(html, { headers: encabezados() });
+  } catch (err) {
+    // Una plantilla sin los marcadores esperados no debe tumbar la ruta
+    // publica: se registra y se responde como si el codigo no existiera.
+    console.error("renderPropuesta", codigo, err);
+    return new Response("No encontrado", { status: 404 });
+  }
 }
 
 // Next enrutaria un HEAD sin handler propio al GET (y ejecutaria sus efectos,
@@ -80,7 +87,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ codigo: string 
 // sin cuerpo y sin registrar nada.
 export async function HEAD(_req: Request, ctx: { params: Promise<{ codigo: string }> }) {
   const { codigo } = await ctx.params;
-  if (!CODIGO_RE.test(codigo)) return new Response(null, { status: 404 });
+  if (!CODIGO_VALIDO.test(codigo)) return new Response(null, { status: 404 });
   if (!permitirIntento(`p:${await ipCliente()}`, 60, 60_000)) return new Response(null, { status: 404 });
   const p = await encontrarProspecto(codigo);
   if (!p) return new Response(null, { status: 404 });

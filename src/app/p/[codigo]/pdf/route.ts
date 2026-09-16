@@ -4,6 +4,7 @@ import { permitirIntento } from "@/lib/rate-limit";
 import { ipCliente } from "@/lib/ip";
 import { leerPlantilla, generarPdf, hashDe } from "@/lib/propuesta";
 import { renderPropuesta } from "@/lib/propuesta-contrato";
+import { CODIGO_VALIDO } from "@/lib/codigo";
 
 // Nombre de archivo seguro para el header (ASCII, sin comillas ni barras);
 // la version completa con acentos y demas va aparte en filename* (UTF-8).
@@ -27,7 +28,7 @@ function respuestaFalloGenerico(): Response {
 
 export async function GET(_req: Request, ctx: { params: Promise<{ codigo: string }> }) {
   const { codigo } = await ctx.params;
-  if (!/^[A-Za-z0-9_-]{22}$/.test(codigo)) return new Response("No encontrado", { status: 404 });
+  if (!CODIGO_VALIDO.test(codigo)) return new Response("No encontrado", { status: 404 });
   if (!permitirIntento(`pdf:${await ipCliente()}`, 10, 60_000)) return new Response("Demasiadas descargas. Intenta en un minuto.", { status: 429 });
   const p = await prisma.prospecto.findUnique({ where: { codigo }, select: { nombre: true, nicho: { select: { plantillaPropuesta: true } } } });
   if (!p || !p.nicho.plantillaPropuesta) return new Response("No encontrado", { status: 404 });

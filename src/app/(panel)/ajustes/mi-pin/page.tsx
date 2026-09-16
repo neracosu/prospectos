@@ -2,6 +2,8 @@
 import { exigirSesion } from "@/lib/sesion";
 import { FormularioPin } from "@/componentes/FormularioPin";
 
+export const dynamic = "force-dynamic";
+
 export default async function MiPin() {
   await exigirSesion();
   return (

@@ -29,6 +29,9 @@ export function registrarFallo(claveOriginal: string, max = MAX_FALLOS, ventanaM
   const reg = fallos.get(clave);
   if (!reg || ahora - reg.desde > ventanaMs) { podar(fallos, ahora, ventanaMs); fallos.set(clave, { n: 1, desde: ahora }); return; }
   reg.n += 1;
+  // === a proposito, no >=: el reinicio de `desde` pasa una sola vez, al
+  // cruzar el maximo. Fallos de mas dentro de la misma ventana no vuelven a
+  // extenderla, o alguien fallando sin parar se quedaria bloqueado para siempre.
   if (reg.n === max) reg.desde = ahora;
 }
 

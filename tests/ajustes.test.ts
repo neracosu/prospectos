@@ -38,6 +38,17 @@ describe.runIf(DB_HABILITADA)("ajustes", () => {
     expect((await guardarNicho(fd({ id: String(ids.nichoId), mensajeInicial: "Hola {nombre}: {enlace}", mensajeSeguimiento: "De nuevo {enlace}", diasSeguimiento: "5" }))).ok).toBe(true);
     expect((await prisma.nicho.findUniqueOrThrow({ where: { id: ids.nichoId } })).diasSeguimiento).toBe(5);
   });
+  it("guardarNicho no exige {enlace} en un nicho sin plantilla de propuesta", async () => {
+    const sinPlantilla = await prisma.nicho.create({
+      data: {
+        slug: "farmacias-sin-plantilla", nombre: "Farmacias", plantillaPropuesta: "",
+        mensajeInicial: "Buenas, {nombre}", mensajeSeguimiento: "De nuevo, {nombre}", diasSeguimiento: 3,
+      },
+    });
+    const r = await guardarNicho(fd({ id: String(sinPlantilla.id), mensajeInicial: "Buenas, {nombre}, sin enlace", mensajeSeguimiento: "De nuevo, {nombre}", diasSeguimiento: "4" }));
+    expect(r.ok).toBe(true);
+    expect((await prisma.nicho.findUniqueOrThrow({ where: { id: sinPlantilla.id } })).diasSeguimiento).toBe(4);
+  });
   it("guardarUsuario crea, edita y desactiva sin borrar", async () => {
     const r = await guardarUsuario(fd({ nombre: "Pedro", rol: "prospectador", pin: "222222", metaDiaria: "4" }));
     expect(r.ok).toBe(true);

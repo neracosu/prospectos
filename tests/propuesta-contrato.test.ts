@@ -1,8 +1,9 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
+import path from "node:path";
 import { renderPropuesta, nombreSeguro } from "@/lib/propuesta-contrato";
 
-const plantilla = readFileSync("plantillas/hoteles.html", "utf8");
+const plantilla = readFileSync(path.join(import.meta.dirname, "..", "plantillas", "hoteles.html"), "utf8");
 
 describe("renderPropuesta", () => {
   const html = renderPropuesta(plantilla, "Hotel Yare", "/p/abc/pdf");
