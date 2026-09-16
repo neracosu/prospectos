@@ -37,8 +37,8 @@ Estado al 16-sep (noche): **pieza 1 construida y en producción.**
 - Scripts útiles (PIN siempre por stdin, nunca en la línea de comandos): `scripts/crear-usuario.mjs`,
   `scripts/cambiar-pin.mjs <id>`, `scripts/pin-en-uso.mjs`, `scripts/verificar-flujo.mts` (Playwright
   a 390 px contra el dominio), `scripts/sembrar-nichos.mjs`, `scripts/importar-hoteles.mts`.
-- Siguiente pieza: **3 (Proyectos y cobros)**, luego 2, 4 y 5. Plan nuevo por pieza en
-  `docs/superpowers/plans/`.
+- Siguiente pieza: **3 (Proyectos y cobros)** — plan listo en
+  `docs/superpowers/plans/2026-09-16-pieza-3-proyectos-cobros.md` (11 tareas). Luego 2, 4 y 5.
 - Pendientes de Neri: rotar la contraseña de la base (spec, decisiones abiertas) y decidir los precios
   de farmacias (bloquea la propuesta de ese nicho; hoy `farmacias` no tiene plantilla y la ficha no
   muestra enlace de propuesta).
