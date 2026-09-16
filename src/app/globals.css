@@ -30,3 +30,21 @@ button, input, select, textarea { font: inherit; }
 .teclado__tecla { height: 68px; font-size: 26px; border-radius: 16px; border: 1px solid var(--borde); background: var(--panel); color: var(--tinta); }
 .teclado__tecla:disabled { visibility: hidden; }
 .teclado__tecla:active { background: var(--borde); }
+
+.barra { position: fixed; left: 0; right: 0; bottom: 0; height: var(--barra-alto); display: flex; background: var(--panel); border-top: 1px solid var(--borde); padding-bottom: env(safe-area-inset-bottom); z-index: 10; }
+.barra__item { flex: 1; display: flex; align-items: center; justify-content: center; font-size: 13px; text-decoration: none; color: var(--tinta-suave); }
+.barra__item.activo { color: var(--verde); font-weight: 600; }
+.barra__item--pronto { opacity: .35; }
+.progreso { height: 8px; background: var(--borde); border-radius: 4px; overflow: hidden; margin: 6px 0 10px; }
+.progreso > i { display: block; height: 100%; background: var(--verde); }
+.embudo { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; font-size: 12px; text-align: center; }
+.embudo b { display: block; font-size: 18px; }
+.etiqueta { display: inline-block; font-size: 12px; padding: 2px 8px; border-radius: 999px; background: var(--borde); color: var(--tinta-suave); }
+.etiqueta--enviado { background: #23413a; color: var(--verde); }
+.etiqueta--respondio, .etiqueta--reunion { background: #3b3520; color: var(--ambar); }
+.etiqueta--ganado { background: var(--verde); color: #0b1a12; }
+.etiqueta--descartado { background: #3b2424; color: var(--rojo); }
+.fila { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--borde); text-decoration: none; }
+.pregunta { background: #23413a; border-radius: 10px; padding: 10px; margin-top: 10px; }
+.historial li { padding: 6px 0; border-bottom: 1px solid var(--borde); font-size: 14px; }
+.historial time { color: var(--tinta-suave); font-size: 12px; display: block; }
