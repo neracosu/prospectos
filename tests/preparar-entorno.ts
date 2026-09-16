@@ -9,10 +9,33 @@ const RUTA_ENV = process.env.PROSPECTOS_ENV_FILE ?? "/home/neracosu/.config/pros
 // lado, los tests no arrancan en vez de escribir donde no deben.
 const MARCA = "prospectos_test";
 
+// El archivo esta pensado para cargarse con "set -a; . env; set +a" (bash),
+// asi que un valor puede traer segmentos entre comillas simples o dobles
+// (para proteger caracteres como "!" de la expansion de historial). Bash los
+// quita al sourcear; esta funcion imita ese mismo desarmado para que leer el
+// archivo a mano en Node de el mismo valor.
+function quitarComillasDeBash(valor: string): string {
+  let resultado = "";
+  let i = 0;
+  while (i < valor.length) {
+    const c = valor[i];
+    if (c === "'" || c === '"') {
+      const fin = valor.indexOf(c, i + 1);
+      if (fin === -1) { resultado += valor.slice(i); break; }
+      resultado += valor.slice(i + 1, fin);
+      i = fin + 1;
+    } else {
+      resultado += c;
+      i++;
+    }
+  }
+  return resultado;
+}
+
 function leerDelArchivoEnv(clave: string): string | undefined {
   try {
     for (const linea of readFileSync(RUTA_ENV, "utf8").split("\n")) {
-      if (linea.startsWith(`${clave}=`)) return linea.slice(clave.length + 1).trim().replace(/^"|"$/g, "");
+      if (linea.startsWith(`${clave}=`)) return quitarComillasDeBash(linea.slice(clave.length + 1).trim());
     }
   } catch {
     // Puede no existir en otra maquina; lo que importa es si al final hay URL.

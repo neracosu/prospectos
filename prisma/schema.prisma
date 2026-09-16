@@ -1,0 +1,92 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider          = "mysql"
+  url               = env("DATABASE_URL")
+  // El usuario MySQL de cPanel no puede CREATE DATABASE: shadow dedicada.
+  shadowDatabaseUrl = env("SHADOW_DATABASE_URL")
+}
+
+model Usuario {
+  id         Int      @id @default(autoincrement())
+  nombre     String
+  rol        String   // dueno | prospectador | cliente (pieza 5)
+  activo     Boolean  @default(true)
+  pinHash    String
+  metaDiaria Int      @default(10)
+  creadoEn   DateTime @default(now())
+  eventos    Evento[]
+}
+
+model Nicho {
+  id                 Int         @id @default(autoincrement())
+  slug               String      @unique
+  nombre             String
+  // Plantillas con {nombre} y {enlace}
+  mensajeInicial     String      @db.Text
+  mensajeSeguimiento String      @db.Text
+  // Nombre del archivo en plantillas/ (sin .html). Vacio = sin propuesta en linea.
+  plantillaPropuesta String      @default("")
+  diasSeguimiento    Int         @default(3)
+  prospectos         Prospecto[]
+}
+
+model Prospecto {
+  id                 Int       @id @default(autoincrement())
+  nichoId            Int
+  nicho              Nicho     @relation(fields: [nichoId], references: [id])
+  nombre             String
+  ciudad             String
+  estado             String    @default("")
+  region             String    @default("")
+  tipo               String    @default("")
+  tamano             String    @default("")
+  telefono           String    @default("")
+  whatsapp           String    @default("") // 58XXXXXXXXXX o vacio
+  email              String    @default("")
+  web                String    @default("")
+  instagram          String    @default("")
+  facebook           String    @default("")
+  tiktok             String    @default("")
+  nota               String    @default("") @db.Text
+  fuentes            Json      // lista de URLs (pieza 2 suma {campo: url})
+  origen             String    @default("importado") // importado | manual | overpass | web | maps
+  etapa              String    @default("por_contactar")
+  // Texto ISO YYYY-MM-DD en dia de Caracas. Nulo = sin seguimiento pendiente.
+  proximoSeguimiento String?
+  codigo             String    @unique // 16 bytes base64url, para /p/<codigo>
+  ordenCola          Int       @default(0)
+  // nombre+ciudad normalizados: reimportar no duplica
+  clave              String
+  creadoEn           DateTime  @default(now())
+  eventos            Evento[]
+
+  @@unique([nichoId, clave])
+  @@index([etapa, ordenCola])
+  @@index([etapa, proximoSeguimiento])
+}
+
+model Evento {
+  id          Int       @id @default(autoincrement())
+  prospectoId Int
+  prospecto   Prospecto @relation(fields: [prospectoId], references: [id])
+  usuarioId   Int?
+  usuario     Usuario?  @relation(fields: [usuarioId], references: [id])
+  // etapa | enviado | abierto | nota | saltado | importado | seguimiento
+  tipo        String
+  de          String    @default("")
+  a           String    @default("")
+  canal       String    @default("")
+  texto       String    @default("") @db.Text
+  creadoEn    DateTime  @default(now())
+
+  @@index([prospectoId, creadoEn])
+  @@index([tipo, creadoEn])
+}
+
+model Configuracion {
+  clave String @id
+  valor String @db.Text
+}

@@ -11,5 +11,6 @@ export default defineConfig({
     // en paralelo daba deadlocks al azar).
     fileParallelism: false,
   },
-  resolve: { alias: { "@": path.resolve(__dirname, "src") } },
+  // .mts es modulo ESM nativo: no hay __dirname, se usa import.meta.dirname.
+  resolve: { alias: { "@": path.resolve(import.meta.dirname, "src") } },
 });
