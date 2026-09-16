@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import bcrypt from "bcryptjs";
+import type { Prisma } from "@prisma/client";
 
 // Los tests con base exigen PROSPECTOS_TEST_DB=1 para que un "npm test" casual
 // no toque la base real. Con la bandera, preparar-entorno.ts ya redirigio
@@ -19,6 +20,8 @@ export async function limpiarBase(): Promise<void> {
   await prisma.cobro.deleteMany();
   await prisma.proyecto.deleteMany();
   await prisma.cliente.deleteMany();
+  await prisma.revision.deleteMany();
+  await prisma.busquedaOsm.deleteMany();
   await prisma.prospecto.deleteMany();
   await prisma.nicho.deleteMany();
   await prisma.usuario.deleteMany();
@@ -76,6 +79,12 @@ export async function sembrarCliente(
       codigo: Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2),
     },
   });
+}
+
+export async function sembrarLote(origen: string, filas: Record<string, unknown>[], usuarioId?: number): Promise<string> {
+  const lote = "lote-" + Math.random().toString(36).slice(2);
+  await prisma.revision.createMany({ data: filas.map((datos, i) => ({ lote, origen, fila: i + 1, datos: datos as Prisma.InputJsonValue, estado: "nuevo", usuarioId })) });
+  return lote;
 }
 
 export async function sembrarProyecto(

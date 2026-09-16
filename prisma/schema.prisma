@@ -10,61 +10,68 @@ datasource db {
 }
 
 model Usuario {
-  id         Int      @id @default(autoincrement())
+  id         Int        @id @default(autoincrement())
   nombre     String
   rol        String // dueno | prospectador | cliente (pieza 5)
-  activo     Boolean  @default(true)
+  activo     Boolean    @default(true)
   pinHash    String
-  metaDiaria Int      @default(10)
-  creadoEn   DateTime @default(now())
+  metaDiaria Int        @default(10)
+  creadoEn   DateTime   @default(now())
   eventos    Evento[]
   horas      Horas[]
+  revisiones Revision[]
 }
 
 model Nicho {
-  id                 Int         @id @default(autoincrement())
-  slug               String      @unique
+  id                 Int           @id @default(autoincrement())
+  slug               String        @unique
   nombre             String
   // Plantillas con {nombre} y {enlace}
-  mensajeInicial     String      @db.Text
-  mensajeSeguimiento String      @db.Text
+  mensajeInicial     String        @db.Text
+  mensajeSeguimiento String        @db.Text
   // Nombre del archivo en plantillas/ (sin .html). Vacio = sin propuesta en linea.
-  plantillaPropuesta String      @default("")
-  diasSeguimiento    Int         @default(3)
+  plantillaPropuesta String        @default("")
+  diasSeguimiento    Int           @default(3)
+  // Etiquetas OSM del nicho: lista de pares [clave, valor], p. ej. [["tourism","hotel"],["tourism","motel"]]
+  etiquetaOsm        Json          @default("[]")
   prospectos         Prospecto[]
   proyectos          Proyecto[]
+  busquedasOsm       BusquedaOsm[]
 }
 
 model Prospecto {
-  id                 Int      @id @default(autoincrement())
+  id                 Int        @id @default(autoincrement())
   nichoId            Int
-  nicho              Nicho    @relation(fields: [nichoId], references: [id])
+  nicho              Nicho      @relation(fields: [nichoId], references: [id])
   nombre             String
   ciudad             String
-  estado             String   @default("")
-  region             String   @default("")
-  tipo               String   @default("")
-  tamano             String   @default("")
-  telefono           String   @default("")
-  whatsapp           String   @default("") // 58XXXXXXXXXX o vacio
-  email              String   @default("")
-  web                String   @default("")
-  instagram          String   @default("")
-  facebook           String   @default("")
-  tiktok             String   @default("")
-  nota               String   @default("") @db.Text
+  estado             String     @default("")
+  region             String     @default("")
+  tipo               String     @default("")
+  tamano             String     @default("")
+  telefono           String     @default("")
+  whatsapp           String     @default("") // 58XXXXXXXXXX o vacio
+  email              String     @default("")
+  web                String     @default("")
+  instagram          String     @default("")
+  facebook           String     @default("")
+  tiktok             String     @default("")
+  nota               String     @default("") @db.Text
   fuentes            Json // lista de URLs (pieza 2 suma {campo: url})
-  origen             String   @default("importado") // importado | manual | overpass | web | maps
-  etapa              String   @default("por_contactar")
+  // {campo: url} de donde salio cada dato (pieza 2). `fuentes` sigue siendo la lista plana de URLs.
+  fuentesPorCampo    Json       @default("{}")
+  origen             String     @default("importado") // importado | manual | overpass | web | maps
+  etapa              String     @default("por_contactar")
   // Texto ISO YYYY-MM-DD en dia de Caracas. Nulo = sin seguimiento pendiente.
   proximoSeguimiento String?
-  codigo             String   @unique // 16 bytes base64url, para /p/<codigo>
-  ordenCola          Int      @default(0)
+  codigo             String     @unique // 16 bytes base64url, para /p/<codigo>
+  ordenCola          Int        @default(0)
   // nombre+ciudad normalizados: reimportar no duplica
   clave              String
-  creadoEn           DateTime @default(now())
+  creadoEn           DateTime   @default(now())
   eventos            Evento[]
   cliente            Cliente?
+  revisiones         Revision[]
 
   @@unique([nichoId, clave])
   @@index([etapa, ordenCola])
@@ -94,6 +101,40 @@ model Evento {
   @@index([prospectoId, creadoEn])
   @@index([tipo, creadoEn])
   @@index([proyectoId, creadoEn])
+}
+
+model BusquedaOsm {
+  id           Int      @id @default(autoincrement())
+  nichoId      Int
+  nicho        Nicho    @relation(fields: [nichoId], references: [id])
+  area         String // slug de la ciudad (ver CIUDADES)
+  consultadoEn DateTime @default(now())
+  resultados   Json // ProspectoEntrada[] ya mapeados
+
+  @@unique([nichoId, area])
+}
+
+model Revision {
+  id          Int        @id @default(autoincrement())
+  lote        String // uuid del lote
+  origen      String // overpass | web | maps | importado
+  fila        Int
+  datos       Json // ProspectoEntrada + fuentesPorCampo
+  // nuevo | repetido | error
+  estado      String
+  errores     Json       @default("[]") // lista de textos
+  existenteId Int?
+  existente   Prospecto? @relation(fields: [existenteId], references: [id])
+  // pendiente | aprobado | completado | descartado
+  decision    String     @default("pendiente")
+  decididoPor Int?
+  decididoEn  DateTime?
+  usuarioId   Int?
+  usuario     Usuario?   @relation(fields: [usuarioId], references: [id])
+  creadoEn    DateTime   @default(now())
+
+  @@index([lote, fila])
+  @@index([decision, creadoEn])
 }
 
 model Configuracion {
