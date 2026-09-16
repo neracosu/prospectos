@@ -19,6 +19,8 @@ const Id = z.number().int().positive();
 const CanalZ = z.enum(CANALES);
 const EtapaZ = z.enum(ETAPAS);
 const ERROR = "No se pudo guardar. Intenta de nuevo.";
+// Menos que esto entre dos "reenviar" es un doble toque, no un reenvio real.
+const UMBRAL_DOBLE_TOQUE_MS = 2 * 60 * 1000;
 
 function refrescar(id?: number) {
   revalidatePath("/hoy"); revalidatePath("/prospectos");
@@ -90,21 +92,41 @@ export async function escribirDeNuevo(prospectoId: number, canal: Canal): Promis
   const eCanal = CanalZ.safeParse(canal);
   if (!eCanal.success) return fallo("Ese canal no existe.");
   try {
-    const p = await nichoDe(eId.data);
-    if (!p) return fallo("Ese prospecto ya no existe.");
-    // Condicionado a la etapa leida Y al valor previo del seguimiento: la etapa no
-    // cambia aqui (a diferencia de marcarEnviado), asi que el "antes != despues" es
-    // lo unico que distingue dos toques concurrentes de uno solo. Tambien evita que
-    // un descartar/respondio concurrente deje un proximoSeguimiento colgado.
-    const objetivo = sumarDias(hoyCaracas(), p.nicho.diasSeguimiento);
-    const r = await prisma.prospecto.updateMany({
-      where: { id: eId.data, etapa: "enviado", NOT: { proximoSeguimiento: objetivo } },
-      data: { proximoSeguimiento: objetivo },
+    // Todo dentro de una transaccion con SELECT ... FOR UPDATE: la decision
+    // "es un doble toque o un reenvio real" lee la etapa, la fecha y el ultimo
+    // evento, y ESCRIBE el nuevo evento, en el mismo tramo bloqueado por fila.
+    // Un `updateMany` condicionado (como en marcarEnviado y saltar) no alcanza
+    // aqui porque el update y la creacion del evento son dos sentencias distintas:
+    // sin el candado, un segundo toque concurrente puede leer entre una y otra
+    // y no ver el evento recien creado, duplicandolo.
+    const resultado = await prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT id FROM Prospecto WHERE id = ${eId.data} FOR UPDATE`;
+      const actual = await tx.prospecto.findUnique({
+        where: { id: eId.data },
+        select: { etapa: true, proximoSeguimiento: true, nicho: { select: { diasSeguimiento: true } } },
+      });
+      if (!actual) return fallo("Ese prospecto ya no existe.");
+      if (actual.etapa !== "enviado") return fallo("Solo se reenvía a un prospecto en «Enviado».");
+      const objetivo = sumarDias(hoyCaracas(), actual.nicho.diasSeguimiento);
+      // Si la fecha ya esta en el objetivo, un doble toque y un reenvio real el
+      // mismo dia se ven igual en la fila: se distinguen por la antiguedad del
+      // ultimo evento de envio.
+      let registrarEvento = actual.proximoSeguimiento !== objetivo;
+      if (!registrarEvento) {
+        const ultimo = await tx.evento.findFirst({
+          where: { prospectoId: eId.data, tipo: { in: ["enviado", "seguimiento"] } },
+          orderBy: { creadoEn: "desc" },
+        });
+        registrarEvento = !ultimo || Date.now() - ultimo.creadoEn.getTime() >= UMBRAL_DOBLE_TOQUE_MS;
+      }
+      await tx.prospecto.update({ where: { id: eId.data }, data: { proximoSeguimiento: objetivo } });
+      if (registrarEvento) {
+        await tx.evento.create({ data: { prospectoId: eId.data, usuarioId: u.id, tipo: "seguimiento", canal: eCanal.data } });
+      }
+      return exito();
     });
-    if (r.count === 0) return fallo("Solo se reenvía a un prospecto en «Enviado».");
-    await prisma.evento.create({ data: { prospectoId: eId.data, usuarioId: u.id, tipo: "seguimiento", canal: eCanal.data } });
-    refrescar(eId.data);
-    return exito();
+    if (resultado.ok) refrescar(eId.data);
+    return resultado;
   } catch (err) {
     console.error("escribirDeNuevo", err);
     return fallo(ERROR);
@@ -164,10 +186,17 @@ export async function editarSeguimiento(prospectoId: number, fecha: string): Pro
   if (!e.success) return fallo(ERROR);
   if (fecha !== "" && !esFechaIso(fecha)) return fallo("Fecha inválida.");
   try {
-    const p = await prisma.prospecto.findUnique({ where: { id: e.data }, select: { etapa: true } });
-    if (!p) return fallo("Ese prospecto ya no existe.");
-    if (p.etapa === "ganado" || p.etapa === "descartado") return fallo("Un prospecto ganado o descartado no lleva seguimiento.");
-    await prisma.prospecto.update({ where: { id: e.data }, data: { proximoSeguimiento: fecha || null } });
+    // Condicionado a la etapa leida: un ganado/descartado concurrente no deja un
+    // proximoSeguimiento colgado en una fila que ya no lo necesita.
+    const r = await prisma.prospecto.updateMany({
+      where: { id: e.data, etapa: { notIn: ["ganado", "descartado"] } },
+      data: { proximoSeguimiento: fecha || null },
+    });
+    if (r.count === 0) {
+      const actual = await prisma.prospecto.findUnique({ where: { id: e.data }, select: { etapa: true } });
+      if (!actual) return fallo("Ese prospecto ya no existe.");
+      return fallo("Un prospecto ganado o descartado no lleva seguimiento.");
+    }
     await prisma.evento.create({
       data: { prospectoId: e.data, usuarioId: u.id, tipo: "nota", texto: fecha ? `Seguimiento movido a ${fecha}` : "Seguimiento quitado" },
     });

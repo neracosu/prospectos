@@ -81,7 +81,27 @@ describe.runIf(DB_HABILITADA)("acciones de prospectos", () => {
   it("escribirDeNuevo: dos toques concurrentes cuentan uno solo", async () => {
     const p = await crearProspectoDePrueba(ids.nichoId, { whatsapp: "584120000097", etapa: "enviado", proximoSeguimiento: "2026-09-01" });
     const [a, b] = await Promise.all([escribirDeNuevo(p.id, "whatsapp"), escribirDeNuevo(p.id, "whatsapp")]);
-    expect([a.ok, b.ok].filter(Boolean).length).toBe(1);
+    // Los dos responden ok: el segundo toque es un doble toque ya contado, no un error.
+    expect(a.ok).toBe(true);
+    expect(b.ok).toBe(true);
+    expect(await prisma.evento.count({ where: { prospectoId: p.id, tipo: "seguimiento" } })).toBe(1);
+  });
+
+  it("escribirDeNuevo el mismo dia, con el ultimo toque de hace mas de 2 minutos, es un reenvio real y deja rastro", async () => {
+    const p = await crearProspectoDePrueba(ids.nichoId, { whatsapp: "584120000096", etapa: "enviado", proximoSeguimiento: sumarDias(hoyCaracas(), 3) });
+    await prisma.evento.create({
+      data: { prospectoId: p.id, usuarioId: ids.usuarioId, tipo: "seguimiento", canal: "whatsapp", creadoEn: new Date(Date.now() - 10 * 60 * 1000) },
+    });
+    expect((await escribirDeNuevo(p.id, "whatsapp")).ok).toBe(true);
+    expect(await prisma.evento.count({ where: { prospectoId: p.id, tipo: "seguimiento" } })).toBe(2);
+  });
+
+  it("escribirDeNuevo el mismo dia, con el ultimo toque de hace menos de 2 minutos, no duplica el evento", async () => {
+    const p = await crearProspectoDePrueba(ids.nichoId, { whatsapp: "584120000095", etapa: "enviado", proximoSeguimiento: sumarDias(hoyCaracas(), 3) });
+    await prisma.evento.create({
+      data: { prospectoId: p.id, usuarioId: ids.usuarioId, tipo: "seguimiento", canal: "whatsapp", creadoEn: new Date(Date.now() - 30 * 1000) },
+    });
+    expect((await escribirDeNuevo(p.id, "whatsapp")).ok).toBe(true);
     expect(await prisma.evento.count({ where: { prospectoId: p.id, tipo: "seguimiento" } })).toBe(1);
   });
 
