@@ -7,11 +7,18 @@ import { ipCliente } from "@/lib/ip";
 import { leerPlantilla } from "@/lib/propuesta";
 import { renderPropuesta } from "@/lib/propuesta-contrato";
 
-const NO = () => new Response("No encontrado", { status: 404 });
+const CODIGO_RE = /^[A-Za-z0-9_-]{22}$/;
+const MINUTOS_DEDUPE = 30;
 
-// La unica ruta publica. Solo expone el nombre del negocio. Cada visita deja un
-// Evento "abierto", salvo si quien abre tiene sesion (Neri revisando su enlace).
-//
+// Bots que piden el enlace para armar la vista previa (WhatsApp la busca apenas
+// se envia el mensaje, antes de que nadie lo abra de verdad): no cuentan como
+// una apertura real.
+const BOT_UA = /whatsapp|facebookexternalhit|telegrambot|twitterbot|slackbot|discordbot|linkedinbot|bot\b|crawler|spider|preview/i;
+
+function encabezados() {
+  return { "content-type": "text/html; charset=utf-8", "x-robots-tag": "noindex, nofollow", "cache-control": "no-store" };
+}
+
 // No se usa sesionActual() aqui: esa funcion puede hacer redirect() (lanza una
 // excepcion de Next) cuando el usuario del token ya no esta activo, y esta ruta
 // no tiene donde mandar ese redirect. Alcanza con un token valido para no
@@ -22,15 +29,60 @@ async function tieneSesion(): Promise<boolean> {
   return (await verificarToken(token)) !== null;
 }
 
-export async function GET(_req: Request, ctx: { params: Promise<{ codigo: string }> }) {
-  const { codigo } = await ctx.params;
-  if (!/^[A-Za-z0-9_-]{22}$/.test(codigo)) return NO();
-  if (!permitirIntento(`p:${await ipCliente()}`, 60, 60_000)) return NO();
+async function encontrarProspecto(codigo: string) {
+  if (!CODIGO_RE.test(codigo)) return null;
   const p = await prisma.prospecto.findUnique({ where: { codigo }, select: { id: true, nombre: true, nicho: { select: { plantillaPropuesta: true } } } });
-  if (!p || !p.nicho.plantillaPropuesta) return NO();
+  if (!p || !p.nicho.plantillaPropuesta) return null;
   const plantilla = await leerPlantilla(p.nicho.plantillaPropuesta);
-  if (!plantilla) return NO();
-  if (!(await tieneSesion())) await prisma.evento.create({ data: { prospectoId: p.id, tipo: "abierto" } });
-  const html = renderPropuesta(plantilla, p.nombre, `/p/${codigo}/pdf`);
-  return new Response(html, { headers: { "content-type": "text/html; charset=utf-8", "x-robots-tag": "noindex, nofollow", "cache-control": "no-store" } });
+  if (!plantilla) return null;
+  return { id: p.id, nombre: p.nombre, plantilla };
+}
+
+// Deja un Evento "abierto", salvo que quien abre tenga sesion (Neri revisando
+// su propio enlace), sea un bot de vista previa, o ya haya una apertura reciente
+// de la misma IP (refrescos o reintentos del propio navegador no deben sumar
+// aperturas nuevas cada vez). El texto guarda la IP: dato interno para agrupar,
+// nunca se muestra en el panel.
+async function registrarAbiertoSiHaceFalta(prospectoId: number, req: Request): Promise<void> {
+  if (BOT_UA.test(req.headers.get("user-agent") ?? "")) return;
+  if (await tieneSesion()) return;
+  try {
+    const ip = await ipCliente();
+    const desde = new Date(Date.now() - MINUTOS_DEDUPE * 60_000);
+    const previo = await prisma.evento.findFirst({
+      where: { prospectoId, tipo: "abierto", texto: ip, creadoEn: { gte: desde } },
+    });
+    if (previo) return;
+    await prisma.evento.create({ data: { prospectoId, tipo: "abierto", texto: ip } });
+  } catch (err) {
+    // Si falla el registro del evento, la propuesta se sigue sirviendo igual:
+    // el visitante no debe notar un problema interno de bitacora.
+    console.error("registrarAbierto", prospectoId, err);
+  }
+}
+
+// La unica ruta publica. Solo expone el nombre del negocio.
+export async function GET(req: Request, ctx: { params: Promise<{ codigo: string }> }) {
+  const { codigo } = await ctx.params;
+  if (!CODIGO_RE.test(codigo)) return new Response("No encontrado", { status: 404 });
+  // Un codigo invalido y uno que agoto el limite de intentos responden igual
+  // (404): no hay forma de distinguir "existe pero estas apurando" desde afuera.
+  if (!permitirIntento(`p:${await ipCliente()}`, 60, 60_000)) return new Response("No encontrado", { status: 404 });
+  const p = await encontrarProspecto(codigo);
+  if (!p) return new Response("No encontrado", { status: 404 });
+  await registrarAbiertoSiHaceFalta(p.id, req);
+  const html = renderPropuesta(p.plantilla, p.nombre, `/p/${codigo}/pdf`);
+  return new Response(html, { headers: encabezados() });
+}
+
+// Next enrutaria un HEAD sin handler propio al GET (y ejecutaria sus efectos,
+// como el Evento "abierto"): se define aparte para dar los mismos encabezados
+// sin cuerpo y sin registrar nada.
+export async function HEAD(_req: Request, ctx: { params: Promise<{ codigo: string }> }) {
+  const { codigo } = await ctx.params;
+  if (!CODIGO_RE.test(codigo)) return new Response(null, { status: 404 });
+  if (!permitirIntento(`p:${await ipCliente()}`, 60, 60_000)) return new Response(null, { status: 404 });
+  const p = await encontrarProspecto(codigo);
+  if (!p) return new Response(null, { status: 404 });
+  return new Response(null, { headers: encabezados() });
 }
