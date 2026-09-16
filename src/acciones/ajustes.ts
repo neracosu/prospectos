@@ -7,6 +7,8 @@ import { prisma } from "@/lib/db";
 import { exigirSesion, exigirRol } from "@/lib/sesion";
 import { crearUsuario, cambiarPin, PIN_VALIDO } from "@/lib/usuarios";
 import { fallo, exito, type Resultado } from "@/acciones/resultado";
+import { guardarConfig, CLAVES } from "@/lib/configuracion";
+import { normalizarCelular } from "@/lib/celular-contrato";
 
 // exigirSesion()/exigirRol() van FUERA del try/catch (redirigen lanzando).
 // Cada funcion exportada de aqui es un endpoint publico: nada de auxiliares exportados.
@@ -118,4 +120,43 @@ export async function restablecerPin(usuarioId: number, pinNuevo: string): Promi
     console.error("restablecerPin", err);
     return fallo(ERROR);
   }
+}
+
+const MensajesZ = z.object({
+  recordatorio: z.string().trim().min(10).max(1000).refine((s) => s.includes("{monto}") && s.includes("{vence}"), "variables"),
+  vencido: z.string().trim().min(10).max(1000).refine((s) => s.includes("{monto}") && s.includes("{vence}"), "variables"),
+});
+export async function guardarMensajesCobro(formData: FormData): Promise<Resultado> {
+  await exigirRol("dueno");
+  const e = MensajesZ.safeParse(Object.fromEntries(formData));
+  if (!e.success) return fallo("Los dos mensajes llevan {monto} y {vence} (y entre 10 y 1000 caracteres).");
+  try {
+    await guardarConfig(CLAVES.mensajeRecordatorio, e.data.recordatorio);
+    await guardarConfig(CLAVES.mensajeVencido, e.data.vencido);
+    revalidatePath("/ajustes");
+    return exito();
+  } catch (err) { console.error("guardarMensajesCobro", err); return fallo(ERROR); }
+}
+
+const EmisorZ = z.object({ nombre: z.string().trim().min(2).max(80), rif: z.string().trim().max(20).default(""), whatsapp: z.string().trim().max(40).default(""), email: z.string().trim().max(120).default("") });
+export async function guardarDatosEmisor(formData: FormData): Promise<Resultado> {
+  await exigirRol("dueno");
+  const e = EmisorZ.safeParse(Object.fromEntries(formData));
+  if (!e.success) return fallo("Revisa el nombre (2 a 80 letras).");
+  try {
+    await guardarConfig(CLAVES.emisor, JSON.stringify({ nombre: e.data.nombre, rif: e.data.rif.toUpperCase(), whatsapp: normalizarCelular(e.data.whatsapp), email: e.data.email }));
+    revalidatePath("/ajustes");
+    return exito();
+  } catch (err) { console.error("guardarDatosEmisor", err); return fallo(ERROR); }
+}
+
+export async function guardarTarifa(formData: FormData): Promise<Resultado> {
+  await exigirRol("dueno");
+  const e = z.object({ tarifa: z.coerce.number().min(1).max(500) }).safeParse(Object.fromEntries(formData));
+  if (!e.success) return fallo("La tarifa va entre 1 y 500 dólares por hora.");
+  try {
+    await guardarConfig(CLAVES.tarifaHora, String(e.data.tarifa));
+    revalidatePath("/ajustes");
+    return exito();
+  } catch (err) { console.error("guardarTarifa", err); return fallo(ERROR); }
 }
