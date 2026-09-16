@@ -12,15 +12,15 @@ acá a pedido de Neri y esa misma tarde se amplió de un panel a una plataforma 
 
 | # | Pieza | Spec | Estado |
 |---|---|---|---|
-| 1 | Panel de prospección | `2026-09-16-panel-prospeccion-design.md` | Aprobada completa |
-| 3 | Proyectos y cobros | `2026-09-16-proyectos-cobros-design.md` | Aprobada |
+| 1 | Panel de prospección | `2026-09-16-panel-prospeccion-design.md` | Implementada (16-sep) |
+| 3 | Proyectos y cobros | `2026-09-16-proyectos-cobros-design.md` | Implementada (16-sep) |
 | 2 | Buscador e importación | `2026-09-16-buscador-importacion-design.md` | Aprobada |
 | 4 | Recibos de pago | `2026-09-16-recibos-design.md` | Aprobada |
 | 5 | Portal del cliente | `2026-09-16-portal-cliente-design.md` | Aprobada |
 
 Orden de construcción: **1 → 3 → 2 → 4 → 5**. Cada pieza sale a producción cuando termina.
 
-Estado al 16-sep (noche): **pieza 1 construida y en producción.**
+Estado al 16-sep (noche): **piezas 1 y 3 construidas y en producción.**
 
 - Código en `main` (rama `pieza-1` ya fusionada). Proceso PM2 **`prospectos`**, puerto 3013 en
   `127.0.0.1`, proxy en el `.htaccess` (ver abajo). Repo: `git@github.com:neracosu/prospectos.git`.
@@ -37,8 +37,15 @@ Estado al 16-sep (noche): **pieza 1 construida y en producción.**
 - Scripts útiles (PIN siempre por stdin, nunca en la línea de comandos): `scripts/crear-usuario.mjs`,
   `scripts/cambiar-pin.mjs <id>`, `scripts/pin-en-uso.mjs`, `scripts/verificar-flujo.mts` (Playwright
   a 390 px contra el dominio), `scripts/sembrar-nichos.mjs`, `scripts/importar-hoteles.mts`.
-- Siguiente pieza: **3 (Proyectos y cobros)** — plan listo en
-  `docs/superpowers/plans/2026-09-16-pieza-3-proyectos-cobros.md` (11 tareas). Luego 2, 4 y 5.
+- **Pieza 3 (Proyectos y cobros) en producción:** `/proyectos`, `/proyectos/nuevo`, `/proyectos/[id]` (pestañas
+  cobros · pendientes · horas · versiones · cliente), `/clientes`, `/clientes/[id]`, `/clientes/nuevo`; Ajustes
+  suma mensajes de cobro, datos del emisor y tarifa por hora. **Cron de mensualidades dentro de la app**
+  (`src/instrumentation.ts` → `src/lib/mensualidades.ts`): corre al arrancar y a las 06:00 de Caracas,
+  idempotente por `(proyectoId, mes)`, deja una línea `[mensualidades] <fecha>: N creadas de M activos` en
+  cada corrida (si no aparece tras un `pm2 restart`, el cron no arrancó). Un proyecto con mensualidad 0 no
+  genera cobros; al activar un cliente que ya existía solo se generan mensualidades desde hoy (el rescate
+  de 60 días nunca va antes del primer mes facturado). Recorrido real: `scripts/verificar-flujo-proyectos.mts`.
+- Siguiente pieza: **2 (Buscador e importación)**, luego 4 y 5. Plan nuevo por pieza en `docs/superpowers/plans/`.
 - Pendientes de Neri: rotar la contraseña de la base (spec, decisiones abiertas) y decidir los precios
   de farmacias (bloquea la propuesta de ese nicho; hoy `farmacias` no tiene plantilla y la ficha no
   muestra enlace de propuesta).

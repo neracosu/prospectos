@@ -1,6 +1,6 @@
 # Pieza 3 — Proyectos y cobros — diseño
 
-**Fecha:** 2026-09-16 · **Dueño:** Neri Colón · **Estado:** aprobada en la sesión del 16-sep.
+**Fecha:** 2026-09-16 · **Dueño:** Neri Colón · **Estado:** implementada y en producción el 16-sep (plan `2026-09-16-pieza-3-proyectos-cobros.md`).
 Depende de la pieza 1. Ver `2026-09-16-plataforma-vision-general.md`.
 
 ## Qué resuelve
