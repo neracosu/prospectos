@@ -17,7 +17,7 @@ export default async function Ficha({ params }: { params: Promise<{ id: string }
   if (!p) notFound();
   const contacto: [string, string][] = [
     ["WhatsApp", p.whatsapp ? `https://wa.me/${p.whatsapp}` : ""], ["Teléfono", p.telefono ? `tel:${p.telefono.replace(/[^\d+]/g, "")}` : ""],
-    ["Correo", p.email ? `mailto:${p.email}` : ""], ["Instagram", p.instagram], ["Facebook", p.facebook], ["TikTok", p.tiktok],
+    ["Correo", p.email ? `mailto:${p.email}` : ""], ["Web", p.web], ["Instagram", p.instagram], ["Facebook", p.facebook], ["TikTok", p.tiktok],
   ];
   return (
     <>

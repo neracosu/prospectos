@@ -39,7 +39,7 @@ export function FichaAcciones(props: { id: number; etapa: Etapa; nota: string; p
           {destinos.map((e) => <button key={e} className={"boton" + (e === "descartado" ? " boton--peligro" : "")} disabled={pendiente} onClick={() => correr(() => cambiarEtapa(props.id, e, motivo))}>{ETIQUETA_ETAPA[e]}</button>)}
         </div>
         {destinos.includes("descartado") && <label className="campo"><span>Motivo (para descartar)</span><input value={motivo} onChange={(e) => setMotivo(e.target.value)} /></label>}
-        <label className="campo"><span>Próximo seguimiento</span><input type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} onBlur={() => correr(() => editarSeguimiento(props.id, fecha))} /></label>
+        <label className="campo"><span>Próximo seguimiento</span><input type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} onBlur={() => { if (fecha !== (props.proximoSeguimiento ?? "")) correr(() => editarSeguimiento(props.id, fecha)); }} /></label>
       </section>
       <section className="tarjeta">
         <label className="campo"><span>Nota interna (nunca sale del panel)</span><textarea rows={3} value={nota} onChange={(e) => setNota(e.target.value)} /></label>

@@ -40,7 +40,7 @@ export async function sembrarBasico(): Promise<{ nichoId: number; usuarioId: num
 
 export async function crearProspectoDePrueba(
   nichoId: number,
-  extra: Partial<{ nombre: string; ciudad: string; whatsapp: string; telefono: string; email: string; instagram: string; etapa: string; proximoSeguimiento: string | null; ordenCola: number }> = {},
+  extra: Partial<{ nombre: string; ciudad: string; whatsapp: string; telefono: string; email: string; web: string; instagram: string; etapa: string; proximoSeguimiento: string | null; ordenCola: number }> = {},
 ) {
   const nombre = extra.nombre ?? `Hotel Prueba ${Math.random().toString(36).slice(2, 7)}`;
   const ciudad = extra.ciudad ?? "Caracas";

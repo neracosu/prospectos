@@ -13,6 +13,8 @@ describe.runIf(DB_HABILITADA)("consultas de prospectos", () => {
     const enviadoViejo = await crearProspectoDePrueba(ids.nichoId, { nombre: "Enviado viejo", whatsapp: "584120000001", etapa: "enviado", proximoSeguimiento: "2026-09-10" });
     await crearProspectoDePrueba(ids.nichoId, { nombre: "Enviado futuro", whatsapp: "584120000002", etapa: "enviado", proximoSeguimiento: "2026-09-20" });
     const abierto = await crearProspectoDePrueba(ids.nichoId, { nombre: "Abierto", whatsapp: "584120000003", etapa: "enviado", proximoSeguimiento: "2026-09-16" });
+    // etapa "ganado": no debe alterar los conteos de por_contactar/enviado ni la cola de abajo.
+    await crearProspectoDePrueba(ids.nichoId, { nombre: "Con Web", etapa: "ganado", web: "https://ejemplo.test/" });
     // Historial de "Abierto": fechas fijas y lejanas de la ventana de resumenHoy de
     // abajo, para que este par no se cuente sin querer ahi. Evento mas viejo primero
     // para que "enviado" quede mas nuevo, sin depender del orden de insercion.
@@ -59,5 +61,10 @@ describe.runIf(DB_HABILITADA)("consultas de prospectos", () => {
     expect(f?.historial.map((e) => e.tipo)).toEqual(["enviado", "abierto"]); // mas nuevo primero
     expect(f?.historial[0].usuarioNombre).toBe("Neri");
     expect(await fichaProspecto(999999)).toBeNull();
+  });
+  it("la ficha trae la web del prospecto", async () => {
+    const p = await prisma.prospecto.findFirstOrThrow({ where: { nombre: "Con Web" } });
+    const f = await fichaProspecto(p.id);
+    expect(f?.web).toBe("https://ejemplo.test/");
   });
 });

@@ -7,7 +7,7 @@ import { rellenar } from "@/lib/plantilla-mensaje";
 import { enlacePropuesta, type ProspectoTarjeta } from "@/lib/prospectos-contrato";
 
 const SELECT = {
-  id: true, nombre: true, ciudad: true, nota: true, tipo: true, tamano: true, etapa: true, proximoSeguimiento: true, codigo: true,
+  id: true, nombre: true, ciudad: true, nota: true, web: true, tipo: true, tamano: true, etapa: true, proximoSeguimiento: true, codigo: true,
   whatsapp: true, telefono: true, email: true, instagram: true, facebook: true, tiktok: true, ordenCola: true,
   nicho: { select: { nombre: true, slug: true, mensajeInicial: true, mensajeSeguimiento: true } },
 } as const;
@@ -24,7 +24,7 @@ function aTarjeta(f: FilaProspecto, abrio: boolean, plantilla: "inicial" | "segu
   const enlace = enlacePropuesta(f.codigo);
   const base = plantilla === "inicial" ? f.nicho.mensajeInicial : f.nicho.mensajeSeguimiento;
   return {
-    id: f.id, nombre: f.nombre, ciudad: f.ciudad, nichoNombre: f.nicho.nombre, nichoSlug: f.nicho.slug, nota: f.nota, tipo: f.tipo, tamano: f.tamano,
+    id: f.id, nombre: f.nombre, ciudad: f.ciudad, nichoNombre: f.nicho.nombre, nichoSlug: f.nicho.slug, nota: f.nota, web: f.web, tipo: f.tipo, tamano: f.tamano,
     etapa: f.etapa as Etapa, proximoSeguimiento: f.proximoSeguimiento, abrio, codigo: f.codigo, enlace,
     mensaje: rellenar(base, { nombre: f.nombre, enlace }),
     whatsapp: f.whatsapp, telefono: f.telefono, email: f.email, instagram: f.instagram, facebook: f.facebook, tiktok: f.tiktok, ordenCola: f.ordenCola,

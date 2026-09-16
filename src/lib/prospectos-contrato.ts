@@ -9,6 +9,7 @@ export type ProspectoTarjeta = ContactoProspecto & {
   nichoNombre: string;
   nichoSlug: string;
   nota: string;
+  web: string;
   tipo: string;
   tamano: string;
   etapa: Etapa;
