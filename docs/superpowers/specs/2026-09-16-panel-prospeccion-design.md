@@ -198,6 +198,8 @@ Ajustes**.
 5. **Certificado**: al 16-sep el subdominio todavía no respondía con su propio sitio (DNS o vhost
    recién creados). Confirmar AutoSSL antes de publicar enlaces.
 6. **Rotar la contraseña de la base** (se pegó en el chat).
-7. Qué pasa con los artefactos actuales de hoteles (`JNgfD2HQ` propuesta, `YBFhiJoY` lista) cuando el
-   panel funcione: ¿se dejan como están o se reemplazan por el panel? Los «Contactado» marcados en el
-   navegador de Neri no se pueden leer desde el servidor: si hay alguno, cargarlo a mano.
+7. **Resuelto (Neri, 16-sep):** los artefactos actuales de hoteles (`JNgfD2HQ` propuesta,
+   `YBFhiJoY` lista) son la **base del sistema, con su data incluida**: la propuesta es la plantilla
+   del nicho hoteles y los 132 hoteles de `~/propuestas/hoteles/prospectos/fuentes/*.json` son la
+   primera importación. Los «Contactado» marcados en el navegador de Neri no se pueden leer desde el
+   servidor: si hay alguno, se carga a mano al importar.
