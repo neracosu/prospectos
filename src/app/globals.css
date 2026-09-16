@@ -48,3 +48,23 @@ button, input, select, textarea { font: inherit; }
 .pregunta { background: #23413a; border-radius: 10px; padding: 10px; margin-top: 10px; }
 .historial li { padding: 6px 0; border-bottom: 1px solid var(--borde); font-size: 14px; }
 .historial time { color: var(--tinta-suave); font-size: 12px; display: block; }
+
+.semaforo { display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-right: 6px; }
+.semaforo--rojo { background: var(--rojo); } .semaforo--amarillo { background: var(--ambar); } .semaforo--verde { background: var(--verde); }
+.etiqueta--proyecto-activo { background: #23413a; color: var(--verde); }
+.etiqueta--proyecto-pausado, .etiqueta--proyecto-en_construccion { background: #3b3520; color: var(--ambar); }
+.etiqueta--proyecto-cerrado { background: #3b2424; color: var(--rojo); }
+.cifras { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; text-align: center; }
+.cifras b { display: block; font-size: 18px; }
+.cifras .vencido b { color: var(--rojo); }
+.pestanas { display: flex; gap: 4px; overflow-x: auto; margin: 0 -16px 12px; padding: 0 16px; scrollbar-width: none; }
+.pestanas__item { flex: 0 0 auto; padding: 10px 14px; border-radius: 999px; border: 1px solid var(--borde); color: var(--tinta-suave); text-decoration: none; font-size: 14px; min-height: 44px; display: inline-flex; align-items: center; }
+.pestanas__item.activa { background: var(--verde); color: #0b1a12; border-color: var(--verde); font-weight: 600; }
+.cobro { display: grid; grid-template-columns: 1fr auto; gap: 4px 8px; padding: 10px 0; border-bottom: 1px solid var(--borde); }
+.cobro__monto { font-weight: 600; }
+.etiqueta--vencido { background: #3b2424; color: var(--rojo); } .etiqueta--por_vencer { background: #3b3520; color: var(--ambar); } .etiqueta--pagado { background: #23413a; color: var(--verde); } .etiqueta--anulado { opacity: .6; }
+.pendiente { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--borde); }
+.pendiente input[type=checkbox] { width: 24px; height: 24px; }
+.pendiente .hecho { text-decoration: line-through; color: var(--tinta-suave); }
+.mini { min-height: 36px; padding: 0 10px; font-size: 13px; }
+.cambio--nuevo::before { content: "＋ "; color: var(--verde); } .cambio--mejora::before { content: "↑ "; color: var(--ambar); } .cambio--arreglo::before { content: "✓ "; color: var(--tinta-suave); }

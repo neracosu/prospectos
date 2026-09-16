@@ -1,12 +1,13 @@
 "use client";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import type { Canal, ContactoProspecto } from "@/lib/canales-contrato";
 import { ETAPAS, ETIQUETA_ETAPA, puedePasar, type Etapa } from "@/lib/embudo-contrato";
 import { cambiarEtapa, guardarNota, editarSeguimiento, marcarEnviado, escribirDeNuevo } from "@/acciones/prospectos";
 import { BotonesCanal } from "./BotonesCanal";
 
-export function FichaAcciones(props: { id: number; etapa: Etapa; nota: string; proximoSeguimiento: string | null; contacto: ContactoProspecto; mensaje: string }) {
+export function FichaAcciones(props: { id: number; etapa: Etapa; nota: string; proximoSeguimiento: string | null; contacto: ContactoProspecto; mensaje: string; rol: "dueno" | "prospectador" }) {
   const [nota, setNota] = useState(props.nota);
   const [fecha, setFecha] = useState(props.proximoSeguimiento ?? "");
   const [motivo, setMotivo] = useState("");
@@ -40,6 +41,9 @@ export function FichaAcciones(props: { id: number; etapa: Etapa; nota: string; p
         </div>
         {destinos.includes("descartado") && <label className="campo"><span>Motivo (para descartar)</span><input value={motivo} onChange={(e) => setMotivo(e.target.value)} /></label>}
         <label className="campo"><span>Próximo seguimiento</span><input type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} onBlur={() => { if (fecha !== (props.proximoSeguimiento ?? "")) correr(() => editarSeguimiento(props.id, fecha)); }} /></label>
+        {props.etapa === "ganado" && props.rol === "dueno" && (
+          <div className="fila-botones"><Link className="boton boton--primario" href={`/proyectos/nuevo?prospecto=${props.id}`}>Crear proyecto</Link></div>
+        )}
       </section>
       <section className="tarjeta">
         <label className="campo"><span>Nota interna (nunca sale del panel)</span><textarea rows={3} value={nota} onChange={(e) => setNota(e.target.value)} /></label>

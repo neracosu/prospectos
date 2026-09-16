@@ -2,16 +2,16 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-// Hoy · Prospectos · Buscar · Proyectos · Ajustes. Buscar y Proyectos se activan
-// en las piezas 2 y 3; hasta entonces van deshabilitados. El prospectador no ve
-// Proyectos ni Ajustes (solo "Mi PIN").
+// Hoy · Prospectos · Buscar · Proyectos · Ajustes. Buscar se activa en la
+// pieza 4; hasta entonces va deshabilitado. El prospectador no ve Proyectos
+// ni Ajustes (solo "Mi PIN").
 export function BarraInferior({ rol }: { rol: "dueno" | "prospectador" }) {
   const ruta = usePathname();
   const items = [
     { href: "/hoy", texto: "Hoy" },
     { href: "/prospectos", texto: "Prospectos" },
     { href: "/buscar", texto: "Buscar", pronto: true },
-    ...(rol === "dueno" ? [{ href: "/proyectos", texto: "Proyectos", pronto: true }, { href: "/ajustes", texto: "Ajustes" }] : [{ href: "/ajustes/mi-pin", texto: "Mi PIN" }]),
+    ...(rol === "dueno" ? [{ href: "/proyectos", texto: "Proyectos" }, { href: "/ajustes", texto: "Ajustes" }] : [{ href: "/ajustes/mi-pin", texto: "Mi PIN" }]),
   ];
   return (
     <nav className="barra" aria-label="Secciones">

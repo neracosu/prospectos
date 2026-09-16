@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 const TEXTO_EVENTO: Record<string, string> = { enviado: "Enviado", seguimiento: "Escribió de nuevo", abierto: "Abrió la propuesta", etapa: "Cambio de etapa", nota: "Nota", saltado: "Saltado", importado: "Ingresó" };
 
 export default async function Ficha({ params }: { params: Promise<{ id: string }> }) {
-  await exigirSesion();
+  const u = await exigirSesion();
   const id = Number((await params).id);
   const p = Number.isInteger(id) ? await fichaProspecto(id) : null;
   if (!p) notFound();
@@ -35,7 +35,7 @@ export default async function Ficha({ params }: { params: Promise<{ id: string }
           <p className="suave">{p.abrio ? "El prospecto abrió la propuesta." : "Todavía no la ha abierto."}</p>
         </section>
       )}
-      <FichaAcciones id={p.id} etapa={p.etapa} nota={p.nota} proximoSeguimiento={p.proximoSeguimiento} contacto={p} mensaje={p.mensaje} />
+      <FichaAcciones id={p.id} etapa={p.etapa} nota={p.nota} proximoSeguimiento={p.proximoSeguimiento} contacto={p} mensaje={p.mensaje} rol={u.rol} />
       <section className="tarjeta">
         <b>Historial</b>
         <ul className="historial" style={{ listStyle: "none", padding: 0, margin: 0 }}>
