@@ -31,6 +31,11 @@ describe("mensajeDeCobro", () => {
     expect(enlaceWhatsappCobro("584121234567", "Hola & adiós")).toBe("https://wa.me/584121234567?text=Hola%20%26%20adi%C3%B3s");
     expect(enlaceWhatsappCobro("", "x")).toBeNull();
   });
+  it("colapsa solo espacio horizontal: una plantilla multilinea conserva ambos saltos de linea", () => {
+    const c = { concepto: "extra" as const, detalle: "", monto: 10, vence: "2026-01-01", estado: "pendiente" as const };
+    const multilinea = { recordatorio: "línea 1\n\nlínea 2  con  espacios", vencido: "" };
+    expect(mensajeDeCobro(c, { nombre: "P" }, { nombre: "C", contactoNombre: "" }, multilinea)).toBe("línea 1\n\nlínea 2 con espacios");
+  });
 });
 
 describe.runIf(DB_HABILITADA)("acciones de cobros", () => {
@@ -87,15 +92,16 @@ describe.runIf(DB_HABILITADA)("acciones de cobros", () => {
     expect((await prisma.cobro.findUniqueOrThrow({ where: { id: c.id } })).anuladoMotivo).toBe("se acordó otra cosa");
   });
 
-  it("registrarRecordatorio devuelve el enlace de WhatsApp una vez por dia", async () => {
+  it("registrarRecordatorio devuelve el enlace de WhatsApp una vez por dia; el segundo toque repite el mismo enlace sin duplicar evento", async () => {
     const r = await agregarCobro(fd({ proyectoId: String(proyectoId), concepto: "extra", detalle: "Soporte", monto: "40", vence: "2026-01-01" })); // vencido
     expect(r.ok).toBe(true);
     const c = await prisma.cobro.findFirstOrThrow({ where: { proyectoId, detalle: "Soporte" } });
     const a = await registrarRecordatorio(c.id);
     expect(a.ok).toBe(true);
-    if (a.ok) { expect(a.datos.href).toMatch(/^https:\/\/wa\.me\/584129999999\?text=/); expect(decodeURIComponent(a.datos.href)).toContain("venció"); }
+    if (a.ok) { expect(a.datos.repetido).toBe(false); expect(a.datos.href).toMatch(/^https:\/\/wa\.me\/584129999999\?text=/); expect(decodeURIComponent(a.datos.href)).toContain("venció"); }
     const b = await registrarRecordatorio(c.id);
-    expect(b).toEqual({ ok: false, mensaje: expect.stringContaining("hoy") });
+    expect(b.ok).toBe(true);
+    if (b.ok && a.ok) { expect(b.datos.repetido).toBe(true); expect(b.datos.href).toBe(a.datos.href); }
     expect(await prisma.evento.count({ where: { cobroId: c.id, tipo: "recordatorio" } })).toBe(1);
   });
 
@@ -105,5 +111,36 @@ describe.runIf(DB_HABILITADA)("acciones de cobros", () => {
     await agregarCobro(fd({ proyectoId: String(p2.id), concepto: "extra", detalle: "Cobro", monto: "1", vence: "2026-12-01" }));
     const c = await prisma.cobro.findFirstOrThrow({ where: { proyectoId: p2.id } });
     expect(await registrarRecordatorio(c.id)).toEqual({ ok: false, mensaje: expect.stringContaining("WhatsApp") });
+  });
+
+  it("agregarCobro guarda montos con coma decimal", async () => {
+    const r = await agregarCobro(fd({ proyectoId: String(proyectoId), concepto: "extra", detalle: "Coma decimal", monto: "10,50", vence: "2026-10-01" }));
+    expect(r.ok).toBe(true);
+    const c = await prisma.cobro.findFirstOrThrow({ where: { proyectoId, detalle: "Coma decimal" } });
+    expect(Number(c.monto)).toBe(10.5);
+  });
+
+  it("agregarCobro rechaza pago_unico aunque el detalle sea valido", async () => {
+    const r = await agregarCobro(fd({ proyectoId: String(proyectoId), concepto: "pago_unico", detalle: "Pago inicial", monto: "100", vence: "2026-10-01" }));
+    expect(r.ok).toBe(false);
+  });
+
+  it("marcarPagado guarda el mediodia de Caracas del dia elegido", async () => {
+    const r = await agregarCobro(fd({ proyectoId: String(proyectoId), concepto: "extra", detalle: "Fecha exacta", monto: "20", vence: "2026-09-01" }));
+    expect(r.ok).toBe(true);
+    const c = await prisma.cobro.findFirstOrThrow({ where: { proyectoId, detalle: "Fecha exacta" } });
+    const p = await marcarPagado(fd({ cobroId: String(c.id), pagadoEn: "2026-09-16", canal: "efectivo", referencia: "", nota: "" }));
+    expect(p.ok).toBe(true);
+    const d = await prisma.cobro.findUniqueOrThrow({ where: { id: c.id } });
+    expect(d.pagadoEn?.toISOString()).toBe("2026-09-16T16:00:00.000Z");
+  });
+
+  it("anularCobro deja un solo evento cobro_anulado", async () => {
+    const r = await agregarCobro(fd({ proyectoId: String(proyectoId), concepto: "extra", detalle: "Para anular", monto: "15", vence: "2026-10-01" }));
+    expect(r.ok).toBe(true);
+    const c = await prisma.cobro.findFirstOrThrow({ where: { proyectoId, detalle: "Para anular" } });
+    const a = await anularCobro(c.id, "ya no aplica");
+    expect(a.ok).toBe(true);
+    expect(await prisma.evento.count({ where: { cobroId: c.id, tipo: "cobro_anulado" } })).toBe(1);
   });
 });

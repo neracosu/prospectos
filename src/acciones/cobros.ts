@@ -5,8 +5,8 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { exigirRol } from "@/lib/sesion";
 import { hoyCaracas, esFechaIso } from "@/lib/fecha-caracas";
-import { MONTO_TEXTO } from "@/lib/dinero";
-import { CANALES_COBRO, estadoCobro, type Concepto } from "@/lib/cobros-contrato";
+import { MONTO_TEXTO, formatoUSD } from "@/lib/dinero";
+import { CANALES_COBRO, ETIQUETA_CANAL_COBRO, estadoCobro, type Concepto } from "@/lib/cobros-contrato";
 import { leerConfig, CLAVES } from "@/lib/configuracion";
 import { mensajeDeCobro, enlaceWhatsappCobro } from "@/lib/mensajes-cobro";
 import { fallo, exito, type Resultado } from "@/acciones/resultado";
@@ -39,7 +39,7 @@ export async function marcarPagado(formData: FormData): Promise<Resultado> {
       // Mediodia de Caracas del dia elegido: el mes de Caracas del pago queda bien en cifrasDelMes.
       const r = await tx.cobro.updateMany({ where: { id: d.cobroId, pagadoEn: null, anuladoEn: null }, data: { pagadoEn: new Date(`${d.pagadoEn}T12:00:00-04:00`), canal: d.canal, referencia: d.referencia, nota: d.nota } });
       if (r.count === 0) throw new Error(COBRO_YA_RESUELTO);
-      await tx.evento.create({ data: { proyectoId: c.proyectoId, cobroId: d.cobroId, usuarioId: u.id, tipo: "cobro_pagado", texto: `${Number(c.monto).toFixed(2)} por ${d.canal}${d.referencia ? ` (${d.referencia})` : ""}` } });
+      await tx.evento.create({ data: { proyectoId: c.proyectoId, cobroId: d.cobroId, usuarioId: u.id, tipo: "cobro_pagado", texto: `${formatoUSD(Number(c.monto))} por ${ETIQUETA_CANAL_COBRO[d.canal]}${d.referencia ? ` (${d.referencia})` : ""}` } });
     });
     refrescar(c.proyectoId);
     return exito();
@@ -82,15 +82,20 @@ export async function agregarCobro(formData: FormData): Promise<Resultado> {
   if (!e.success) return fallo("Revisa concepto (cuota o extra), detalle, monto y fecha.");
   const d = e.data;
   try {
-    const c = await prisma.cobro.create({ data: { proyectoId: d.proyectoId, concepto: d.concepto, detalle: d.detalle, monto: new Prisma.Decimal(d.monto.replace(",", ".")), vence: d.vence }, select: { id: true } });
-    await prisma.evento.create({ data: { proyectoId: d.proyectoId, cobroId: c.id, usuarioId: u.id, tipo: "cobro_agregado", texto: `${d.concepto}: ${d.detalle}` } });
+    // Cobro y evento van juntos: un cobro nuevo nunca queda sin su rastro.
+    await prisma.$transaction(async (tx) => {
+      const nuevo = await tx.cobro.create({ data: { proyectoId: d.proyectoId, concepto: d.concepto, detalle: d.detalle, monto: new Prisma.Decimal(d.monto.replace(",", ".")), vence: d.vence }, select: { id: true } });
+      await tx.evento.create({ data: { proyectoId: d.proyectoId, cobroId: nuevo.id, usuarioId: u.id, tipo: "cobro_agregado", texto: `${d.concepto}: ${d.detalle}` } });
+    });
     refrescar(d.proyectoId);
     return exito();
   } catch (err) { console.error("agregarCobro", err); return fallo(ERROR); }
 }
 
-// Devuelve el enlace de WhatsApp con el mensaje y deja rastro. Una vez por dia de Caracas por cobro.
-export async function registrarRecordatorio(cobroId: number): Promise<Resultado<{ href: string }>> {
+// Devuelve el enlace de WhatsApp con el mensaje. Deja rastro la primera vez del dia de Caracas;
+// si ya se recordo hoy, devuelve el mismo enlace con repetido:true (para reabrir WhatsApp si
+// la ventana no abrio), sin duplicar el evento.
+export async function registrarRecordatorio(cobroId: number): Promise<Resultado<{ href: string; repetido: boolean }>> {
   const u = await exigirRol("dueno");
   const e = Id.safeParse(cobroId);
   if (!e.success) return fallo(ERROR);
@@ -99,14 +104,15 @@ export async function registrarRecordatorio(cobroId: number): Promise<Resultado<
     if (!c) return fallo("Ese cobro no existe.");
     if (c.pagadoEn || c.anuladoEn) return fallo("Ese cobro ya está pagado o anulado.");
     const hoy = hoyCaracas();
-    const desde = new Date(`${hoy}T00:00:00-04:00`);
-    if (await prisma.evento.findFirst({ where: { cobroId: c.id, tipo: "recordatorio", creadoEn: { gte: desde } }, select: { id: true } })) return fallo("Ya se recordó hoy. Mañana de nuevo.");
     const mensaje = mensajeDeCobro({ concepto: c.concepto as Concepto, detalle: c.detalle, monto: Number(c.monto), vence: c.vence, estado: estadoCobro(c, hoy) }, c.proyecto, c.proyecto.cliente,
       { recordatorio: await leerConfig(CLAVES.mensajeRecordatorio), vencido: await leerConfig(CLAVES.mensajeVencido) });
     const href = enlaceWhatsappCobro(c.proyecto.cliente.whatsapp, mensaje);
     if (!href) return fallo("El cliente no tiene WhatsApp cargado. Agrégalo en su ficha o copia el mensaje.");
+    const desde = new Date(`${hoy}T00:00:00-04:00`);
+    const yaHoy = await prisma.evento.findFirst({ where: { cobroId: c.id, tipo: "recordatorio", creadoEn: { gte: desde } }, select: { id: true } });
+    if (yaHoy) return exito({ href, repetido: true });
     await prisma.evento.create({ data: { proyectoId: c.proyectoId, cobroId: c.id, usuarioId: u.id, tipo: "recordatorio", canal: "whatsapp", texto: c.detalle } });
     refrescar(c.proyectoId);
-    return exito({ href });
+    return exito({ href, repetido: false });
   } catch (err) { console.error("registrarRecordatorio", err); return fallo(ERROR); }
 }
