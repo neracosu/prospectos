@@ -45,7 +45,8 @@ Estado al 16-sep (noche): **piezas 1 y 3 construidas y en producción.**
   cada corrida (si no aparece tras un `pm2 restart`, el cron no arrancó). Un proyecto con mensualidad 0 no
   genera cobros; al activar un cliente que ya existía solo se generan mensualidades desde hoy (el rescate
   de 60 días nunca va antes del primer mes facturado). Recorrido real: `scripts/verificar-flujo-proyectos.mts`.
-- Siguiente pieza: **2 (Buscador e importación)**, luego 4 y 5. Plan nuevo por pieza en `docs/superpowers/plans/`.
+- Siguiente pieza: **2 (Buscador e importación)** — plan listo en
+  `docs/superpowers/plans/2026-09-16-pieza-2-buscador-importacion.md` (7 tareas). Luego 4 y 5.
 - Pendientes de Neri: rotar la contraseña de la base (spec, decisiones abiertas) y decidir los precios
   de farmacias (bloquea la propuesta de ese nicho; hoy `farmacias` no tiene plantilla y la ficha no
   muestra enlace de propuesta).
