@@ -5,3 +5,4 @@ node_modules/
 cgi-bin/
 pdf/
 .well-known/
+.superpowers/
