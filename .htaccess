@@ -1,0 +1,18 @@
+
+# php -- BEGIN cPanel-generated handler, do not edit
+# Set the “ea-php82” package as the default “PHP” programming language.
+<IfModule mime_module>
+  AddHandler application/x-httpd-ea-php82 .php .php8 .phtml
+</IfModule>
+# php -- END cPanel-generated handler, do not edit
+
+# ---------------------------------------------------------------------------
+# CERRADO HASTA QUE EXISTA LA APP (2026-09-16)
+# Este directorio es el docroot publico del subdominio y tambien el repo del
+# proyecto: sin esta regla Apache serviria CLAUDE.md y docs/ a cualquiera.
+# Se deja pasar solo /.well-known/ para que AutoSSL emita el certificado.
+# Cuando la app corra, este bloque se reemplaza por el proxy a Next (ver spec).
+# ---------------------------------------------------------------------------
+RewriteEngine On
+RewriteRule ^\.well-known/ - [L]
+RewriteRule ^ - [F]
