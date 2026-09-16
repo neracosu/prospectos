@@ -5,19 +5,34 @@ enlace de propuesta personalizado por prospecto y registro de envíos. Entra con
 
 ## Cómo retomar
 
-**El diseño está en `docs/superpowers/specs/2026-09-16-panel-prospeccion-design.md`. Leerlo entero
-antes de tocar nada.** Se armó el 16-sep en una sesión de Hotel Marte y se trasladó acá a pedido de
-Neri, para que este proyecto lleve su propia sesión y su propia memoria.
+**El diseño vive en `docs/superpowers/specs/`. Leer primero `2026-09-16-plataforma-vision-general.md`
+y después el spec de la pieza que toque.** Se armó el 16-sep en una sesión de Hotel Marte, se trasladó
+acá a pedido de Neri y esa misma tarde se amplió de un panel a una plataforma de cinco piezas.
 
-Estado al 16-sep:
+| # | Pieza | Spec | Estado |
+|---|---|---|---|
+| 1 | Panel de prospección | `2026-09-16-panel-prospeccion-design.md` | Partes 1 y 2 aprobadas; **parte 3 sin aprobar** |
+| 3 | Proyectos y cobros | `2026-09-16-proyectos-cobros-design.md` | Aprobada |
+| 2 | Buscador e importación | `2026-09-16-buscador-importacion-design.md` | Aprobada |
+| 4 | Recibos de pago | `2026-09-16-recibos-design.md` | Aprobada |
+| 5 | Portal del cliente | `2026-09-16-portal-cliente-design.md` | Aprobada |
 
-- Partes 1 (arquitectura y datos) y 2 (pantallas) **aprobadas**.
-- Parte 3 (seguridad, errores y pruebas) **escrita, sin aprobar**: empezar mostrándosela a Neri.
+Orden de construcción: **1 → 3 → 2 → 4 → 5**. Cada pieza sale a producción cuando termina.
+
+Estado al 16-sep (tarde):
+
 - Todavía **no hay código**: ni `package.json`, ni Prisma, ni proceso PM2.
-- Siguiente paso tras aprobar la parte 3: pedirle que revise el spec y luego armar el plan de
-  implementación (skill `superpowers:writing-plans`), guardado en `docs/superpowers/plans/`.
-- La lista de «Decisiones abiertas» al final del spec tiene lo que falta resolver con él; la de
-  **precios de farmacias bloquea la propuesta de ese nicho**.
+- Repo en GitHub: `git@github.com:neracosu/prospectos.git` (`origin`).
+- Siguiente paso: que Neri apruebe la parte 3 del spec de la pieza 1 y revise los specs nuevos;
+  luego armar el plan de implementación de la pieza 1 (skill `superpowers:writing-plans`), guardado en
+  `docs/superpowers/plans/`. Un plan por pieza.
+- La lista de «Decisiones abiertas» al final del spec de la pieza 1 tiene lo que falta resolver con
+  él; la de **precios de farmacias bloquea la propuesta de ese nicho**.
+
+Decisiones de Neri del 16-sep que no se deducen del código: el buscador **no hace scraping masivo de
+Google** (bloquea la IP compartida con Adastram); el portal del cliente **no muestra horas ni tarifa**;
+los recibos son «recibo de pago», **nunca «factura»**; el acceso del cliente es **por cliente, no por
+proyecto**.
 
 ## Reglas que no se negocian
 
