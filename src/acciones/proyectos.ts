@@ -42,22 +42,29 @@ export async function crearProyecto(formData: FormData): Promise<Resultado<{ id:
   const e = NuevoZ.safeParse(Object.fromEntries(formData));
   if (!e.success) return fallo("Revisa nombre, montos (números con hasta 2 decimales), fechas y día de cobro (1 a 28).");
   const d = e.data;
+  const pagoUnico = montoDesdeTexto(d.pagoUnico)!;
+  // Sin pago unico, el proyecto puede ser solo-mensualidad; pero no hay como repartir
+  // en cuotas un monto de cero.
+  if (d.formaPago === "cuotas" && pagoUnico === 0) return fallo("Sin pago único no hay cuotas.");
+  const cuotas = pagoUnico === 0 ? [] : generarCuotas(pagoUnico, d.formaPago === "cuotas" ? d.cuotas! : 1, d.fechaInicio);
   try {
     const clienteId = d.clienteId ?? (await clienteDesdeProspecto(d.prospectoId!)).id;
-    const cuotas = generarCuotas(montoDesdeTexto(d.pagoUnico)!, d.formaPago === "cuotas" ? d.cuotas! : 1, d.fechaInicio);
     const p = await prisma.proyecto.create({
       data: {
         clienteId, nombre: d.nombre, nichoId: d.nichoId, pagoUnico: new Prisma.Decimal(d.pagoUnico.replace(",", ".")), mensualidad: new Prisma.Decimal(d.mensualidad.replace(",", ".")),
         horasCotizadas: new Prisma.Decimal(d.horasCotizadas.replace(",", ".")), fechaInicio: d.fechaInicio, fechaEntregaEstimada: d.fechaEntregaEstimada ?? null,
         diaCobroMensual: d.diaCobroMensual, propuestaCodigo: d.propuestaCodigo,
-        cobros: { create: cuotas.map((c) => ({ concepto: cuotas.length === 1 ? "pago_unico" : "cuota", detalle: c.detalle, monto: new Prisma.Decimal(c.monto.toFixed(2)), vence: c.vence })) },
-        eventos: { create: { tipo: "proyecto_creado", usuarioId: u.id, texto: d.formaPago === "cuotas" ? `${cuotas.length} cuotas` : "pago único" } },
+        ...(cuotas.length ? { cobros: { create: cuotas.map((c) => ({ concepto: cuotas.length === 1 ? "pago_unico" : "cuota", detalle: c.detalle, monto: new Prisma.Decimal(c.monto.toFixed(2)), vence: c.vence })) } } : {}),
+        eventos: { create: { tipo: "proyecto_creado", usuarioId: u.id, texto: cuotas.length === 0 ? "sin pago único" : d.formaPago === "cuotas" ? `${cuotas.length} cuotas` : "pago único" } },
       },
       select: { id: true },
     });
     refrescar(p.id);
     return exito({ id: p.id });
-  } catch (err) { console.error("crearProyecto", err); return fallo(ERROR); }
+  } catch (err) {
+    if (err instanceof Error && err.message === "PROSPECTO_NO_GANADO") return fallo("Ese prospecto no está en «Ganado».");
+    console.error("crearProyecto", err); return fallo(ERROR);
+  }
 }
 
 export async function cambiarEstadoProyecto(proyectoId: number, a: EstadoProyecto, motivo = ""): Promise<Resultado> {
@@ -70,12 +77,18 @@ export async function cambiarEstadoProyecto(proyectoId: number, a: EstadoProyect
     if (!p) return fallo("Ese proyecto no existe.");
     const de = p.estado as EstadoProyecto;
     if (!puedePasarProyecto(de, e.data.a)) return fallo(`No se puede pasar de «${de}» a «${e.data.a}».`);
-    const r = await prisma.proyecto.updateMany({ where: { id: e.data.id, estado: de }, data: { estado: e.data.a, ...(e.data.a === "entregado" ? { fechaEntregaReal: hoyCaracas() } : {}) } });
-    if (r.count === 0) return fallo("Alguien más acaba de cambiar este proyecto. Recarga.");
-    await prisma.evento.create({ data: { proyectoId: e.data.id, usuarioId: u.id, tipo: "proyecto_estado", texto: `${de} → ${e.data.a}${e.data.motivo ? `: ${e.data.motivo}` : ""}` } });
+    // El estado y su evento se escriben juntos: si uno falla, el otro tampoco queda.
+    await prisma.$transaction(async (tx) => {
+      const r = await tx.proyecto.updateMany({ where: { id: e.data.id, estado: de }, data: { estado: e.data.a, ...(e.data.a === "entregado" ? { fechaEntregaReal: hoyCaracas() } : {}) } });
+      if (r.count === 0) throw new Error("ESTADO_CAMBIO_CONCURRENTE");
+      await tx.evento.create({ data: { proyectoId: e.data.id, usuarioId: u.id, tipo: "proyecto_estado", texto: `${de} → ${e.data.a}${e.data.motivo ? `: ${e.data.motivo}` : ""}` } });
+    });
     refrescar(e.data.id);
     return exito();
-  } catch (err) { console.error("cambiarEstadoProyecto", err); return fallo(ERROR); }
+  } catch (err) {
+    if (err instanceof Error && err.message === "ESTADO_CAMBIO_CONCURRENTE") return fallo("Alguien más acaba de cambiar este proyecto. Recarga.");
+    console.error("cambiarEstadoProyecto", err); return fallo(ERROR);
+  }
 }
 
 const EditarZ = z.object({

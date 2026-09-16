@@ -12,7 +12,7 @@ vi.mock("next/cache", () => ({ revalidatePath: () => {} }));
 
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
 import { prisma } from "@/lib/db";
-import { DB_HABILITADA, limpiarBase, sembrarBasico, crearProspectoDePrueba, sembrarCliente, sembrarProyecto } from "./ayuda-db";
+import { DB_HABILITADA, limpiarBase, sembrarBasico, crearProspectoDePrueba, sembrarCliente } from "./ayuda-db";
 import { sesionFalsa } from "./ayuda-sesion";
 import { crearProyecto, cambiarEstadoProyecto, editarProyecto } from "@/acciones/proyectos";
 import { crearCliente } from "@/acciones/clientes";
@@ -78,6 +78,27 @@ describe.runIf(DB_HABILITADA)("clientes y proyectos", () => {
     expect(cobros).toHaveLength(1);
     expect(cobros[0]).toMatchObject({ concepto: "pago_unico", detalle: "Pago único", vence: "2026-09-01" });
     expect(Number(cobros[0].monto)).toBe(2500);
+  });
+
+  it("crearProyecto exige que el prospecto este en Ganado", async () => {
+    const pr = await crearProspectoDePrueba(ids.nichoId, { nombre: "Farmacia Pendiente" });
+    const r = await crearProyecto(fd({ prospectoId: String(pr.id), nombre: "Farmacia PMS", nichoId: String(ids.nichoId), pagoUnico: "1000", mensualidad: "50", horasCotizadas: "40", fechaInicio: "2026-09-01", diaCobroMensual: "5", formaPago: "completo" }));
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.mensaje).toMatch(/Ganado/);
+    expect(await prisma.cliente.count({ where: { prospectoId: pr.id } })).toBe(0);
+  });
+
+  it("crearProyecto sin pago unico no crea cobro; con cuotas sin pago unico falla", async () => {
+    const c = await sembrarCliente({ nombre: "Cliente Mensual" });
+    const r = await crearProyecto(fd({ clienteId: String(c.id), nombre: "Solo Mensualidad", nichoId: String(ids.nichoId), pagoUnico: "0", mensualidad: "50", horasCotizadas: "20", fechaInicio: "2026-09-01", diaCobroMensual: "5", formaPago: "completo" }));
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(await prisma.cobro.count({ where: { proyectoId: r.datos.id } })).toBe(0);
+    const r2 = await crearProyecto(fd({ clienteId: String(c.id), nombre: "Solo Mensualidad 2", nichoId: String(ids.nichoId), pagoUnico: "0", mensualidad: "50", horasCotizadas: "20", fechaInicio: "2026-09-01", diaCobroMensual: "5", formaPago: "cuotas", cuotas: "3" }));
+    expect(r2.ok).toBe(false);
+    if (r2.ok) return;
+    expect(r2.mensaje).toBe("Sin pago único no hay cuotas.");
   });
 
   it("cambiarEstadoProyecto respeta el orden, fija fechaEntregaReal y deja evento", async () => {

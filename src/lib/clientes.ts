@@ -27,10 +27,12 @@ export async function fichaCliente(id: number): Promise<(ClienteFila & { proyect
 
 // Crea el cliente a partir del prospecto ganado (o lo devuelve si ya existe).
 // Copia el contacto publicado; la nota interna del prospecto NO se copia.
+// Solo un prospecto en etapa "ganado" se vuelve cliente.
 export async function clienteDesdeProspecto(prospectoId: number): Promise<{ id: number }> {
   const existente = await prisma.cliente.findUnique({ where: { prospectoId }, select: { id: true } });
   if (existente) return existente;
-  const p = await prisma.prospecto.findUniqueOrThrow({ where: { id: prospectoId } });
+  const p = await prisma.prospecto.findUnique({ where: { id: prospectoId, etapa: "ganado" } });
+  if (!p) throw new Error("PROSPECTO_NO_GANADO");
   try {
     return await prisma.cliente.create({
       data: { nombre: p.nombre, whatsapp: p.whatsapp, email: p.email, instagram: p.instagram, facebook: p.facebook, tiktok: p.tiktok, prospectoId, codigo: generarCodigo() },
