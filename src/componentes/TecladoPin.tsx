@@ -9,11 +9,15 @@ export function TecladoPin() {
   const teclas = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "⌫"];
 
   function tocar(t: string, form: HTMLFormElement | null) {
-    if (t === "⌫") return setPin((p) => p.slice(0, -1));
-    if (!t || pin.length >= 6) return;
-    const nuevo = pin + t;
-    setPin(nuevo);
-    if (nuevo.length === 6) setTimeout(() => form?.requestSubmit(), 50);
+    if (pendiente) return; // ya se esta enviando: no tocar el pin o se postea a medio armar
+    if (t === "⌫") { setPin((p) => p.slice(0, -1)); return; }
+    if (!t) return;
+    setPin((p) => {
+      if (p.length >= 6) return p;
+      const nuevo = p + t;
+      if (nuevo.length === 6) setTimeout(() => form?.requestSubmit(), 50);
+      return nuevo;
+    });
   }
 
   return (

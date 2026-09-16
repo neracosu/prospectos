@@ -7,6 +7,7 @@ export type SesionUsuario = { id: number; nombre: string; rol: "dueno" | "prospe
 const secreto = () => {
   const s = process.env.SESION_SECRET;
   if (!s) throw new Error("Falta SESION_SECRET");
+  if (s.length < 32) throw new Error("SESION_SECRET es demasiado corto (minimo 32 caracteres)");
   return new TextEncoder().encode(s);
 };
 
@@ -18,7 +19,7 @@ export async function crearToken(u: SesionUsuario): Promise<string> {
 
 export async function verificarToken(token: string): Promise<SesionUsuario | null> {
   try {
-    const { payload } = await jwtVerify(token, secreto());
+    const { payload } = await jwtVerify(token, secreto(), { algorithms: ["HS256"] });
     const p = Payload.safeParse(payload);
     return p.success ? p.data : null;
   } catch {

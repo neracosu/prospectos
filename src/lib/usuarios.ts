@@ -10,20 +10,26 @@ export async function hashPin(pin: string): Promise<string> {
   return bcrypt.hash(pin, RONDAS);
 }
 
-// Entrar es solo con PIN, sin usuario: el PIN identifica a la persona. Por eso
-// tiene que ser unico entre cuentas activas (pinEnUso) y se compara contra
+// Entrar es solo con PIN, sin usuario: el PIN identifica a la persona. Se
+// busca solo entre cuentas activas, en orden estable, y se compara contra
 // todas: son pocas (Neri y quien lo ayude), bcrypt aguanta.
 export async function buscarPorPin(pin: string): Promise<{ id: number; nombre: string; rol: "dueno" | "prospectador" } | null> {
   if (!PIN_VALIDO.test(pin)) return null;
-  const usuarios = await prisma.usuario.findMany({ where: { activo: true, rol: { in: ["dueno", "prospectador"] } } });
+  const usuarios = await prisma.usuario.findMany({
+    where: { activo: true, rol: { in: ["dueno", "prospectador"] } },
+    orderBy: { id: "asc" },
+  });
   for (const u of usuarios) {
     if (await bcrypt.compare(pin, u.pinHash)) return { id: u.id, nombre: u.nombre, rol: u.rol as "dueno" | "prospectador" };
   }
   return null;
 }
 
+// La unicidad del PIN se exige contra TODAS las cuentas, activas o no: si se
+// reactivara una cuenta desactivada, dos personas terminarian con el mismo
+// PIN y buscarPorPin devolveria siempre la primera que encuentre.
 export async function pinEnUso(pin: string, salvoId?: number): Promise<boolean> {
-  const usuarios = await prisma.usuario.findMany({ where: { activo: true, ...(salvoId ? { id: { not: salvoId } } : {}) } });
+  const usuarios = await prisma.usuario.findMany({ where: { ...(salvoId ? { id: { not: salvoId } } : {}) } });
   for (const u of usuarios) if (await bcrypt.compare(pin, u.pinHash)) return true;
   return false;
 }
