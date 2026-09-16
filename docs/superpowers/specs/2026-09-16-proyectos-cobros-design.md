@@ -50,7 +50,7 @@ Nada se borra. Un cobro equivocado se anula con motivo; un proyecto que no va se
   mismo proyecto y mes. En `pausado` y `cerrado` no genera.
 - Un `extra` se crea a mano (trabajo fuera de alcance).
 - En la primera activación solo se generan mensualidades que vencen desde hoy; el rescate de 60
-  días aplica cuando ya existe alguna.
+  días aplica cuando ya existe alguna, y nunca va antes del primer mes facturado.
 
 ## Pantallas (390 px primero)
 

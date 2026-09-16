@@ -73,4 +73,15 @@ describe("mensualidades", () => {
       { mes: "2026-09", vence: "2026-09-05" },
     ]); // ya existe una mensualidad: se restaura el rescate de 60 dias
   });
+  it("el rescate de 60 dias nunca va antes del primer mes facturado", () => {
+    const p = { estado: "activo", diaCobroMensual: 5, fechaInicio: "2024-01-01" };
+    // Un mes despues de la primera mensualidad, el rescate no debe reabrir meses de antes de ella.
+    expect(mensualidadesQueTocan(p, "2026-10-01", ["2026-10"])).toEqual([]);
+    // Pero si el cron se cayo varios meses, sigue recuperando lo perdido desde el primer mes facturado.
+    expect(mensualidadesQueTocan(p, "2026-10-25", ["2026-08"])).toEqual([
+      { mes: "2026-09", vence: "2026-09-05" },
+      { mes: "2026-10", vence: "2026-10-05" },
+    ]);
+    expect(mensualidadesQueTocan(p, "2026-11-03", ["2026-10"])).toEqual([{ mes: "2026-11", vence: "2026-11-05" }]);
+  });
 });

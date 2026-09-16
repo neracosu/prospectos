@@ -68,20 +68,24 @@ function mesSiguiente(mes: string): string {
 
 // Que mensualidades hay que crear hoy: las que vencen entre hoy-60 y hoy+7, del proyecto activo,
 // no antes de fechaInicio y que no existan ya. Idempotente por construccion.
-// El rescate de 60 dias atras solo aplica si ya existe alguna mensualidad generada: un cliente
-// que recien se activa no debe nacer con cobros vencidos fantasma (meses que nunca se avisaron
-// porque el proyecto no estaba activo todavia).
+// El rescate de 60 dias atras solo aplica si ya existe alguna mensualidad generada, y nunca va
+// antes del primer mes que se facturo (el minimo de existentes): un cliente que recien se activa
+// no debe nacer con cobros vencidos fantasma, y uno viejo tampoco resucita meses de antes de que
+// existiera su primera mensualidad.
 export function mensualidadesQueTocan(
   p: { estado: string; diaCobroMensual: number; fechaInicio: string }, hoy: string, existentes: string[],
 ): { mes: string; vence: string }[] {
   if (p.estado !== "activo") return [];
   const desde = existentes.length === 0 ? hoy : sumarDias(hoy, -60), hasta = sumarDias(hoy, DIAS_AVISO);
+  // Piso del rescate: el mes mas viejo ya facturado. Sin esto, un mes despues de la primera
+  // mensualidad el rescate de 60 dias volvia a abrirse y generaba los meses fantasma otra vez.
+  const piso = existentes.length === 0 ? null : existentes.reduce((a, b) => (a < b ? a : b));
   const salida = [];
   let mes = mesDe(desde);
   const tope = mesDe(hasta);
   while (mes <= tope) {
     const vence = venceMensualidad(mes, p.diaCobroMensual);
-    if (vence >= desde && vence <= hasta && vence >= p.fechaInicio && !existentes.includes(mes)) salida.push({ mes, vence });
+    if ((piso === null || mes >= piso) && vence >= desde && vence <= hasta && vence >= p.fechaInicio && !existentes.includes(mes)) salida.push({ mes, vence });
     mes = mesSiguiente(mes);
   }
   return salida;
