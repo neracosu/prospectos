@@ -1,0 +1,23 @@
+/* src/app/globals.css — base movil primero */
+:root {
+  --fondo: #0f1412; --panel: #171e1b; --borde: #26302c; --tinta: #eef3f0; --tinta-suave: #9db0a6;
+  --verde: #5ed29c; --rojo: #ef6b6b; --ambar: #f0c35a; --radio: 12px;
+  --barra-alto: 64px;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--fondo); color: var(--tinta); font: 16px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+a { color: inherit; }
+button, input, select, textarea { font: inherit; }
+.contenedor { padding: 16px; padding-bottom: calc(var(--barra-alto) + 24px); max-width: 640px; margin: 0 auto; }
+.tarjeta { background: var(--panel); border: 1px solid var(--borde); border-radius: var(--radio); padding: 14px; margin-bottom: 12px; }
+.boton { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; padding: 0 16px; border-radius: 10px; border: 1px solid var(--borde); background: var(--panel); color: var(--tinta); text-decoration: none; cursor: pointer; }
+.boton--primario { background: var(--verde); color: #0b1a12; border-color: var(--verde); font-weight: 600; }
+.boton--peligro { border-color: var(--rojo); color: var(--rojo); }
+.boton:disabled { opacity: .5; cursor: default; }
+.fila-botones { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.campo { display: block; margin-bottom: 12px; }
+.campo > span { display: block; font-size: 14px; color: var(--tinta-suave); margin-bottom: 4px; }
+.campo input, .campo select, .campo textarea { width: 100%; min-height: 44px; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--borde); background: #0c100e; color: var(--tinta); }
+.suave { color: var(--tinta-suave); font-size: 14px; }
+.error { color: var(--rojo); font-size: 14px; }
+.titulo { font-size: 20px; margin: 4px 0 12px; }

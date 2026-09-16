@@ -5,4 +5,7 @@ node_modules/
 cgi-bin/
 pdf/
 .well-known/
+tsconfig.tsbuildinfo
+next-env.d.ts
+/capturas/
 .superpowers/
