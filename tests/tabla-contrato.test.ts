@@ -53,6 +53,11 @@ describe("validarFila", () => {
     expect(validarFila({ ...base, fuente: "https://maps.test/?q=" + "x".repeat(2000) }).errores).toContain("La fuente no puede pasar de 2000 caracteres");
     // Se mide el valor ya normalizado: normalizarRed convierte @usuario en URL.
     expect(validarFila({ ...base, instagram: "@" + "u".repeat(180) }).errores).toContain("El Instagram no puede pasar de 191 caracteres");
+    // Una red que venia escrita y no se entiende se avisa, no se pierde en silencio.
+    expect(validarFila({ ...base, instagram: "https://hotelyare.com" }).errores).toContain("El Instagram no se entiende");
+    expect(validarFila({ ...base, facebook: "https://wa.me/584121234567" }).errores).toContain("El Facebook no se entiende");
+    expect(validarFila({ ...base, tiktok: "mi-sitio.com/videos" }).errores).toContain("El TikTok no se entiende");
+    expect(validarFila({ ...base, instagram: "@hotela" }).errores).toEqual([]);
   });
 
   it("marca errores: sin ciudad, whatsapp sin formato", () => {

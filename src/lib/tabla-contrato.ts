@@ -109,6 +109,11 @@ export function validarFila(f: Record<Columna, string>): { entrada: EntradaValid
     nota: f.nota.trim(), fuentes: fuente ? [fuente] : [], fuentesPorCampo: {},
   };
   if (fuente) for (const c of ["nombre", "ciudad", "estado", "tipo", "tamano", "telefono", "whatsapp", "email", "web", "instagram", "facebook", "tiktok"] as const) if (entrada[c]) entrada.fuentesPorCampo[c] = fuente;
+  // Una red que venia escrita y no se pudo entender se avisa, igual que el
+  // WhatsApp: antes se perdia en silencio y la fila entraba "bien" sin el dato.
+  for (const [columna, etiqueta] of [["instagram", "El Instagram"], ["facebook", "El Facebook"], ["tiktok", "El TikTok"]] as const) {
+    if (f[columna].trim() && !entrada[columna]) errores.push(`${etiqueta} no se entiende`);
+  }
   errores.push(...validarTopes(entrada));
   return { entrada, errores };
 }
