@@ -1,6 +1,6 @@
 # Pieza 2 — Buscador e importación — diseño
 
-**Fecha:** 2026-09-16 · **Dueño:** Neri Colón · **Estado:** aprobada en la sesión del 16-sep.
+**Fecha:** 2026-09-16 · **Dueño:** Neri Colón · **Estado:** implementada; en producción desde el 17-sep (ver «Estado» al final).
 Depende de la pieza 1. Ver `2026-09-16-plataforma-vision-general.md`.
 
 ## Qué resuelve
@@ -119,3 +119,36 @@ cerrar el teléfono y seguir después. Los lotes aprobados o descartados se limp
 
 Búsquedas masivas en Google, API de Places, adivinar redes por nombre, enriquecimiento con servicios
 de terceros, lectura de PDF o imágenes, geolocalización por mapa.
+
+## Estado al 17-sep: implementada y en producción
+
+Lo construido difiere de este diseño en estos puntos, a propósito o por decisión pendiente:
+
+1. **Overpass busca por radio alrededor de 13 ciudades** (`CIUDADES` en `src/lib/overpass-contrato.ts`,
+   con alias como «Puerto La Cruz» → Barcelona), no dentro de un área administrativa, y no hay opción
+   «estado». La ciudad que se guarda es la del centro elegido: «Margarita» etiqueta como Porlamar
+   cualquier punto de la isla.
+2. **Tiempos reales de Overpass:** inactividad 60 s y plazo total 90 s (la consulta lleva
+   `[timeout:60]`). Una consulta a la vez por proceso, 5 s entre consultas, caché de 7 días en
+   `BusquedaOsm` con huella de la consulta: cambiar `etiquetaOsm` la invalida. Solo se cachean
+   respuestas 200 con resultados; la caché vencida se sirve diciendo de cuántos días es.
+3. **La clave de duplicado no quita «hotel/farmacia/posada» inicial.** Es la de la pieza 1
+   (`nombre|ciudad` normalizados). Cambiarla recalcula la clave de todos los prospectos en producción:
+   decisión de Neri, pendiente. Costo: «Hotel Yare» y «Yare» no se detectan como repetidos.
+4. **Las «diferencias resaltadas» del repetido no se muestran:** la tarjeta nombra los campos que se
+   le pueden completar al existente. Completar nunca pisa un dato.
+5. **La bandeja es paginada** (50 por página, pendientes primero, orden estable) y «Aprobar las nuevas»
+   va de a 500 por llamada en bucle con avance; se detiene sola si una pasada no aprueba nada.
+6. **Dos columnas de fuente:** `Prospecto.fuentes` es la lista plana de URLs y `Prospecto.fuentesPorCampo`
+   el mapa `{campo: url}`. `Revision` lleva además `fila`, `errores`, `decididoPor` y `decididoEn`.
+7. **Leer web:** una lectura por minuto y por prospecto; deja un `Evento` de tipo `lectura_web`; al
+   aplicar una sugerencia la fuente tiene que ser la web cargada o la URL final de la última lectura.
+8. **Recorrido Playwright** (`scripts/verificar-flujo-buscar.mts`): importar, corregir, aprobar en
+   bloque, descartar y descarga de la plantilla. Pegar un enlace de Maps quedó fuera a propósito:
+   exigiría salir a Google en cada corrida.
+9. **Importar y alta manual** comparten los topes de nombre/ciudad/estado y la guarda del par
+   nombre+ciudad ≤ 191; el alta manual sigue sin validar formato de correo y con topes propios de
+   email/nota/fuente (pendiente de Neri, sin riesgo de error de base).
+10. **Toda descarga sale por `src/lib/red-segura.ts`:** redes privadas y nombres locales bloqueados en
+    cada salto, IP fijada tras el DNS, plazo total 30 s separado de la inactividad de 10 s. Un
+    `dns.promises.lookup` abandonado no se cancela al vencer el plazo (Node 20).

@@ -20,7 +20,7 @@ acá a pedido de Neri y esa misma tarde se amplió de un panel a una plataforma 
 
 Orden de construcción: **1 → 3 → 2 → 4 → 5**. Cada pieza sale a producción cuando termina.
 
-Estado al 16-sep (noche): **piezas 1 y 3 construidas y en producción.**
+Estado al 17-sep: **piezas 1, 3 y 2 construidas y en producción.**
 
 - Código en `main` (rama `pieza-1` ya fusionada). Proceso PM2 **`prospectos`**, puerto 3013 en
   `127.0.0.1`, proxy en el `.htaccess` (ver abajo). Repo: `git@github.com:neracosu/prospectos.git`.
@@ -36,7 +36,8 @@ Estado al 16-sep (noche): **piezas 1 y 3 construidas y en producción.**
   `RewriteCond %{REQUEST_FILENAME} !-f`: Apache serviría el repo entero.
 - Scripts útiles (PIN siempre por stdin, nunca en la línea de comandos): `scripts/crear-usuario.mjs`,
   `scripts/cambiar-pin.mjs <id>`, `scripts/pin-en-uso.mjs`, `scripts/verificar-flujo.mts` (Playwright
-  a 390 px contra el dominio), `scripts/sembrar-nichos.mjs`, `scripts/importar-hoteles.mts`.
+  a 390 px contra el dominio), `scripts/verificar-flujo-proyectos.mts`, `scripts/verificar-flujo-buscar.mts`,
+  `scripts/sembrar-nichos.mjs`, `scripts/importar-hoteles.mts`, `scripts/generar-iconos.mts`.
 - **Pieza 3 (Proyectos y cobros) en producción:** `/proyectos`, `/proyectos/nuevo`, `/proyectos/[id]` (pestañas
   cobros · pendientes · horas · versiones · cliente), `/clientes`, `/clientes/[id]`, `/clientes/nuevo`; Ajustes
   suma mensajes de cobro, datos del emisor y tarifa por hora. **Cron de mensualidades dentro de la app**
@@ -45,8 +46,57 @@ Estado al 16-sep (noche): **piezas 1 y 3 construidas y en producción.**
   cada corrida (si no aparece tras un `pm2 restart`, el cron no arrancó). Un proyecto con mensualidad 0 no
   genera cobros; al activar un cliente que ya existía solo se generan mensualidades desde hoy (el rescate
   de 60 días nunca va antes del primer mes facturado). Recorrido real: `scripts/verificar-flujo-proyectos.mts`.
-- Siguiente pieza: **2 (Buscador e importación)** — plan listo en
-  `docs/superpowers/plans/2026-09-16-pieza-2-buscador-importacion.md` (7 tareas). Luego 4 y 5.
+- **Pieza 2 (Buscador e importación) en producción:** `/buscar` con pestañas `?t=osm|maps|importar|bandeja`
+  (Mapa · Maps · Importar · Bandeja; un lote se abre con `?t=bandeja&lote=<uuid>`, paginado de a 50),
+  `/buscar/plantilla?formato=xlsx|csv`, «Leer web» en la ficha del prospecto (sugiere contactos publicados
+  en su web; solo llena campos vacíos; una lectura por minuto), y PWA mínima: `/manifest.webmanifest` con
+  Web Share Target, así que compartir un enlace de Google Maps desde el teléfono abre `/buscar?url=` (o
+  dentro de `?text=`). **Nada entra al panel sin pasar por la bandeja** (`Revision`): Overpass, Maps, texto
+  pegado y archivos crean un lote; cada fila se aprueba, completa (solo campos vacíos del existente),
+  corrige o descarta. Cada dato lleva su fuente: `Prospecto.fuentes` (lista) y `fuentesPorCampo` (mapa).
+  Recorrido real: `scripts/verificar-flujo-buscar.mts` (PIN por stdin; escribe en la base de
+  `DATABASE_URL` y maneja el sitio de `BASE_URL`, por defecto `127.0.0.1:3013`: tienen que ser la misma
+  instancia; limpia lo que crea por la marca `(PRUEBA) <timestamp>`).
+  - **Toda petición saliente va por `src/lib/red-segura.ts`** (`descargar`), nunca `fetch` en el servidor:
+    solo http(s), sin IPs privadas ni nombres locales, DNS resuelto y fijado, plazo total 30 s separado
+    de la inactividad de 10 s, tope de bytes, máximo 3 redirecciones.
+  - **Overpass:** una consulta a la vez por proceso, 5 s entre consultas, User-Agent identificado, caché
+    de 7 días en `BusquedaOsm` con huella de la consulta (cambiar `etiquetaOsm` la invalida); solo se
+    cachean respuestas 200 con resultados; una búsqueda puede tardar hasta 90 s. Ciudades y alias en
+    `CIUDADES` de `src/lib/overpass-contrato.ts`. Un nicho sin `etiquetaOsm` no se puede buscar en el mapa
+    (lo llena `scripts/sembrar-nichos.mjs`). `PROSPECTOS_OVERPASS_ESPERA_MS` solo se respeta fuera de
+    producción.
+  - **Segundo cron dentro de la app:** `src/instrumentation.ts` → `limpiarLotesViejos(30)`, a la misma hora
+    que las mensualidades; deja `[revision] N lotes viejos limpiados` (si no aparece tras un
+    `pm2 restart`, no arrancó). Es lo único que borra algo en toda la app: filas de `Revision` ya
+    decididas, nunca un `Prospecto`.
+  - ⚠️ **La cadena de imports de `src/instrumentation.ts` no puede tocar ningún `node:`.** Next la compila
+    también para edge y un import con esquema deja **todas** las rutas en 500; `tsc` y los tests pasan
+    igual, solo `next build` lo detecta. Hoy son 9 archivos (`mensualidades`, `revision`,
+    `revision-contrato`, `clave-prospecto`, `cobros-contrato`, `db`, `dinero`, `fecha-caracas`); por eso
+    `crearLote` usa el `crypto` global. Revisar el grafo antes de agregarle un import.
+  - ⚠️ **Migraciones solo con `prisma migrate deploy`; nunca `migrate dev` ni `db push` contra ninguna
+    base.** Prisma no emite `DEFAULT` para columnas `Json` en MariaDB y `migrate diff` pide siempre
+    `MODIFY … JSON NOT NULL` con `DEFAULT []` sin comillas (SQL inválido): es el desencuentro de Prisma
+    con el `LONGTEXT + json_valid` de MariaDB, no un cambio pendiente. Al agregar una columna Json:
+    `migrate dev --create-only` → escribir a mano el `ALTER TABLE … MODIFY … JSON NOT NULL DEFAULT '{}'`
+    (ver `20260917000100_json_defaults`) → `migrate deploy`.
+  - **Topes compartidos** entre importación y alta manual en `TOPES` de `src/lib/tabla-contrato.ts`
+    (nombre 120, ciudad 80, estado 60, y el par nombre+ciudad ≤ 191, que es el largo de `clave`).
+  - La clave de duplicado sigue siendo la de la pieza 1 (`nombre|ciudad` normalizados): **no quita
+    «hotel/farmacia/posada» inicial** como pedía la spec. Cambiarla recalcula la clave de todos los
+    prospectos; decisión de Neri, pendiente.
+  - `scripts/generar-iconos.mts` regenera `public/icono-{192,512}.png` desde `public/icono.svg`; no
+    dibujar los PNG a mano.
+- ⚠️ **Procesos: matar solo por PID.** Nunca `pkill`/`killall` ni matar por patrón en este servidor:
+  `pkill -f next-server` tumbó los cinco sitios de PM2 el 16-sep (Adastram incluido). Un dev server de
+  prueba se lanza desde un clon fuera del docroot con `DATABASE_URL` de prueba, con
+  `node_modules/.bin/next dev -p <puerto>` (sin `npx`, que deja un hijo que sobrevive al kill del padre),
+  guardando `$!`, y al terminar `kill $PID` más `pgrep -af <marca-del-clon>`. Nunca `next dev` ni
+  `next build` en este directorio salvo el build del despliegue.
+- Siguiente pieza: **4 (Recibos)**, luego 5 (Portal del cliente). Plan nuevo por pieza en
+  `docs/superpowers/plans/`. Pendiente aparte: la **pasada de UX** del panel
+  (`docs/superpowers/specs/2026-09-17-ux-panel-design.md`, propuesta sin aprobar).
 - Pendientes de Neri: rotar la contraseña de la base (spec, decisiones abiertas) y decidir los precios
   de farmacias (bloquea la propuesta de ese nicho; hoy `farmacias` no tiene plantilla y la ficha no
   muestra enlace de propuesta).
