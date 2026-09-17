@@ -10,7 +10,7 @@ export function MasAcciones({ principal, children, etiqueta = "Más acciones" }:
     <>
       <div className="fila-botones">
         {principal}
-        <button type="button" className="boton boton--mas" aria-label={etiqueta} aria-expanded={abierto} aria-controls={id} onClick={() => setAbierto((a) => !a)}><span aria-hidden="true">···</span></button>
+        <button type="button" className="boton boton--mas" aria-label={etiqueta} aria-expanded={abierto} aria-controls={abierto ? id : undefined} onClick={() => setAbierto((a) => !a)}><span aria-hidden="true">···</span></button>
       </div>
       {abierto && <div className="fila-botones fila-botones--secundarias" id={id}>{children}</div>}
     </>

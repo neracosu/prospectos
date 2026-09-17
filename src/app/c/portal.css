@@ -4,6 +4,8 @@
 html:has(.portal) {
   --fondo: #f1f4f2; --panel: #ffffff; --borde: #d0d6d3; --tinta: #1a1d1c; --tinta-suave: #5d6664;
   --verde: #1f5a45; --rojo: #8f2a23; --ambar: #93661c; --radio: 10px;
+  /* El portal conserva su borde de siempre en botones y pestanas (el panel usa uno mas marcado). */
+  --borde-control: #d0d6d3;
 }
 html:has(.portal), html:has(.portal) body { background: var(--fondo); color: var(--tinta); }
 /* Las fuentes las define next/font en el envoltorio del layout (--fuente-sans, --fuente-serif): por eso

@@ -38,7 +38,7 @@ export function TarjetaCola({ p }: { p: ProspectoTarjeta }) {
         </div>
       ) : (
         <BotonesCanal contacto={p} mensaje={p.mensaje} onAbierto={setCanal}
-          extra={<button className="boton" disabled={pendiente} onClick={() => empezar(async () => { const r = await saltar(p.id); if (r.ok) { setOculta(true); router.refresh(); } else setError(r.mensaje); })}>Saltar</button>} />
+          alLado={<button className="boton" disabled={pendiente} onClick={() => empezar(async () => { const r = await saltar(p.id); if (r.ok) { setOculta(true); router.refresh(); } else setError(r.mensaje); })}>Saltar</button>} />
       )}
       {error && <p className="error" role="alert">{error}</p>}
     </article>

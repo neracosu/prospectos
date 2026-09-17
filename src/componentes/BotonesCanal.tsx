@@ -6,12 +6,12 @@ import { MasAcciones } from "./MasAcciones";
 
 // Dibuja un boton por canal disponible. Al tocar uno, abre la app externa y
 // avisa al padre que canal se uso para que pregunte "¿Se envio?" al volver.
-// El primer canal disponible es la accion principal; los demas, copiar y `extra` (lo que el padre quiera
-// sumar, como Saltar) quedan detras de «···»: una tarjeta ensena una sola accion en verde.
-export function BotonesCanal({ contacto, mensaje, onAbierto, extra }: { contacto: ContactoProspecto; mensaje: string; onAbierto: (canal: Canal) => void; extra?: ReactNode }) {
+// El primer canal disponible es la accion principal (la unica en verde); los demas canales y copiar quedan
+// detras de «···». `alLado` es lo que el padre necesita a un toque junto a la principal (Saltar, en la cola).
+export function BotonesCanal({ contacto, mensaje, onAbierto, alLado }: { contacto: ContactoProspecto; mensaje: string; onAbierto: (canal: Canal) => void; alLado?: ReactNode }) {
   const [copiando, setCopiando] = useState<Canal | null>(null);
   const acciones = canalesDisponibles(contacto, mensaje);
-  if (!acciones.length) return <><p className="suave">Sin contacto publicado.</p><div className="fila-botones"><BotonCopiar texto={mensaje} />{extra}</div></>;
+  if (!acciones.length) return <><p className="suave">Sin contacto publicado.</p><div className="fila-botones"><BotonCopiar texto={mensaje} />{alLado}</div></>;
   const enlace = (a: (typeof acciones)[number], principal: boolean) => (
     <a key={a.canal} href={a.href} target={a.canal === "whatsapp" || a.modo === "copiar_y_abrir" ? "_blank" : undefined} rel="noopener"
       className={"boton" + (principal ? " boton--primario" : "")}
@@ -23,10 +23,9 @@ export function BotonesCanal({ contacto, mensaje, onAbierto, extra }: { contacto
     </a>
   );
   return (
-    <MasAcciones principal={enlace(acciones[0], true)} etiqueta="Otros canales y más acciones">
+    <MasAcciones principal={<>{enlace(acciones[0], true)}{alLado}</>} etiqueta="Otros canales y copiar el mensaje">
       {acciones.slice(1).map((a) => enlace(a, false))}
       <BotonCopiar texto={mensaje} />
-      {extra}
     </MasAcciones>
   );
 }

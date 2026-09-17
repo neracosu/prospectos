@@ -17,7 +17,7 @@ export function AccionesProyecto({ proyecto }: { proyecto: P }) {
   const destinos = ESTADOS_PROYECTO.filter((e) => puedePasarProyecto(proyecto.estado, e));
   const botonEditar = <button className="boton mini" onClick={() => setEditando((v) => !v)}>{editando ? "Cancelar" : "Editar proyecto"}</button>;
   return (
-    <section style={{ marginBottom: 12 }}>
+    <section className="tarjeta tarjeta--compacta">
       {/* Pausar o cerrar un proyecto pasa pocas veces: vive detras de «···» y no le quita la primera pantalla a los cobros. */}
       {destinos.length === 0 ? <div className="fila-botones">{botonEditar}</div> : (
         <MasAcciones etiqueta="Cambiar el estado del proyecto" principal={botonEditar}>

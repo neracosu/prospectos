@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { CobroFila } from "@/lib/proyectos";
 import { generarReciboDeCobro, avisarRecibo, generarNotaDeAnulacion } from "@/acciones/recibos";
+import { MasAcciones } from "@/componentes/MasAcciones";
 
 type Accion = "recibo" | "aviso" | "nota";
 
@@ -50,19 +51,27 @@ export function AccionesRecibo({ cobro, emisorListo, onAnular }: { cobro: CobroF
     if (r.ok) { setAviso({ tipo: "ok", texto: `Nota ${r.datos.numero} generada.` }); router.refresh(); } else setAviso({ tipo: "error", texto: r.mensaje });
   });
 
+  const botones = (
+    <>
+      {!cobro.reciboNumero && !anulado && (emisorListo
+        ? <button type="button" className="boton mini boton--primario" aria-disabled={enCurso !== null} onClick={generar}>{enCurso === "recibo" ? "Generando recibo…" : "Generar recibo"}</button>
+        : <Link className="boton mini" href="/ajustes">Completa tus datos en Ajustes</Link>)}
+      {cobro.reciboNumero && <a className={`boton mini${anulado ? "" : " boton--primario"}`} href={`/recibos/${cobro.reciboNumero}.pdf`} target="_blank" rel="noopener">{anulado ? `Recibo ${cobro.reciboNumero} (anulado)` : `Recibo ${cobro.reciboNumero}`}</a>}
+      {cobro.reciboNumero && !anulado && <button type="button" className="boton mini" aria-disabled={enCurso !== null} onClick={avisar}>{enCurso === "aviso" ? "Abriendo WhatsApp…" : "Enviar por WhatsApp"}</button>}
+      {anulado && cobro.reciboNumero && (cobro.notaAnulacion
+        ? <a className="boton mini" href={`/recibos/${cobro.reciboNumero}-A.pdf`} target="_blank" rel="noopener">Nota de anulación</a>
+        : <button type="button" className="boton mini boton--primario" aria-disabled={enCurso !== null} onClick={generarNota}>{enCurso === "nota" ? "Generando nota…" : "Generar nota de anulación"}</button>)}
+    </>
+  );
+
   return (
     <div style={{ gridColumn: "1 / -1" }}>
-      <div className="fila-botones">
-        {!cobro.reciboNumero && !anulado && (emisorListo
-          ? <button type="button" className="boton mini boton--primario" aria-disabled={enCurso !== null} onClick={generar}>{enCurso === "recibo" ? "Generando recibo…" : "Generar recibo"}</button>
-          : <Link className="boton mini" href="/ajustes">Completa tus datos en Ajustes</Link>)}
-        {cobro.reciboNumero && <a className={`boton mini${anulado ? "" : " boton--primario"}`} href={`/recibos/${cobro.reciboNumero}.pdf`} target="_blank" rel="noopener">{anulado ? `Recibo ${cobro.reciboNumero} (anulado)` : `Recibo ${cobro.reciboNumero}`}</a>}
-        {cobro.reciboNumero && !anulado && <button type="button" className="boton mini" aria-disabled={enCurso !== null} onClick={avisar}>{enCurso === "aviso" ? "Abriendo WhatsApp…" : "Enviar por WhatsApp"}</button>}
-        {anulado && cobro.reciboNumero && (cobro.notaAnulacion
-          ? <a className="boton mini" href={`/recibos/${cobro.reciboNumero}-A.pdf`} target="_blank" rel="noopener">Nota de anulación</a>
-          : <button type="button" className="boton mini boton--primario" aria-disabled={enCurso !== null} onClick={generarNota}>{enCurso === "nota" ? "Generando nota…" : "Generar nota de anulación"}</button>)}
-        {!anulado && <button type="button" className="boton mini boton--peligro" aria-disabled={enCurso !== null} onClick={() => { if (!enCurso) onAnular(); }}>Anular</button>}
-      </div>
+      {/* Anular un cobro pagado es raro y no se deshace (deja nota de anulacion): detras de «···», como en los impagos. */}
+      {anulado ? <div className="fila-botones">{botones}</div> : (
+        <MasAcciones etiqueta="Más acciones de este cobro" principal={botones}>
+          <button type="button" className="boton mini boton--peligro" aria-disabled={enCurso !== null} onClick={() => { if (!enCurso) onAnular(); }}>Anular</button>
+        </MasAcciones>
+      )}
       {!cobro.reciboNumero && !anulado && !emisorListo && <p className="suave">Para generar recibos hacen falta tu nombre, RIF, WhatsApp y correo.</p>}
       {/* La region existe desde el principio: un lector de pantalla solo anuncia cambios dentro de una region que ya estaba. */}
       <p role="status" className={`estado-fila${aviso?.tipo === "error" ? " estado-fila--error" : ""}`}>{aviso?.texto ?? ""}</p>

@@ -72,6 +72,7 @@ try {
   if ((await prisma.evento.count({ where: { proyectoId: proyecto.id, tipo: "aviso_cliente", texto: `recibo ${numero}` } })) !== 1) errores.push("no quedo el evento aviso_cliente");
 
   // 5. Anular: la confirmacion dice que pasa con el recibo
+  await pg.getByRole("button", { name: "Más acciones de este cobro" }).first().click(); // anular vive detras de «···» desde la pasada de UX
   await pg.getByRole("button", { name: "Anular", exact: true }).click();
   await pg.getByText(`se genera la nota ${numero}-A`).waitFor();
   // exact: true porque el proyecto activo tambien puede pasar a "cerrado" y esa tarjeta trae su

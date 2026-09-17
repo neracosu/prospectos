@@ -22,6 +22,8 @@ const codigoDe = (semilla: string) => (semilla + "x".repeat(22)).replace(/[^A-Za
 const hoy = new Date(Date.now() - 4 * 3600_000).toISOString().slice(0, 10);
 const dia = (n: number) => { const d = new Date(`${hoy}T00:00:00Z`); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
 const errores: string[] = [];
+const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+const mesEnLetras = (iso: string) => `${MESES[Number(iso.slice(5, 7)) - 1]} ${iso.slice(0, 4)}`;
 const creado = { prospectos: [] as number[], clientes: [] as number[], duenoId: 0, nichoId: 0, nichoPropio: false };
 
 const b = await chromium.launch();
@@ -56,8 +58,8 @@ try {
   await prisma.proyecto.create({ data: { clienteId: cliente.id, nichoId: nicho.id, nombre: "Módulo de reservas en línea", pagoUnico: "900.00", mensualidad: "0", fechaInicio: dia(-10), estado: "en_construccion" } });
   await prisma.cobro.createMany({ data: [
     { proyectoId: pms.id, concepto: "cuota", detalle: "Cuota 3 de 3", monto: "933.34", vence: dia(-60), pagadoEn: new Date(Date.now() - 60 * 86400_000), canal: "pago_movil", referencia: "00123456" },
-    { proyectoId: pms.id, concepto: "mensualidad", detalle: `Mensualidad de ${dia(-12).slice(0, 7)}`, mes: dia(-40).slice(0, 7), monto: "100.00", vence: dia(-12) },
-    { proyectoId: pms.id, concepto: "mensualidad", detalle: `Mensualidad de ${hoy.slice(0, 7)}`, mes: hoy.slice(0, 7), monto: "100.00", vence: dia(4) },
+    { proyectoId: pms.id, concepto: "mensualidad", detalle: `Mensualidad de ${mesEnLetras(dia(-40))}`, mes: dia(-40).slice(0, 7), monto: "100.00", vence: dia(-12) },
+    { proyectoId: pms.id, concepto: "mensualidad", detalle: `Mensualidad de ${mesEnLetras(hoy)}`, mes: hoy.slice(0, 7), monto: "100.00", vence: dia(4) },
     { proyectoId: pms.id, concepto: "extra", detalle: "Módulo de reportes de ocupación", monto: "150.50", vence: dia(20) },
   ] });
   await prisma.pendiente.createMany({ data: [
@@ -122,8 +124,8 @@ try {
   }
   await prisma.evento.deleteMany({ where: { prospectoId: { in: creado.prospectos } } });
   await prisma.prospecto.deleteMany({ where: { id: { in: creado.prospectos } } });
-  if (creado.duenoId) { await prisma.evento.deleteMany({ where: { usuarioId: creado.duenoId } }); await prisma.usuario.delete({ where: { id: creado.duenoId } }).catch(() => {}); }
-  if (creado.nichoPropio) await prisma.nicho.delete({ where: { id: creado.nichoId } }).catch(() => {});
+  if (creado.duenoId) { await prisma.evento.deleteMany({ where: { usuarioId: creado.duenoId } }); await prisma.usuario.delete({ where: { id: creado.duenoId } }).catch((e) => errores.push(`LIMPIEZA: quedo el dueno temporal ${creado.duenoId} en la base de tests: ${(e as Error).message}`)); }
+  if (creado.nichoPropio) await prisma.nicho.delete({ where: { id: creado.nichoId } }).catch((e) => errores.push(`LIMPIEZA: quedo el nicho ${creado.nichoId}: ${(e as Error).message}`));
   await prisma.$disconnect();
 }
 console.log(errores.length ? `CON ERRORES:\n- ${errores.join("\n- ")}` : `LISTO: capturas en ${SALIDA}`);

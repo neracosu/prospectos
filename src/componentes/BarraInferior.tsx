@@ -16,7 +16,7 @@ export function BarraInferior({ rol }: { rol: "dueno" | "prospectador" }) {
   return (
     <nav className="barra" aria-label="Secciones">
       {items.map((i) => (
-        <Link key={i.href} href={i.href} className={"barra__item" + (ruta.startsWith(i.href) ? " activo" : "")}>{i.texto}</Link>
+        <Link key={i.href} href={i.href} className={"barra__item" + (ruta.startsWith(i.href) ? " activo" : "")} aria-current={ruta.startsWith(i.href) ? "page" : undefined}>{i.texto}</Link>
       ))}
     </nav>
   );
