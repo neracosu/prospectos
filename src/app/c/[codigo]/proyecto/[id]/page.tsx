@@ -87,7 +87,7 @@ export default async function ProyectoDelPortal({ params, searchParams }: { para
               <div key={c.id} className="cobro">
                 <span>{c.texto}<small>Pagado el {fechaVisible(c.pagadoEl ?? c.vence)}{c.canal ? ` por ${c.canal}` : ""}</small></span>
                 <span style={{ textAlign: "right" }}><span className="cobro__monto">{formatoUSD(c.monto)}</span></span>
-                {c.reciboNumero && <div style={{ gridColumn: "1 / -1" }}><a className="boton mini" href={`/recibos/${c.reciboNumero}.pdf`} target="_blank" rel="noopener">Descargar recibo {c.reciboNumero}</a></div>}
+                {c.reciboNumero && <div style={{ gridColumn: "1 / -1" }}><a className="boton mini" href={`/recibos/${c.reciboNumero}.pdf?c=${codigo}`} target="_blank" rel="noopener">Descargar recibo {c.reciboNumero}</a></div>}
               </div>
             ))}
           </section>
@@ -95,11 +95,29 @@ export default async function ProyectoDelPortal({ params, searchParams }: { para
       )}
 
       {t === "documentos" && (
-        <section className="tarjeta">
-          {p.propuestaCodigo
-            ? <p style={{ margin: 0 }}><a className="boton" href={`/p/${p.propuestaCodigo}`} target="_blank" rel="noopener">Ver la propuesta aceptada</a></p>
-            : <p style={{ margin: 0 }}>Todavía no hay documentos de este proyecto.</p>}
-        </section>
+        <>
+          <section className="tarjeta">
+            {!p.propuestaCodigo && p.documentos.length === 0
+              ? <p style={{ margin: 0 }}>Todavía no hay documentos de este proyecto.</p>
+              : (
+                <ul className="documentos">
+                  {p.propuestaCodigo && (
+                    <li><a className="documento" href={`/p/${p.propuestaCodigo}`} target="_blank" rel="noopener">
+                      <span className="documento__hoja" aria-hidden="true">WEB</span>
+                      <span><span className="documento__nombre">La propuesta que aceptaste</span><small>Se abre en una pestaña nueva</small></span>
+                    </a></li>
+                  )}
+                  {p.documentos.map((d) => (
+                    <li key={d.id}><a className="documento" href={`/c/documentos/${d.id}?c=${codigo}`} target="_blank" rel="noopener">
+                      <span className="documento__hoja" aria-hidden="true">{d.sigla}</span>
+                      <span><span className="documento__nombre">{d.nombre}</span><small>{d.descripcion}, del {fechaVisible(d.subidoEl)}{d.seDescarga ? ". Se descarga a tu teléfono" : ""}</small></span>
+                    </a></li>
+                  ))}
+                </ul>
+              )}
+          </section>
+          <p className="portal__pie">¿Falta algún documento? Pídelo desde <a href={`/c/${codigo}/contacto`}>Contacto</a>.</p>
+        </>
       )}
     </main>
   );

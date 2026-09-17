@@ -35,6 +35,12 @@ describe.runIf(DB_HABILITADA)("consultas del portal", () => {
       { proyectoId: pms, concepto: "extra", detalle: "SECRETO cobro anulado", monto: "50.00", vence: "2026-08-01", pagadoEn: new Date("2026-08-01T16:00:00Z"), canal: "zelle", referencia: "SECRETO referencia interna", anuladoEn: new Date(), anuladoMotivo: "SECRETO error interno", reciboNumero: "R-2026-0005", reciboGeneradoEn: new Date() },
       { proyectoId: deB, concepto: "extra", detalle: "SECRETO cobro de B", monto: "10.00", vence: "2026-09-01" },
     ] });
+    await prisma.documento.createMany({ data: [
+      { proyectoId: pms, nombre: "Manual de recepción", archivo: `documentos/${a.id}/11111111-1111-4111-8111-111111111111.pdf`, tipoMime: "application/pdf", tamano: 1_258_291, subidoEn: new Date("2026-09-12T16:00:00Z") },
+      { proyectoId: pms, nombre: "Respaldo de tarifas", archivo: `documentos/${a.id}/22222222-2222-4222-8222-222222222222.zip`, tipoMime: "application/zip", tamano: 860_160, subidoEn: new Date("2026-09-14T16:00:00Z") },
+      { proyectoId: pms, nombre: "SECRETO documento quitado", archivo: `documentos/${a.id}/33333333-3333-4333-8333-333333333333.pdf`, tipoMime: "application/pdf", tamano: 10, quitadoEn: new Date() },
+      { proyectoId: deB, nombre: "SECRETO documento de B", archivo: `documentos/${b.id}/44444444-4444-4444-8444-444444444444.pdf`, tipoMime: "application/pdf", tamano: 10 },
+    ] });
   });
   afterAll(async () => { await limpiarBase(); await prisma.$disconnect(); });
 
@@ -70,6 +76,16 @@ describe.runIf(DB_HABILITADA)("consultas del portal", () => {
     expect(p.versiones[0].cambios).toEqual([{ tipo: "nuevo", texto: "Reporte semanal" }]);
     expect(p.cobros.porPagar.map((c) => [c.texto, c.estado])).toEqual([["Mensualidad de septiembre 2026", "vencido"], ["Mensualidad de octubre 2026", "pendiente"]]);
     expect(p.cobros.pagados).toEqual([expect.objectContaining({ texto: "Cuota 3 de 3", monto: 933.34, pagadoEl: "2026-07-15", canal: "Pago móvil", reciboNumero: "R-2026-0004" })]);
+  });
+
+  it("documentos: solo los vigentes de ESE proyecto, el mas nuevo primero, sin la ruta del archivo", async () => {
+    const p = await proyectoPortal(a.id, pms, HOY);
+    expect(p?.documentos).toEqual([
+      { id: expect.any(Number), nombre: "Respaldo de tarifas", sigla: "ZIP", descripcion: "ZIP de 840 KB", subidoEl: "2026-09-14", seDescarga: true },
+      { id: expect.any(Number), nombre: "Manual de recepción", sigla: "PDF", descripcion: "PDF de 1,2 MB", subidoEl: "2026-09-12", seDescarga: false },
+    ]);
+    expect(JSON.stringify(p)).not.toContain("documentos/");
+    expect((await proyectoPortal(a.id, reservas, HOY))?.documentos).toEqual([]);
   });
 
   it("nada interno sale del portal: ni pendientes internos, ni horas, ni notas, ni anulados, ni lo de otro cliente", async () => {

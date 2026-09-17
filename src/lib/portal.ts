@@ -6,6 +6,7 @@ import { estadoCobro, ETIQUETA_CANAL_COBRO, type CanalCobro, type Concepto } fro
 import type { EstadoProyecto } from "@/lib/proyectos-contrato";
 import type { TipoCambio } from "@/lib/semver-contrato";
 import { CODIGO_VALIDO } from "@/lib/codigo";
+import { TIPOS, descripcionDocumento, siglaDocumento } from "@/lib/documentos-contrato";
 import {
   resumenHitos, versionesDelMasNuevo, textoCobro, separarCobros, avisoDeCobros,
   type AvisoCobros, type CobroPortal, type HitoPortal, type ResumenHitos,
@@ -55,11 +56,15 @@ export async function inicioPortal(clienteId: number, hoy: string): Promise<{ pr
   return { proyectos, aviso: avisoDeCobros(cobros) };
 }
 
+// La ruta del archivo en disco no sale nunca: el cliente lo pide por /c/documentos/<id>.
+export type DocumentoPortal = { id: number; nombre: string; sigla: string; descripcion: string; subidoEl: string; seDescarga: boolean };
+
 export type ProyectoPortal = ProyectoTarjeta & {
   pagoUnico: number; mensualidad: number; diaCobroMensual: number; propuestaCodigo: string;
   listaHitos: HitoPortal[];
   versiones: { version: string; fecha: string; cambios: { tipo: TipoCambio; texto: string }[] }[];
   cobros: { porPagar: CobroPortal[]; pagados: CobroPortal[] };
+  documentos: DocumentoPortal[];
 };
 
 // El id del proyecto viene de la URL: SIEMPRE se busca junto con el clienteId de la sesion.
@@ -72,6 +77,7 @@ export async function proyectoPortal(clienteId: number, proyectoId: number, hoy:
       versiones: { select: { version: true, fecha: true, cambios: { select: { tipo: true, texto: true }, orderBy: { orden: "asc" } } } },
       pendientes: { where: { visibleCliente: true }, select: { texto: true, hecho: true, hechoEn: true, fechaEstimada: true }, orderBy: { orden: "asc" } },
       cobros: { where: { anuladoEn: null }, select: COBRO },
+      documentos: { where: { quitadoEn: null }, select: { id: true, nombre: true, tipoMime: true, tamano: true, subidoEn: true }, orderBy: [{ subidoEn: "desc" }, { id: "desc" }] },
     },
   });
   if (!p) return null;
@@ -81,5 +87,9 @@ export async function proyectoPortal(clienteId: number, proyectoId: number, hoy:
     id: p.id, nombre: p.nombre, estado: p.estado as EstadoProyecto, versionActual: versiones[0]?.version ?? "", versionFecha: versiones[0]?.fecha ?? null,
     hitos: resumenHitos(listaHitos), pagoUnico: Number(p.pagoUnico), mensualidad: Number(p.mensualidad), diaCobroMensual: p.diaCobroMensual, propuestaCodigo: p.propuestaCodigo,
     listaHitos, versiones, cobros: separarCobros(p.cobros.map((c) => aCobroPortal(c, p, hoy))),
+    documentos: p.documentos.map((d) => ({
+      id: d.id, nombre: d.nombre, sigla: siglaDocumento(d.tipoMime), descripcion: descripcionDocumento(d), subidoEl: hoyCaracas(d.subidoEn),
+      seDescarga: !(d.tipoMime in TIPOS && TIPOS[d.tipoMime as keyof typeof TIPOS].enLinea),
+    })),
   };
 }

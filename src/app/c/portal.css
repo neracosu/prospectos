@@ -77,6 +77,18 @@ html:has(.portal), html:has(.portal) body { background: var(--fondo); color: var
 .acordado dt { color: var(--tinta-suave); font-size: 14px; }
 .acordado dd { margin: 0; font-family: var(--serif); font-weight: 600; font-size: 19px; font-variant-numeric: tabular-nums lining-nums; }
 
+/* Documentos: la fila entera es el enlace; la hoja dice el tipo con letras, no con un icono. */
+.documentos { list-style: none; margin: 0; padding: 0; }
+.documentos li { border-top: 1px solid var(--borde); }
+.documentos li:first-child { border-top: 0; }
+.documento { display: grid; grid-template-columns: 44px 1fr; gap: 14px; align-items: center; padding: 14px 0; min-height: 64px; text-decoration: none; }
+.documentos li:first-child .documento { padding-top: 2px; }
+.documentos li:last-child .documento { padding-bottom: 2px; }
+.documento__hoja { position: relative; width: 44px; height: 54px; background: #e6ece8; color: var(--verde); clip-path: polygon(0 0, calc(100% - 13px) 0, 100% 13px, 100% 100%, 0 100%); display: flex; align-items: flex-end; justify-content: center; padding-bottom: 7px; font-family: var(--serif); font-weight: 600; font-size: 13px; }
+.documento__hoja::before { content: ""; position: absolute; top: 0; right: 0; width: 13px; height: 13px; background: #c3cfc8; }
+.documento__nombre { display: block; font-weight: 600; overflow-wrap: anywhere; }
+.documento small { display: block; color: var(--tinta-suave); font-size: 14px; }
+
 /* Entrada con PIN: el teclado del panel, en papel. */
 .portal--entrar { display: flex; flex-direction: column; justify-content: center; text-align: center; }
 .portal--entrar .portal__logo { font-size: 18px; display: block; margin-bottom: 28px; }
