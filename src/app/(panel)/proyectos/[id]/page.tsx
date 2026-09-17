@@ -38,7 +38,7 @@ export default async function Proyecto({ params, searchParams }: { params: Promi
       <AccionesProyecto proyecto={{ id: p.id, nombre: p.nombre, estado: p.estado, mensualidad: p.mensualidad, horasCotizadas: p.horasCotizadas, fechaEntregaEstimada: p.fechaEntregaEstimada, diaCobroMensual: p.diaCobroMensual }} />
       <Pestanas base={base} activa={t} items={PESTANAS} />
       {t === "cobros" && <TabCobros proyectoId={p.id} cobros={p.cobros} hoy={hoy} emisorListo={faltantesEmisor(emisor).length === 0} />}
-      {t === "pendientes" && <TabPendientes proyectoId={p.id} pendientes={p.pendientes} avance={p.avance} />}
+      {t === "pendientes" && <TabPendientes proyectoId={p.id} pendientes={p.pendientes} />}
       {t === "horas" && <TabHoras proyectoId={p.id} horas={p.horas} cotizadas={p.horasCotizadas} reales={p.horasReales} tarifa={tarifa} hoy={hoy} />}
       {t === "versiones" && <TabVersiones proyectoId={p.id} versiones={p.versiones} hoy={hoy} />}
       {t === "documentos" && <TabDocumentos proyectoId={p.id} documentos={documentos} />}
