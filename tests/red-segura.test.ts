@@ -377,7 +377,9 @@ describe("descargar", () => {
 
   it("un POST con cuerpo lleva content-length y no va troceado", async () => {
     ultimasCabeceras = {};
-    const cuerpo = "data=" + encodeURIComponent("[out:json];node(1);out;");
+    // Con acentos SIN escapar a proposito: content-length va en BYTES, no en
+    // caracteres, y cada acento pesa dos.
+    const cuerpo = 'data=[out:json];nwr["name"="Posada Añil de Mérida"];out;';
     const r = await descargar(url("/final"), {
       ...publica,
       metodo: "POST",
@@ -385,6 +387,7 @@ describe("descargar", () => {
       contentType: "application/x-www-form-urlencoded",
     });
     expect(r.ok).toBe(true);
+    expect(Buffer.byteLength(cuerpo)).toBeGreaterThan(cuerpo.length); // si no, el caso no prueba nada
     expect(ultimasCabeceras["content-length"]).toBe(String(Buffer.byteLength(cuerpo)));
     expect(ultimasCabeceras["transfer-encoding"]).toBeUndefined();
   });

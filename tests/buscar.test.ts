@@ -24,6 +24,7 @@ import { DB_HABILITADA, limpiarBase, sembrarBasico, crearProspectoDePrueba } fro
 import { sesionFalsa } from "./ayuda-sesion";
 import { buscarOverpass, cargarMaps, importarTexto, importarArchivo, leerWebDeProspecto, aplicarSugerencia } from "@/acciones/buscar";
 import { aprobarFila } from "@/acciones/revision";
+import { guardarNota } from "@/acciones/prospectos";
 import { generarPlantillaXlsx } from "@/lib/plantilla-importar";
 import { ESPERA_MS } from "@/lib/overpass";
 import { loteConDetalle } from "@/lib/revision";
@@ -87,6 +88,10 @@ describe.runIf(DB_HABILITADA)("fuentes", () => {
     expect(await consultas("cumana", () => ({ ok: true, estado: 200, urlFinal: "x", texto: respuestaOsm([nodoOsm(11, { name: "Hotel Parcial" })], { remark: "runtime error: Query ran out of memory" }) }))).toBe(2);
     expect(await consultas("san-cristobal", () => ({ ok: true, estado: 200, urlFinal: "x", texto: respuestaOsm([]) }))).toBe(2);
     expect(await prisma.busquedaOsm.count({ where: { area: { in: ["valencia", "cumana", "san-cristobal"] } } })).toBe(0);
+    // Pero un remark que NO dice que la consulta se rompio no invalida nada: con
+    // resultados, se cachea igual que cualquier respuesta buena.
+    expect(await consultas("barquisimeto", () => ({ ok: true, estado: 200, urlFinal: "x", texto: respuestaOsm([nodoOsm(12, { name: "Hotel Avisado" })], { remark: "Fetched 1 element in 0.2 s" }) }))).toBe(1);
+    expect(await prisma.busquedaOsm.count({ where: { area: "barquisimeto" } })).toBe(1);
   });
 
   it("si cambian las etiquetas del nicho, la cache guardada ya no vale", async () => {
@@ -144,11 +149,11 @@ describe.runIf(DB_HABILITADA)("fuentes", () => {
   // y otra (en las pruebas, los ms de PROSPECTOS_OVERPASS_ESPERA_MS).
   it("la cola no solapa dos consultas y deja la espera entre una y otra", async () => {
     expect(ESPERA_MS).toBe(5000); // el valor de produccion, que las pruebas no cambian
-    let dentro = 0; let maxDentro = 0; const arranques: number[] = [];
+    let dentro = 0; let maxDentro = 0; const arranques: number[] = []; const finales: number[] = [];
     red.respuesta = async () => {
       dentro++; maxDentro = Math.max(maxDentro, dentro); arranques.push(Date.now());
       await new Promise((r) => setTimeout(r, 20));
-      dentro--;
+      dentro--; finales.push(Date.now());
       return { ok: true, estado: 200, urlFinal: "x", texto: fixture("overpass.json") };
     };
     await Promise.all([
@@ -157,7 +162,9 @@ describe.runIf(DB_HABILITADA)("fuentes", () => {
     ]);
     expect(maxDentro).toBe(1);
     expect(arranques.length).toBe(2);
-    expect(arranques[1] - arranques[0]).toBeGreaterThanOrEqual(50);
+    // La espera se cuenta desde que TERMINA la consulta anterior, no desde que
+    // arranco: si no, dos consultas lentas se pegarian igual.
+    expect(arranques[1] - finales[0]).toBeGreaterThanOrEqual(60);
   });
 
   it("tres búsquedas del mismo par a la vez hacen UNA sola consulta", async () => {
@@ -285,6 +292,28 @@ describe.runIf(DB_HABILITADA)("fuentes", () => {
     expect(fpc.email).toBe("https://hotelx.com.ve/");
     expect(fpc.instagram).toBe("https://hotelx.com.ve/contacto");
     expect(d.fuentes).toEqual(expect.arrayContaining(["https://hotelx.com.ve/", "https://hotelx.com.ve/contacto"]));
+  });
+
+  it("un municipio que se repite en medio país no decide la ciudad", async () => {
+    red.respuesta = async () => ({ ok: true, estado: 200, urlFinal: URL_MAPS + "libertador", texto: fichaMaps("Calle 2, Municipio Libertador, Carabobo", "Hotel Libertador") });
+    const r = await cargarMaps(fd({ nichoId: String(ids.nichoId), url: "https://www.google.com/maps/place/x" }));
+    if (!r.ok || !("lote" in r.datos)) throw new Error("esperaba lote");
+    const fila = (await loteConDetalle(r.datos.lote))!.filas[0];
+    expect(fila.datos.ciudad).toBe("");
+    expect(fila.errores).toContain("Falta la ciudad");
+  });
+
+  it("una nota escrita a mano no se hace pasar por una lectura de la web", async () => {
+    const p = await crearProspectoDePrueba(ids.nichoId, { nombre: "Hotel Inyectado", email: "", web: "https://hotelx.com.ve/" });
+    // El usuario escribe en su nota interna justo lo que antes marcaba una lectura.
+    expect((await guardarNota(p.id, "Leí la web (https://otro-dominio.test/): 3 sugerencia(s)")).ok).toBe(true);
+    // No le abre la puerta a una fuente de otro dominio...
+    expect(await aplicarSugerencia(p.id, "email", "hola@hotelx.com.ve", "https://otro-dominio.test/")).toEqual({ ok: false, mensaje: "La fuente tiene que ser la web del prospecto." });
+    // ...ni le hace creer al freno que esa web ya se leyo.
+    red.respuesta = async () => ({ ok: true, estado: 200, urlFinal: "https://hotelx.com.ve/", texto: fixture("web-negocio.html") });
+    expect((await leerWebDeProspecto(p.id)).ok).toBe(true);
+    const ev = await prisma.evento.findFirstOrThrow({ where: { prospectoId: p.id, tipo: "lectura_web" } });
+    expect(ev.texto).toMatch(/^https:\/\/hotelx\.com\.ve\//);
   });
 });
 

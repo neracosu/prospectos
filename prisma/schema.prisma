@@ -88,7 +88,7 @@ model Evento {
   cobro       Cobro?     @relation(fields: [cobroId], references: [id])
   usuarioId   Int?
   usuario     Usuario?   @relation(fields: [usuarioId], references: [id])
-  // etapa | enviado | abierto | nota | saltado | importado | seguimiento |
+  // etapa | enviado | abierto | nota | saltado | importado | seguimiento | lectura_web |
   // proyecto_creado | proyecto_estado | proyecto_editado | cobro_pagado | cobro_anulado | cobro_agregado |
   // recordatorio | hito_cumplido | version_publicada | aviso_cliente | horas
   tipo        String

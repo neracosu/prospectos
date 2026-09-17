@@ -8,7 +8,7 @@ import { BotonCopiar } from "@/componentes/BotonCopiar";
 
 export const dynamic = "force-dynamic";
 
-const TEXTO_EVENTO: Record<string, string> = { enviado: "Enviado", seguimiento: "Escribió de nuevo", abierto: "Abrió la propuesta", etapa: "Cambio de etapa", nota: "Nota", saltado: "Saltado", importado: "Ingresó" };
+const TEXTO_EVENTO: Record<string, string> = { enviado: "Enviado", seguimiento: "Escribió de nuevo", abierto: "Abrió la propuesta", etapa: "Cambio de etapa", nota: "Nota", saltado: "Saltado", importado: "Ingresó", lectura_web: "Leyó la web" };
 
 export default async function Ficha({ params }: { params: Promise<{ id: string }> }) {
   const u = await exigirSesion();

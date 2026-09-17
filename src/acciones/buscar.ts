@@ -34,9 +34,13 @@ const EXTENSIONES = [".xlsx", ".csv", ".txt"];
 // Tope de sugerencias por campo: una pagina con veinte mailto no puede llenar la
 // ficha de ruido.
 const MAX_SUGERENCIAS = 5;
-// Con que empieza el Evento que deja leerWebDeProspecto. Sirve para el freno (no
-// releer la misma web cada segundo) y para saber a que URL final se llego.
-const PREFIJO_LECTURA = "Leí la web";
+// Tipo propio del Evento que deja leerWebDeProspecto. Sirve para el freno (no
+// releer la misma web cada segundo) y para saber a que URL final se llego. Es un
+// tipo y no un texto a proposito: el `texto` de una nota lo escribe el usuario
+// desde la ficha (guardarNota), asi que cualquier candado que dependiera de como
+// empieza ese texto se abre escribiendolo a mano. `tipo` no se puede escribir
+// desde ningun formulario.
+const TIPO_LECTURA = "lectura_web";
 const FRENO_LECTURA_MS = 60_000;
 // Fuente que se le pone a lo importado cuando la fila no trae ninguna: no es una
 // URL, es la verdad (entro a mano desde un archivo) y se ve asi en la ficha.
@@ -237,8 +241,7 @@ export async function leerWebDeProspecto(
     const reciente = await prisma.evento.findFirst({
       where: {
         prospectoId: e.data,
-        tipo: "nota",
-        texto: { startsWith: PREFIJO_LECTURA },
+        tipo: TIPO_LECTURA,
         creadoEn: { gt: new Date(Date.now() - FRENO_LECTURA_MS) },
       },
       select: { id: true },
@@ -266,8 +269,8 @@ export async function leerWebDeProspecto(
       data: {
         prospectoId: e.data,
         usuarioId: u.id,
-        tipo: "nota",
-        texto: `${PREFIJO_LECTURA} (${r.urlFinal}): ${sugerencias.length} sugerencia(s)`,
+        tipo: TIPO_LECTURA,
+        texto: `${r.urlFinal} · ${sugerencias.length} sugerencia(s)`,
       },
     });
     return exito({ sugerencias });
@@ -353,11 +356,11 @@ export async function aplicarSugerencia(
       const hosts = new Set<string>();
       if (p.web) hosts.add(hostDe(p.web));
       const lectura = await tx.evento.findFirst({
-        where: { prospectoId: d.id, tipo: "nota", texto: { startsWith: PREFIJO_LECTURA } },
+        where: { prospectoId: d.id, tipo: TIPO_LECTURA },
         orderBy: { id: "desc" },
         select: { texto: true },
       });
-      const m = lectura?.texto.match(/\((https?:\/\/[^)\s]+)\)/);
+      const m = lectura?.texto.match(/^(https?:\/\/\S+)/);
       if (m) hosts.add(hostDe(m[1]));
       hosts.delete("");
       if (!hosts.has(hostFuente)) throw new Error("FUENTE_AJENA");

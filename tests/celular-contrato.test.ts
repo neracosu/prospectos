@@ -34,8 +34,18 @@ describe("normalizarRed", () => {
     expect(normalizarRed("tiktok.com/@hotelx", "tiktok")).toBe("https://www.tiktok.com/@hotelx");
     expect(normalizarRed("https://www.tiktok.com/@hotelx/", "tiktok")).toBe("https://www.tiktok.com/@hotelx");
   });
-  it("una URL con protocolo que no es de esta red se deja tal cual", () => {
-    expect(normalizarRed("https://hotelyare.com", "instagram")).toBe("https://hotelyare.com");
-    expect(normalizarRed("https://wa.me/584121234567", "facebook")).toBe("https://wa.me/584121234567");
+  it("una URL con protocolo que no es de esta red NO normaliza", () => {
+    // Guardarla tal cual la dejaba en la columna de Instagram, y despues cualquiera
+    // la lee como si fuera el Instagram del negocio.
+    expect(normalizarRed("https://hotelyare.com", "instagram")).toBe("");
+    expect(normalizarRed("https://wa.me/584121234567", "facebook")).toBe("");
+    expect(normalizarRed("https://instagram.com.ejemplo.test/hotelx", "instagram")).toBe("");
+    expect(normalizarRed("https://", "instagram")).toBe("");
+  });
+  it("acepta los otros hosts de la misma red", () => {
+    expect(normalizarRed("https://m.instagram.com/hotelx", "instagram")).toBe("https://www.instagram.com/hotelx/");
+    expect(normalizarRed("https://fb.com/hotelx", "facebook")).toBe("https://www.facebook.com/hotelx");
+    expect(normalizarRed("https://web.facebook.com/hotelx/", "facebook")).toBe("https://www.facebook.com/hotelx");
+    expect(normalizarRed("https://vm.tiktok.com/@hotelx", "tiktok")).toBe("https://www.tiktok.com/@hotelx");
   });
 });

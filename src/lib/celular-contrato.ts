@@ -27,19 +27,36 @@ function trasDominio(v: string, dominio: string): string | null {
   return m ? v.slice(m[0].length) : null;
 }
 
+// Hosts que de verdad son de cada red (con o sin www/m/web). Una URL de otro
+// dominio no es un usuario de esta red: la web del negocio, un acortador o un
+// enlace de WhatsApp guardados en la columna de Instagram se leen despues como si
+// fueran el Instagram del negocio, y eso es un dato inventado.
+const HOSTS_RED: Record<keyof typeof BASE_RED, RegExp> = {
+  instagram: /^(?:www\.|m\.)?instagram\.com$/i,
+  facebook: /^(?:www\.|m\.|web\.)?(?:facebook\.com|fb\.com|fb\.me)$/i,
+  tiktok: /^(?:www\.|m\.|vm\.)?tiktok\.com$/i,
+};
+
 // Acepta @usuario, usuario suelto, o la URL completa en cualquier forma
 // (con/sin protocolo, con/sin www, con/sin barra final) y siempre devuelve la
-// URL canonica. Una URL con protocolo que NO es de esta red (la web propia
-// del negocio, por ejemplo) se deja tal cual: no hay usuario que extraerle.
+// URL canonica. Una URL con protocolo que NO es de esta red no normaliza: se
+// devuelve vacio para que quien llama decida (la importacion la deja en blanco y
+// aplicarSugerencia la rechaza).
 export function normalizarRed(valor: string, red: keyof typeof BASE_RED): string {
   const v = (valor ?? "").trim();
   if (!v) return "";
-  const resto = trasDominio(v, DOMINIO_RED[red]);
-  if (resto === null) {
-    if (/^https?:\/\//i.test(v)) return v;
-    const usuario = v.replace(/^@/, "").replace(/\/+$/, "");
+  if (/^https?:\/\//i.test(v)) {
+    let u: URL;
+    try {
+      u = new URL(v);
+    } catch {
+      return "";
+    }
+    if (!HOSTS_RED[red].test(u.hostname)) return "";
+    const usuario = decodeURIComponent(u.pathname).replace(/^\/+/, "").replace(/\/+$/, "").replace(/^@/, "");
     return usuario ? BASE_RED[red](usuario) : "";
   }
-  const usuario = resto.replace(/^@/, "").replace(/\/+$/, "");
+  const resto = trasDominio(v, DOMINIO_RED[red]);
+  const usuario = (resto ?? v).replace(/^@/, "").replace(/\/+$/, "");
   return usuario ? BASE_RED[red](usuario) : "";
 }

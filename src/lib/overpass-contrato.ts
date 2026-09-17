@@ -4,10 +4,13 @@ import type { EntradaValidada } from "@/lib/tabla-contrato";
 // `alias` son los otros nombres con los que el mismo lugar aparece escrito en una
 // direccion (el municipio pegado, el nombre viejo, el que usa Google). Nunca se
 // pone aqui el nombre de un ESTADO que no sea tambien el de la ciudad: "Miranda"
-// no puede convertirse en "Los Teques" porque una direccion diga el estado.
+// no puede convertirse en "Los Teques" porque una direccion diga el estado, ni un
+// nombre de municipio que se repite en medio pais: hay un Municipio Libertador en
+// Carabobo, Merida, Aragua, Tachira, Monagas, Sucre y Barinas, ademas del de
+// Caracas.
 export type Ciudad = { slug: string; nombre: string; estado: string; lat: number; lon: number; radioM: number; alias?: string[] };
 export const CIUDADES: Ciudad[] = [
-  { slug: "caracas", nombre: "Caracas", estado: "Distrito Capital", lat: 10.4806, lon: -66.9036, radioM: 18000, alias: ["Distrito Capital", "Caracas D.C.", "Dtto. Capital", "Municipio Libertador"] },
+  { slug: "caracas", nombre: "Caracas", estado: "Distrito Capital", lat: 10.4806, lon: -66.9036, radioM: 18000, alias: ["Distrito Capital", "Caracas D.C.", "Dtto. Capital"] },
   { slug: "la-guaira", nombre: "La Guaira", estado: "La Guaira", lat: 10.6031, lon: -66.9354, radioM: 12000, alias: ["Maiquetía", "Catia La Mar", "Vargas"] },
   { slug: "los-teques", nombre: "Los Teques", estado: "Miranda", lat: 10.3444, lon: -67.0428, radioM: 8000 },
   { slug: "valencia", nombre: "Valencia", estado: "Carabobo", lat: 10.162, lon: -68.0077, radioM: 15000, alias: ["Naguanagua", "San Diego"] },

@@ -30,6 +30,8 @@ export const ESPERA_MS = 5000;
 const INACTIVIDAD_MS = 60_000;
 const PLAZO_TOTAL_MS = 90_000;
 const MAX_BYTES = 8 * 1024 * 1024;
+// Como suena un `remark` de Overpass cuando la consulta NO se completo.
+const REMARK_ROTO = /error|timed out|timeout|out of memory|too many|rejected/i;
 
 export type ResultadoOverpass =
   | { ok: true; entradas: EntradaValidada[]; desdeCache: boolean; consultadoEn: Date; antiguedadDias: number }
@@ -38,13 +40,21 @@ export type ResultadoOverpass =
 let cola: Promise<void> = Promise.resolve();
 let ultimaConsulta = 0;
 
-// La espera entre consultas se puede acortar SOLO fuera de produccion: sirve para
-// que la suite no tarde 5 s por caso, donde ademas la red esta simulada y no se
-// toca el servidor publico. En produccion siempre son los 5 s de la politica.
+// La espera entre consultas se puede acortar SOLO en las pruebas: ahi la red esta
+// simulada y no se toca el servidor publico. La puerta es la misma que la lista
+// blanca de red-segura (el "!== production" es a proposito: si PROSPECTOS_TEST_DB
+// quedara puesto por error en produccion, igual no alcanza). Un valor vacio, cero
+// o raro cae en los 5 s de la politica.
+function enPruebas(): boolean {
+  return (
+    process.env.NODE_ENV !== "production" &&
+    (process.env.NODE_ENV === "test" || process.env.PROSPECTOS_TEST_DB === "1")
+  );
+}
 function esperaConfigurada(): number {
-  if (process.env.NODE_ENV === "production") return ESPERA_MS;
+  if (!enPruebas()) return ESPERA_MS;
   const v = Number(process.env.PROSPECTOS_OVERPASS_ESPERA_MS);
-  return Number.isFinite(v) && v >= 0 ? v : ESPERA_MS;
+  return Number.isFinite(v) && v > 0 ? v : ESPERA_MS;
 }
 
 // Serializa: cada consulta espera a que termine la anterior y a que hayan pasado
@@ -181,10 +191,15 @@ export async function buscarEnOverpass(
       return conLoViejo("Overpass devolvió una respuesta que no se pudo leer. Intenta en un rato.");
     }
     const aviso = typeof (json as { remark?: unknown }).remark === "string" ? (json as { remark: string }).remark.trim() : "";
+    // Overpass usa `remark` tanto para un aviso inocente como para decir que la
+    // consulta se le cayo. Solo el segundo caso invalida lo que vino: un remark
+    // informativo con resultados se cachea como cualquier otra respuesta.
+    const avisoMalo = aviso !== "" && REMARK_ROTO.test(aviso);
     const entradas = prospectosDesdeOverpass(json, ciudad, nicho.slug);
-    // Las tres condiciones para guardar: 200, sin aviso de Overpass y con algo que
-    // guardar. Si falta una, se devuelve lo que vino pero la cache no se toca.
-    if (r.estado === 200 && !aviso && entradas.length > 0) {
+    // Las tres condiciones para guardar: 200, sin aviso de que la consulta se
+    // rompio y con algo que guardar. Si falta una, se devuelve lo que vino pero la
+    // cache no se toca.
+    if (r.estado === 200 && !avisoMalo && entradas.length > 0) {
       const guardado = { ql: huella, entradas } as unknown as Prisma.InputJsonValue;
       await prisma.busquedaOsm.upsert({
         where: { nichoId_area: { nichoId, area } },
@@ -192,7 +207,7 @@ export async function buscarEnOverpass(
         create: { nichoId, area, resultados: guardado, consultadoEn: ahora },
       });
     }
-    if (aviso && !entradas.length) return conLoViejo(`Overpass no pudo completar la consulta (${aviso.slice(0, 120)}). Intenta en un rato.`);
+    if (avisoMalo && !entradas.length) return conLoViejo(`Overpass no pudo completar la consulta (${aviso.slice(0, 120)}). Intenta en un rato.`);
     return { ok: true, entradas, desdeCache: false, consultadoEn: ahora, antiguedadDias: 0 };
   } finally {
     liberar();
