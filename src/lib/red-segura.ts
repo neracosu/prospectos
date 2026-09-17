@@ -12,19 +12,31 @@ import dns from "node:dns";
 import net from "node:net";
 import http from "node:http";
 import https from "node:https";
+import { StringDecoder } from "node:string_decoder";
 
 export const USER_AGENT = "prospectos.neracosu.com (contacto: neracosu@gmail.com)";
 
+// Lista blanca para las opciones que solo existen para pruebas: fuera de esto se
+// ignoran siempre, sin excepcion (ni "esta corriendo en mi maquina", ni nada).
+function enListaBlancaDePruebas(): boolean {
+  return process.env.NODE_ENV === "test" || process.env.PROSPECTOS_TEST_DB === "1";
+}
+
 type Opciones = {
   maxBytes?: number;
+  // Limite de INACTIVIDAD: se reinicia con cada byte que llega. Un servidor que
+  // gotea de a poco nunca lo dispara solo con esto.
   timeoutMs?: number;
+  // Limite TOTAL: conexion + DNS + cabeceras + cuerpo, sumando todos los saltos de
+  // una redireccion. Es el que de verdad acota cuanto puede tardar la llamada entera.
+  plazoTotalMs?: number;
   maxRedirecciones?: number;
   metodo?: "GET" | "HEAD" | "POST";
   cuerpo?: string;
   contentType?: string;
   // Solo para pruebas: reemplaza la resolucion DNS real para poder simular un host
   // publico que en realidad apunta a un servidor http local levantado por el test.
-  // Se ignora siempre en produccion (NODE_ENV=production), sin excepcion.
+  // Se ignora siempre fuera de la lista blanca (ver enListaBlancaDePruebas).
   _lookupParaTests?: (host: string) => Promise<string>;
   // Solo para pruebas: sin este flag, la IP que devuelva _lookupParaTests se valida
   // igual que una resuelta por DNS real (rechaza privadas). Con el flag, se confia en
@@ -50,7 +62,11 @@ function ipPrivada(ip: string): boolean {
       (a === 100 && b >= 64 && b <= 127) ||
       a >= 224 || // multicast 224.0.0.0/4 y reservado 240.0.0.0/4 (incluye 255.255.255.255)
       (a === 192 && b === 0 && c === 0) || // asignaciones IETF 192.0.0.0/24
-      (a === 198 && (b === 18 || b === 19)) // benchmarking 198.18.0.0/15
+      (a === 198 && (b === 18 || b === 19)) || // benchmarking 198.18.0.0/15
+      (a === 192 && b === 0 && c === 2) || // TEST-NET-1 192.0.2.0/24
+      (a === 198 && b === 51 && c === 100) || // TEST-NET-2 198.51.100.0/24
+      (a === 203 && b === 0 && c === 113) || // TEST-NET-3 203.0.113.0/24
+      (a === 192 && b === 88 && c === 99) // relay anycast 6to4 (obsoleto) 192.88.99.0/24
     );
   }
   const v6 = ip.toLowerCase();
@@ -63,6 +79,10 @@ function ipPrivada(ip: string): boolean {
     v6.startsWith("fe9") ||
     v6.startsWith("fea") ||
     v6.startsWith("feb") ||
+    v6.startsWith("fec") || // site-local (obsoleto) fec0::/10 (mascara completa: fec0..feff)
+    v6.startsWith("fed") ||
+    v6.startsWith("fee") ||
+    v6.startsWith("fef") ||
     v6.startsWith("::ffff:") || // IPv4 mapeada en IPv6
     v6.startsWith("64:ff9b:") || // NAT64 64:ff9b::/96
     v6.startsWith("2002:") // 6to4 2002::/16
@@ -81,13 +101,49 @@ function nombreBloqueado(host: string): boolean {
   return false;
 }
 
+// Errores propios: sirven para que motivoDeError() clasifique por identidad, no por
+// texto, y para no tener que adivinar el codigo exacto que da cada version de Node.
+class ErrorTiempoAgotado extends Error {
+  constructor() {
+    super("tiempo agotado");
+    this.name = "ErrorTiempoAgotado";
+  }
+}
+class ErrorDescargaCortada extends Error {
+  constructor() {
+    super("descarga cortada");
+    this.name = "ErrorDescargaCortada";
+  }
+}
+
+// Envuelve una promesa con un plazo: si "ms" pasa antes de que resuelva, se rechaza
+// con ErrorTiempoAgotado. Se usa para acotar la resolucion DNS al plazo TOTAL que
+// le queda a la llamada completa (no tiene su propio limite independiente).
+function conVencimiento<T>(promesa: Promise<T>, ms: number): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const t = setTimeout(() => reject(new ErrorTiempoAgotado()), ms);
+    promesa.then(
+      (v) => {
+        clearTimeout(t);
+        resolve(v);
+      },
+      (e) => {
+        clearTimeout(t);
+        reject(e);
+      }
+    );
+  });
+}
+
 // Guardia SSRF: valida esquema, forma del host y, si es un nombre, a que IP resuelve.
 // Se llama antes de CADA conexion, incluyendo cada salto de una redireccion, y devuelve
 // la IP validada para que la conexion real se fije a ella (ver cabecera del archivo).
+// "plazoRestanteMs", si se da, acota la resolucion DNS (parte del plazo TOTAL de descargar()).
 export async function esUrlPermitida(
   url: string,
   lookup?: (host: string) => Promise<string>,
-  confiarEnLookup?: boolean
+  confiarEnLookup?: boolean,
+  plazoRestanteMs?: number
 ): Promise<ResultadoGuardia> {
   let u: URL;
   try {
@@ -106,17 +162,24 @@ export async function esUrlPermitida(
     if (ipPrivada(sinCorchetes)) return { ok: false, motivo: "Dirección privada o local no permitida" };
     return { ok: true, url: u, ip: sinCorchetes };
   }
-  if (nombreBloqueado(host)) {
+  // Un punto final es un nombre de dominio absoluto valido ("algo.localhost.") y no
+  // cambia a que resuelve: se quita antes de comparar para que no sirva de escape.
+  if (nombreBloqueado(host.replace(/\.$/, ""))) {
     return { ok: false, motivo: "Dirección privada o local no permitida" };
   }
-  // El resolvedor inyectado es solo para pruebas y nunca corre en produccion.
-  const lookupEfectivo = process.env.NODE_ENV === "production" ? undefined : lookup;
+  // El resolvedor inyectado es solo para pruebas: fuera de la lista blanca se ignora
+  // siempre (produccion, NODE_ENV sin definir, cualquier otro valor).
+  const lookupEfectivo = enListaBlancaDePruebas() ? lookup : undefined;
   try {
-    const ip = lookupEfectivo ? await lookupEfectivo(host) : (await dns.promises.lookup(host)).address;
+    const tareaIp: Promise<string> = lookupEfectivo
+      ? lookupEfectivo(host)
+      : dns.promises.lookup(host).then((r) => r.address);
+    const ip = plazoRestanteMs !== undefined ? await conVencimiento(tareaIp, plazoRestanteMs) : await tareaIp;
     const confiar = Boolean(lookupEfectivo) && Boolean(confiarEnLookup);
     if (!confiar && ipPrivada(ip)) return { ok: false, motivo: "Dirección privada o local no permitida" };
     return { ok: true, url: u, ip };
-  } catch {
+  } catch (err) {
+    if (err instanceof ErrorTiempoAgotado) return { ok: false, motivo: "Tiempo de espera agotado" };
     return { ok: false, motivo: "No se pudo resolver el dominio" };
   }
 }
@@ -126,24 +189,10 @@ export async function esUrlPermitida(
 export async function _esSaltoPermitido(
   url: string,
   lookup?: (host: string) => Promise<string>,
-  confiarEnLookup?: boolean
+  confiarEnLookup?: boolean,
+  plazoRestanteMs?: number
 ): Promise<ResultadoGuardia> {
-  return esUrlPermitida(url, lookup, confiarEnLookup);
-}
-
-// Errores propios: sirven para que motivoDeError() clasifique por identidad, no por
-// texto, y para no tener que adivinar el codigo exacto que da cada version de Node.
-class ErrorTiempoAgotado extends Error {
-  constructor() {
-    super("tiempo agotado");
-    this.name = "ErrorTiempoAgotado";
-  }
-}
-class ErrorDescargaCortada extends Error {
-  constructor() {
-    super("descarga cortada");
-    this.name = "ErrorDescargaCortada";
-  }
+  return esUrlPermitida(url, lookup, confiarEnLookup, plazoRestanteMs);
 }
 
 const CODIGOS_CERTIFICADO = new Set([
@@ -177,7 +226,17 @@ type RespuestaCruda = { estado: number; ubicacion: string | null; texto: string;
 function conectarFijo(
   u: URL,
   ip: string,
-  opts: { metodo: string; cuerpo?: string; contentType?: string; timeoutMs: number; maxBytes: number }
+  opts: {
+    metodo: string;
+    cuerpo?: string;
+    contentType?: string;
+    // Inactividad: se reinicia con cada byte (lo maneja el "timeout" de node:http).
+    timeoutMs: number;
+    // Plazo TOTAL que le queda a la llamada completa para este salto en particular
+    // (descargar() lo recalcula restando lo ya gastado antes de llamar aqui).
+    plazoRestanteMs: number;
+    maxBytes: number;
+  }
 ): Promise<RespuestaCruda> {
   return new Promise((resolve, reject) => {
     const transportador = u.protocol === "https:" ? https : http;
@@ -238,8 +297,11 @@ function conectarFijo(
         res.on("data", (chunk: Buffer) => {
           if (total >= opts.maxBytes) return;
           const restante = opts.maxBytes - total;
-          partes.push(restante < chunk.length ? chunk.subarray(0, restante) : chunk);
-          total += chunk.length;
+          // Solo se cuenta (y se guarda) lo que realmente se conserva: si el chunk
+          // se recorta, el sobrante ni se suma ni se acumula en "partes".
+          const trozo = restante < chunk.length ? chunk.subarray(0, restante) : chunk;
+          partes.push(trozo);
+          total += trozo.length;
           if (total >= opts.maxBytes) {
             truncado = true;
             res.destroy();
@@ -252,9 +314,13 @@ function conectarFijo(
         res.on("close", () => {
           if (agotado) return terminar(new ErrorTiempoAgotado());
           const ubicacion = (res.headers.location as string | undefined) ?? null;
-          const texto = Buffer.concat(partes).toString("utf8");
-          if (truncado) return terminar({ estado: res.statusCode ?? 0, ubicacion, texto, truncado: true });
-          if (res.complete) return terminar({ estado: res.statusCode ?? 0, ubicacion, texto });
+          if (truncado || res.complete) {
+            // StringDecoder.write() (sin end()) deja afuera cualquier caracter
+            // multibyte incompleto al final en vez de convertirlo en U+FFFD: es
+            // exactamente lo que hace falta cuando maxBytes corta a media secuencia.
+            const texto = new StringDecoder("utf8").write(Buffer.concat(partes));
+            return terminar(truncado ? { estado: res.statusCode ?? 0, ubicacion, texto, truncado: true } : { estado: res.statusCode ?? 0, ubicacion, texto });
+          }
           terminar(new ErrorDescargaCortada());
         });
       }
@@ -264,10 +330,11 @@ function conectarFijo(
       agotado = true;
       req.destroy();
     };
+    // Inactividad (Node reinicia este contador solo con cada byte que pasa por el socket).
     req.on("timeout", agotarPorTiempo);
-    // Limite TOTAL: cubre conexion + cabeceras + cuerpo completo, a diferencia del
-    // "timeout" de arriba, que es solo de inactividad.
-    const temporizadorTotal = setTimeout(agotarPorTiempo, opts.timeoutMs);
+    // Plazo TOTAL de este salto: a diferencia del "timeout" de arriba, este no se
+    // reinicia con la actividad, por eso corta a un goteo continuo que nunca calla.
+    const temporizadorTotal = setTimeout(agotarPorTiempo, opts.plazoRestanteMs);
 
     req.on("error", (err) => {
       if (agotado) return terminar(new ErrorTiempoAgotado());
@@ -282,16 +349,25 @@ function conectarFijo(
 
 export async function descargar(url: string, o: Opciones = {}): Promise<ResultadoDescarga> {
   const maxBytes = o.maxBytes ?? 2 * 1024 * 1024;
-  const timeoutMs = o.timeoutMs ?? 10_000;
+  const timeoutMs = o.timeoutMs ?? 10_000; // inactividad, no total
+  const plazoTotalMs = o.plazoTotalMs ?? 30_000; // total: DNS + conexion + cuerpo, todos los saltos
   const maxRedir = o.maxRedirecciones ?? 3;
+  // Se calcula UNA sola vez para toda la llamada (incluye todos los saltos de
+  // redireccion): cada etapa recibe lo que queda, no un plazo nuevo por su cuenta.
+  const vence = Date.now() + plazoTotalMs;
   let actual = url;
   let metodoActual = o.metodo ?? "GET";
   let cuerpoActual = o.cuerpo;
   let contentTypeActual = o.contentType;
 
   for (let salto = 0; salto <= maxRedir; salto++) {
-    const g = await _esSaltoPermitido(actual, o._lookupParaTests, o._confiarEnLookupParaTests);
+    const restanteParaGuardia = vence - Date.now();
+    if (restanteParaGuardia <= 0) return { ok: false, motivo: "Tiempo de espera agotado" };
+    const g = await _esSaltoPermitido(actual, o._lookupParaTests, o._confiarEnLookupParaTests, restanteParaGuardia);
     if (!g.ok) return g;
+
+    const restanteParaConexion = vence - Date.now();
+    if (restanteParaConexion <= 0) return { ok: false, motivo: "Tiempo de espera agotado" };
 
     try {
       const r = await conectarFijo(g.url, g.ip, {
@@ -299,12 +375,20 @@ export async function descargar(url: string, o: Opciones = {}): Promise<Resultad
         cuerpo: cuerpoActual,
         contentType: contentTypeActual,
         timeoutMs,
+        plazoRestanteMs: restanteParaConexion,
         maxBytes,
       });
 
       if (r.estado >= 300 && r.estado < 400 && r.ubicacion) {
         if (salto === maxRedir) return { ok: false, motivo: "Demasiadas redirecciones" };
         const nuevaUrl = new URL(r.ubicacion, g.url);
+        const cambiaOrigen = nuevaUrl.origin !== g.url.origin;
+        // 307/308 deben preservar metodo y cuerpo por spec; hacerlo hacia OTRO origen
+        // con un metodo no seguro (POST) es justo el patron de un ataque de replay
+        // cross-site, asi que ese salto se rechaza en vez de reenviarlo vacio.
+        if ((r.estado === 307 || r.estado === 308) && cambiaOrigen && metodoActual === "POST") {
+          return { ok: false, motivo: "Redirección no permitida" };
+        }
         // 301/302/303 despues de un POST: el navegador (y todo cliente serio) vuelve
         // a pedir por GET, sin cuerpo ni content-type.
         if ((r.estado === 301 || r.estado === 302 || r.estado === 303) && metodoActual === "POST") {
@@ -314,7 +398,7 @@ export async function descargar(url: string, o: Opciones = {}): Promise<Resultad
         }
         // Cambia de origen (esquema, host o puerto): el cuerpo no viaja a un destino
         // distinto al que el llamador autorizo, sin importar el metodo o el codigo.
-        if (nuevaUrl.origin !== g.url.origin) {
+        if (cambiaOrigen) {
           cuerpoActual = undefined;
           contentTypeActual = undefined;
         }

@@ -7,6 +7,16 @@ let puerto = 0;
 let temporizadorLento: NodeJS.Timeout | null = null;
 let ultimaFinal: { metodo: string; longitudCuerpo: number } | null = null;
 
+// Espera "ms" sin retener el proceso vivo si nadie mas lo necesita (para no demorar
+// la salida de vitest cuando el timer sobrevive a la promesa que lo usa, p.ej. un
+// resolvedor de prueba que se abandona porque ya vencio el plazo total).
+function esperar(ms: number): Promise<void> {
+  return new Promise((r) => {
+    const t = setTimeout(r, ms);
+    t.unref?.();
+  });
+}
+
 beforeAll(async () => {
   servidor = http.createServer((req, res) => {
     if (req.url === "/redir") {
@@ -40,6 +50,14 @@ beforeAll(async () => {
       res.writeHead(302, { Location: "file:///etc/passwd" });
       return res.end();
     }
+    if (req.url === "/redir307-otro-origen") {
+      res.writeHead(307, { Location: "http://otro-host.ejemplo.test:1/z" });
+      return res.end();
+    }
+    if (req.url === "/redir307-mismo-origen") {
+      res.writeHead(307, { Location: "/final" });
+      return res.end();
+    }
     // Cadena de 4 redirecciones distintas (no un bucle): sirve para probar que el
     // conteo de saltos es exacto y no solo que un bucle infinito siempre lo agota.
     if (req.url && /^\/r[1-4]$/.test(req.url)) {
@@ -47,10 +65,46 @@ beforeAll(async () => {
       res.writeHead(302, { Location: "/r" + (n + 1) });
       return res.end();
     }
+    // Igual que /r[1-4] pero cada salto tarda 400ms: sirve para el plazo TOTAL.
+    if (req.url && /^\/d[1-4]$/.test(req.url)) {
+      const n = Number(req.url.slice(2));
+      const t = setTimeout(() => {
+        res.writeHead(302, { Location: "/d" + (n + 1) });
+        res.end();
+      }, 400);
+      res.on("close", () => clearTimeout(t));
+      return;
+    }
     if (req.url === "/goteo") {
       const iv = setInterval(() => res.write("x"), 100);
       res.on("close", () => clearInterval(iv));
       return;
+    }
+    if (req.url === "/lento-continuo") {
+      // 20 chunks de 100ms = 2s en total, pero nunca calla mas de 100ms seguidos.
+      let n = 0;
+      const iv = setInterval(() => {
+        n++;
+        res.write("x");
+        if (n >= 20) {
+          clearInterval(iv);
+          res.end();
+        }
+      }, 100);
+      res.on("close", () => clearInterval(iv));
+      return;
+    }
+    if (req.url === "/silencio") {
+      // Escribe una vez y despues nunca mas: sirve para el timeout de INACTIVIDAD puro.
+      res.writeHead(200);
+      res.write("x");
+      return;
+    }
+    if (req.url === "/multibyte") {
+      // El corte a maxBytes:1000 cae justo a la mitad de "é" (2 bytes UTF-8): el byte
+      // 1000 es el primero de esos dos. No debe colar un caracter de reemplazo (U+FFFD).
+      res.writeHead(200, { "content-type": "text/plain; charset=utf-8" });
+      return res.end("a".repeat(999) + "é" + "b".repeat(50));
     }
     if (req.url === "/cortada") {
       res.writeHead(200, { "content-length": "1000" });
@@ -109,16 +163,24 @@ describe("esUrlPermitida", () => {
   });
 
   it("rechaza nombres bloqueados por forma aunque el DNS pudiera decir otra cosa", async () => {
-    for (const u of ["http://algo.localhost/", "http://impresora.local/", "http://svc.internal/", "http://0.0.0.0/"]) {
+    for (const u of [
+      "http://algo.localhost/",
+      "http://algo.localhost./", // punto final: mismo nombre, no un escape
+      "http://impresora.local/",
+      "http://svc.internal/",
+      "http://0.0.0.0/",
+    ]) {
       const r = await esUrlPermitida(u);
       expect(r.ok, u).toBe(false);
     }
   });
 
-  it("rechaza IPv4 disfrazadas (decimal, hex, forma corta) y rangos reservados/benchmarking", async () => {
+  it("rechaza IPv4 disfrazadas (decimal, hex, octal, forma corta) y rangos reservados/benchmarking", async () => {
     for (const u of [
       "http://2130706433/", // 127.0.0.1 en decimal
       "http://0x7f000001/", // 127.0.0.1 en hex
+      "http://0177.0.0.1/", // 127.0.0.1 con el primer octeto en octal
+      "http://0x7f.1/", // 127.0.0.1 en forma corta+hex
       "http://127.1/", // forma corta de 127.0.0.1
       "http://172.16.0.1/",
       "http://100.64.0.1/",
@@ -126,6 +188,19 @@ describe("esUrlPermitida", () => {
       "http://255.255.255.255/", // broadcast (240/4)
       "http://192.0.0.1/", // asignaciones IETF
       "http://198.18.0.1/", // benchmarking
+    ]) {
+      const r = await esUrlPermitida(u);
+      expect(r.ok, u).toBe(false);
+    }
+  });
+
+  it("rechaza rangos TEST-NET, relay anycast 6to4 y site-local IPv6 (obsoleto)", async () => {
+    for (const u of [
+      "http://192.0.2.1/", // TEST-NET-1
+      "http://198.51.100.1/", // TEST-NET-2
+      "http://203.0.113.1/", // TEST-NET-3
+      "http://192.88.99.1/", // relay anycast 6to4 (obsoleto)
+      "http://[fec0::1]/", // site-local (obsoleto), fec0::/10
     ]) {
       const r = await esUrlPermitida(u);
       expect(r.ok, u).toBe(false);
@@ -149,15 +224,23 @@ describe("esUrlPermitida", () => {
     }
   });
 
-  it("en produccion se ignora el resolvedor de pruebas por completo", async () => {
+  it("fuera de la lista blanca de pruebas (produccion, o NODE_ENV sin definir) se ignora el resolvedor inyectado", async () => {
     const entorno = process.env as Record<string, string | undefined>;
-    const previo = entorno.NODE_ENV;
-    entorno.NODE_ENV = "production";
+    const previoNodeEnv = entorno.NODE_ENV;
+    const previoTestDb = entorno.PROSPECTOS_TEST_DB;
+    delete entorno.PROSPECTOS_TEST_DB;
     try {
-      const r = await esUrlPermitida("http://ejemplo.test/x", async () => "127.0.0.1", true);
-      expect(r.ok).toBe(false);
+      for (const valor of ["production", undefined] as const) {
+        if (valor === undefined) delete entorno.NODE_ENV;
+        else entorno.NODE_ENV = valor;
+        const r = await esUrlPermitida("http://ejemplo.test/x", async () => "127.0.0.1", true);
+        expect(r.ok, String(valor)).toBe(false);
+      }
     } finally {
-      entorno.NODE_ENV = previo;
+      if (previoNodeEnv === undefined) delete entorno.NODE_ENV;
+      else entorno.NODE_ENV = previoNodeEnv;
+      if (previoTestDb === undefined) delete entorno.PROSPECTOS_TEST_DB;
+      else entorno.PROSPECTOS_TEST_DB = previoTestDb;
     }
   });
 
@@ -184,7 +267,7 @@ describe("descargar", () => {
     }
   });
 
-  it("corta a maxBytes (marcando truncado), corta por tiempo y corta los bucles de redireccion", async () => {
+  it("corta a maxBytes (marcando truncado, sin partir un caracter multibyte), corta por inactividad y corta los bucles de redireccion", async () => {
     const g = await descargar(url("/grande"), { ...publica, maxBytes: 1024 });
     expect(g.ok && g.texto.length <= 1024).toBe(true);
     expect(g.ok && g.truncado).toBe(true);
@@ -196,12 +279,14 @@ describe("descargar", () => {
     expect(b).toEqual({ ok: false, motivo: expect.stringContaining("redirecciones") });
   });
 
-  it("respeta un plazo TOTAL: un servidor que gotea 1 byte cada 100ms tambien corta", async () => {
-    const inicio = Date.now();
-    const r = await descargar(url("/goteo"), { ...publica, timeoutMs: 600 });
-    const transcurrido = Date.now() - inicio;
-    expect(r).toEqual({ ok: false, motivo: "Tiempo de espera agotado" });
-    expect(transcurrido).toBeLessThan(1200);
+  it("un corte por maxBytes a mitad de un caracter UTF-8 no deja un U+FFFD colgado", async () => {
+    const r = await descargar(url("/multibyte"), { ...publica, maxBytes: 1000 });
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.truncado).toBe(true);
+      expect(r.texto).toBe("a".repeat(999));
+      expect(r.texto).not.toContain("�");
+    }
   });
 
   it("una conexion cortada a medio cuerpo no se reporta como exitosa", async () => {
@@ -226,18 +311,39 @@ describe("descargar", () => {
     expect(f.ok).toBe(false);
   });
 
+  it("un 307 hacia otro origen con POST se rechaza en vez de reenviar el cuerpo (o vaciarlo)", async () => {
+    const r = await descargar(url("/redir307-otro-origen"), {
+      ...publica,
+      metodo: "POST",
+      cuerpo: "x=1",
+      contentType: "text/plain",
+    });
+    expect(r).toEqual({ ok: false, motivo: "Redirección no permitida" });
+  });
+
+  it("un 307 dentro del mismo origen SI preserva metodo y cuerpo", async () => {
+    ultimaFinal = null;
+    const r = await descargar(url("/redir307-mismo-origen"), {
+      ...publica,
+      metodo: "POST",
+      cuerpo: "campo=1",
+      contentType: "text/plain",
+    });
+    expect(r.ok).toBe(true);
+    expect(ultimaFinal).toEqual({ metodo: "POST", longitudCuerpo: 7 });
+  });
+
   it("una redireccion hacia una IP privada se rechaza aunque el origen sea publico", async () => {
-    // El primer salto "resuelve" (via el inyector de pruebas) a una IP publica ficticia
-    // (192.0.2.1, TEST-NET-1: reservada para documentacion, nunca ruteable) que no existe
-    // en este entorno, asi que la conexion real al primer host puede fallar antes de
-    // llegar al segundo salto. Lo que importa aqui es que el resultado final sea de
-    // rechazo: si viene de no poder conectar o de la guardia del segundo salto da igual,
-    // porque _esSaltoPermitido ya esta probado por separado (y descargar lo ejecuta en
-    // cada iteracion del bucle de redirecciones).
+    // El primer salto "resuelve" (via el inyector de pruebas) a una IP publica de verdad
+    // (93.184.216.34, ejemplo.com historico) que no existe como servidor en este entorno,
+    // asi que la conexion real al primer host puede fallar antes de llegar al segundo
+    // salto. Lo que importa aqui es que el resultado final sea de rechazo: si viene de no
+    // poder conectar o de la guardia del segundo salto da igual, porque _esSaltoPermitido
+    // ya esta probado por separado (y descargar lo ejecuta en cada iteracion del bucle).
     const r = await descargar(url("/privado"), {
       ...publica,
       timeoutMs: 1500,
-      _lookupParaTests: async (h: string) => (h === "ejemplo.test" ? "192.0.2.1" : h),
+      _lookupParaTests: async (h: string) => (h === "ejemplo.test" ? "93.184.216.34" : h),
     });
     expect(r.ok).toBe(false);
   });
@@ -257,5 +363,43 @@ describe("descargar", () => {
     });
     expect(r.ok).toBe(true);
     expect(ultimaFinal).toEqual({ metodo: "GET", longitudCuerpo: 0 });
+  });
+});
+
+describe("plazo TOTAL vs. inactividad (no deben confundirse)", () => {
+  it("(a) una cadena de saltos de 400ms cada uno agota el plazo TOTAL en vez de completarse", async () => {
+    const inicio = Date.now();
+    const r = await descargar(url("/d1"), { ...publica, plazoTotalMs: 600 });
+    const transcurrido = Date.now() - inicio;
+    expect(r).toEqual({ ok: false, motivo: "Tiempo de espera agotado" });
+    expect(transcurrido).toBeLessThan(1000);
+  });
+
+  it("(b) una resolucion DNS lenta tambien cuenta contra el plazo TOTAL", async () => {
+    const inicio = Date.now();
+    const r = await descargar(url("/final"), {
+      _lookupParaTests: async () => {
+        await esperar(2500);
+        return "127.0.0.1";
+      },
+      _confiarEnLookupParaTests: true,
+      plazoTotalMs: 200,
+    });
+    const transcurrido = Date.now() - inicio;
+    expect(r).toEqual({ ok: false, motivo: "Tiempo de espera agotado" });
+    expect(transcurrido).toBeLessThan(500);
+  });
+
+  it("(c) REGRESION: una descarga lenta pero CONTINUA no se corta si el timeout es de inactividad", async () => {
+    const r = await descargar(url("/lento-continuo"), { ...publica, timeoutMs: 500, plazoTotalMs: 10_000 });
+    expect(r.ok).toBe(true);
+  });
+
+  it("(d) un silencio mayor al timeoutMs de inactividad corta aunque sobre plazo total", async () => {
+    const inicio = Date.now();
+    const r = await descargar(url("/silencio"), { ...publica, timeoutMs: 300, plazoTotalMs: 5000 });
+    const transcurrido = Date.now() - inicio;
+    expect(r).toEqual({ ok: false, motivo: "Tiempo de espera agotado" });
+    expect(transcurrido).toBeLessThan(1000);
   });
 });
