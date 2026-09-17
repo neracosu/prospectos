@@ -113,15 +113,18 @@ export async function avisarHito(id: number): Promise<Resultado<{ href: string }
     const cliente = p.proyecto.cliente;
     // Sin WhatsApp no hay a quien avisar: se corta antes de marcar nada.
     if (!cliente.whatsapp) return fallo("El cliente no tiene WhatsApp cargado. Agrégalo en su ficha antes de avisar.");
+    // El mensaje se arma ANTES de marcar nada: si leer la plantilla o el enlace fallara, no queda
+    // avisado algo que nunca llego a abrir WhatsApp.
+    const mensaje = mensajeAvisoHito(await leerConfig(CLAVES.avisoHito), { cliente: quienRecibe(cliente), proyecto: p.proyecto.nombre, hito: p.texto, enlace: await enlaceSiTieneAcceso(p.proyecto.clienteId) });
+    // El whatsapp ya se valido arriba, asi que el enlace nunca sale nulo.
+    const href = enlaceWhatsappCobro(cliente.whatsapp, mensaje)!;
     await prisma.$transaction(async (tx) => {
-      const r = await tx.pendiente.updateMany({ where: { id: p.id, hecho: true, avisadoEn: null }, data: { avisadoEn: new Date() } });
+      const r = await tx.pendiente.updateMany({ where: { id: p.id, hecho: true, visibleCliente: true, avisadoEn: null }, data: { avisadoEn: new Date() } });
       if (r.count === 0) throw new Error(HITO_YA_AVISADO);
       await tx.evento.create({ data: { proyectoId: p.proyectoId, usuarioId: u.id, tipo: "aviso_cliente", canal: "whatsapp", texto: `hito: ${p.texto}` } });
     });
-    const mensaje = mensajeAvisoHito(await leerConfig(CLAVES.avisoHito), { cliente: quienRecibe(cliente), proyecto: p.proyecto.nombre, hito: p.texto, enlace: await enlaceSiTieneAcceso(p.proyecto.clienteId) });
     refrescar(p.proyectoId);
-    // El whatsapp ya se valido arriba, asi que el enlace nunca sale nulo.
-    return exito({ href: enlaceWhatsappCobro(cliente.whatsapp, mensaje)! });
+    return exito({ href });
   } catch (err) {
     if (err instanceof Error && err.message === HITO_YA_AVISADO) return fallo("Este hito ya se avisó.");
     console.error("avisarHito", err); return fallo(ERROR);

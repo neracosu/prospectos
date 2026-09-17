@@ -144,14 +144,18 @@ export async function avisarCobro(cobroId: number): Promise<Resultado<{ href: st
     if (c.concepto !== "cuota" && c.concepto !== "extra") return fallo("Solo se avisan las cuotas y los extras: las mensualidades tienen su recordatorio.");
     const cliente = c.proyecto.cliente;
     if (!cliente.whatsapp) return fallo("El cliente no tiene WhatsApp cargado. Agrégalo en su ficha antes de avisar.");
+    // El mensaje se arma ANTES de marcar nada: si leer la plantilla o el enlace fallara, no queda
+    // avisado algo que nunca llego a abrir WhatsApp.
+    const mensaje = mensajeAvisoCobro(await leerConfig(CLAVES.avisoCobro), { cliente: quienRecibe(cliente), proyecto: c.proyecto.nombre, concepto: c.concepto as Concepto, detalle: c.detalle, monto: Number(c.monto), vence: c.vence, enlace: await enlaceSiTieneAcceso(c.proyecto.clienteId) });
+    // El whatsapp ya se valido arriba, asi que el enlace nunca sale nulo.
+    const href = enlaceWhatsappCobro(cliente.whatsapp, mensaje)!;
     await prisma.$transaction(async (tx) => {
       const r = await tx.cobro.updateMany({ where: { id: c.id, avisadoEn: null, pagadoEn: null, anuladoEn: null }, data: { avisadoEn: new Date() } });
       if (r.count === 0) throw new Error(COBRO_YA_AVISADO);
       await tx.evento.create({ data: { proyectoId: c.proyectoId, cobroId: c.id, usuarioId: u.id, tipo: "aviso_cliente", canal: "whatsapp", texto: `cobro: ${c.detalle}` } });
     });
-    const mensaje = mensajeAvisoCobro(await leerConfig(CLAVES.avisoCobro), { cliente: quienRecibe(cliente), proyecto: c.proyecto.nombre, concepto: c.concepto as Concepto, detalle: c.detalle, monto: Number(c.monto), vence: c.vence, enlace: await enlaceSiTieneAcceso(c.proyecto.clienteId) });
     refrescar(c.proyectoId);
-    return exito({ href: enlaceWhatsappCobro(cliente.whatsapp, mensaje)! });
+    return exito({ href });
   } catch (err) {
     if (err instanceof Error && err.message === COBRO_YA_AVISADO) return fallo("Este cobro ya se avisó.");
     console.error("avisarCobro", err); return fallo(ERROR);

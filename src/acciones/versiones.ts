@@ -93,6 +93,11 @@ export async function marcarAvisada(versionId: number): Promise<Resultado<{ href
     // Sin WhatsApp no hay a quien avisar: se corta antes de la transaccion para
     // no dejar la version marcada como avisada sin haber avisado a nadie.
     if (!v.proyecto.cliente.whatsapp) return fallo("El cliente no tiene WhatsApp cargado. Agrégalo en su ficha antes de avisar.");
+    // El mensaje se arma ANTES de marcar nada: si leer la plantilla o el enlace fallara, no queda
+    // avisado algo que nunca llego a abrir WhatsApp.
+    const mensaje = mensajeAvisoVersion(await leerConfig(CLAVES.avisoVersion), { cliente: quienRecibe(v.proyecto.cliente), proyecto: v.proyecto.nombre, version: v.version, cambios: v.cambios, enlace: await enlaceSiTieneAcceso(v.proyecto.clienteId) });
+    // El whatsapp ya se valido arriba, asi que el enlace nunca sale nulo.
+    const href = enlaceWhatsappCobro(v.proyecto.cliente.whatsapp, mensaje)!;
     // Update y evento van juntos: si el evento fallara, avisadoEn tampoco queda a medias
     // (una version marcada avisada sin su evento seria irrecuperable).
     await prisma.$transaction(async (tx) => {
@@ -100,9 +105,6 @@ export async function marcarAvisada(versionId: number): Promise<Resultado<{ href
       if (r.count === 0) throw new Error(VERSION_YA_AVISADA);
       await tx.evento.create({ data: { proyectoId: v.proyectoId, usuarioId: u.id, tipo: "aviso_cliente", texto: `versión ${v.version}` } });
     });
-    const mensaje = mensajeAvisoVersion(await leerConfig(CLAVES.avisoVersion), { cliente: quienRecibe(v.proyecto.cliente), proyecto: v.proyecto.nombre, version: v.version, cambios: v.cambios, enlace: await enlaceSiTieneAcceso(v.proyecto.clienteId) });
-    // El whatsapp ya se valido arriba, asi que el enlace nunca sale nulo.
-    const href = enlaceWhatsappCobro(v.proyecto.cliente.whatsapp, mensaje)!;
     refrescar(v.proyectoId);
     return exito({ href });
   } catch (err) {

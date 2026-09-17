@@ -10,6 +10,12 @@ vi.mock("@/lib/sesion", async () => {
 });
 vi.mock("next/cache", () => ({ revalidatePath: () => {} }));
 
+const configRota = vi.hoisted(() => ({ fallar: false }));
+vi.mock("@/lib/configuracion", async (original) => {
+  const real = await original<typeof import("@/lib/configuracion")>();
+  return { ...real, leerConfig: async (clave: string) => { if (configRota.fallar) throw new Error("CONFIG_ROTA"); return real.leerConfig(clave); } };
+});
+
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
 import { prisma } from "@/lib/db";
 import { DB_HABILITADA, limpiarBase, sembrarBasico, sembrarCliente, sembrarProyecto } from "./ayuda-db";
@@ -147,5 +153,25 @@ describe.runIf(DB_HABILITADA)("avisos al cliente", () => {
     expect(await prisma.usuario.findUniqueOrThrow({ where: { id: cuenta.id } })).toMatchObject({ rol: "cliente", nombre: cuenta.nombre, pinHash: cuenta.pinHash });
     // Una cuenta del panel se sigue pudiendo editar.
     expect((await guardarUsuario(fd({ id: String(ids.prospectadorId), nombre: "María José", rol: "prospectador", metaDiaria: "8", activo: "on" }))).ok).toBe(true);
+  });
+
+  it("si armar el mensaje falla, no queda NADA marcado como avisado: se puede reintentar", async () => {
+    const hito = await prisma.pendiente.create({ data: { proyectoId, texto: "Hito con plantilla rota", hecho: true, hechoEn: new Date(), visibleCliente: true, orden: 9 } });
+    const cobro = await prisma.cobro.create({ data: { proyectoId, concepto: "extra", detalle: "Extra con plantilla rota", monto: "30.00", vence: "2026-11-01" } });
+    const v = await prisma.version.create({ data: { proyectoId, version: "3.0.0", fecha: "2026-09-17", cambios: { create: [{ tipo: "mejora", texto: "Algo", orden: 0 }] } } });
+    configRota.fallar = true;
+    try {
+      expect((await avisarHito(hito.id)).ok).toBe(false);
+      expect((await avisarCobro(cobro.id)).ok).toBe(false);
+      expect((await marcarAvisada(v.id)).ok).toBe(false);
+    } finally { configRota.fallar = false; }
+    expect((await prisma.pendiente.findUniqueOrThrow({ where: { id: hito.id } })).avisadoEn).toBeNull();
+    expect((await prisma.cobro.findUniqueOrThrow({ where: { id: cobro.id } })).avisadoEn).toBeNull();
+    expect((await prisma.version.findUniqueOrThrow({ where: { id: v.id } })).avisadoEn).toBeNull();
+    expect(await prisma.evento.count({ where: { proyectoId, tipo: "aviso_cliente", OR: [{ texto: "hito: Hito con plantilla rota" }, { texto: "cobro: Extra con plantilla rota" }, { texto: "versión 3.0.0" }] } })).toBe(0);
+    // Pasado el problema, el mismo boton funciona.
+    expect((await avisarHito(hito.id)).ok).toBe(true);
+    expect((await avisarCobro(cobro.id)).ok).toBe(true);
+    expect((await marcarAvisada(v.id)).ok).toBe(true);
   });
 });
