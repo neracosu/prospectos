@@ -19,8 +19,10 @@ let usuarioCreado = 0, clienteId = 0;
 
 const b = await chromium.launch();
 const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
-ctx.on("page", (nueva) => { if (nueva.url().includes("wa.me") || nueva.url() === "about:blank") nueva.close().catch(() => {}); }); // la ventana de WhatsApp no interesa
 const pg = await ctx.newPage();
+// Registrado DESPUES de crear pg y comparando contra ella: la pagina principal tambien nace en
+// about:blank antes de goto(), y el manejador no debe cerrar esa. Solo cierra la emergente de WhatsApp.
+ctx.on("page", (nueva) => { if (nueva !== pg && (nueva.url().includes("wa.me") || nueva.url() === "about:blank")) nueva.close().catch(() => {}); });
 pg.on("pageerror", (e) => errores.push(`pageerror: ${e.message}`));
 pg.on("console", (m) => { if (m.type() === "error") errores.push(`console: ${m.text()}`); });
 try {
