@@ -1,11 +1,13 @@
 "use client";
-import { useState, useTransition } from "react";
+import { useOptimistic, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { LoteDetalle } from "@/lib/revision";
 import { COLUMNAS, type Columna } from "@/lib/tabla-contrato";
 import { etiquetaOrigen, siguientePasada, APROBACION_INICIAL } from "@/lib/revision-contrato";
+import { aplicarDecision, type CambioFila } from "@/lib/optimista-contrato";
 import { aprobarFila, completarExistente, descartarFila, corregirFila, aprobarNuevos } from "@/acciones/revision";
+import { useFlotante } from "@/componentes/LineaFlotante";
 
 // La bandeja es el filtro: nada llega al panel sin que alguien lo mire aca. Cada
 // tarjeta tiene UNA accion principal (aprobar, completar o corregir) y las demas
@@ -41,35 +43,47 @@ function esUrl(v: string): boolean {
   return /^https?:\/\//i.test(v);
 }
 
-export function Bandeja({ lote }: { lote: LoteDetalle }) {
+export function Bandeja({ lote: loteDelServidor }: { lote: LoteDetalle }) {
+  const avisar = useFlotante();
+  // Pasada de UX, fase B: aprobar, completar y descartar marcan la ficha al tocar y bajan «por decidir»; si el
+  // servidor dice que no, vuelve sola y el error sale en la ficha. «Corregir» y «Aprobar todas» no son de un
+  // toque y siguen esperando al servidor.
+  const [lote, decidir] = useOptimistic<LoteDetalle, CambioFila>(loteDelServidor, aplicarDecision);
   const [editando, setEditando] = useState<number | null>(null);
   const [error, setError] = useState<Aviso | null>(null);
   const [corriendo, setCorriendo] = useState<Accion | null>(null);
   const [avance, setAvance] = useState<{ hechas: number; de: number } | null>(null);
   const [pendiente, empezar] = useTransition();
   const router = useRouter();
+  // Las decisiones de un toque no esperan a la anterior; solo se bloquean mientras corre «Aprobar todas».
+  const enLote = corriendo === "lote";
 
-  const correr = (donde: Accion, fn: () => Promise<{ ok: true; datos: unknown } | { ok: false; mensaje: string }>) =>
+  // Sin router.refresh(): cada accion de revision ya revalida /buscar y su respuesta trae el lote nuevo.
+  const correr = (donde: Accion, fn: () => Promise<{ ok: true; datos: unknown } | { ok: false; mensaje: string }>, optimista?: { cambio: CambioFila; texto: string }) => {
+    setError(null);
+    // Con cambio optimista no hay «Guardando…»: la ficha ya se ve decidida.
+    if (!optimista) setCorriendo(donde);
     empezar(async () => {
-      setError(null);
-      setCorriendo(donde);
+      if (optimista) decidir(optimista.cambio);
       const r = await fn();
       setCorriendo(null);
       if (r.ok) {
         setEditando(null);
-        router.refresh();
+        if (optimista) avisar({ texto: optimista.texto });
       } else setError({ donde, mensaje: r.mensaje });
     });
+  };
 
   // Aprueba de a 500 (TOPE_APROBACION) hasta que no queden nuevas. Cuando parar
   // lo decide siguientePasada, que esta en revision-contrato con su test: una
   // fila que siempre falla no puede dejar la pantalla girando sin fin.
-  const aprobarTodas = () =>
+  const aprobarTodas = () => {
+    // Antes de la transicion: adentro, lo que va antes del primer await no se pinta hasta que el servidor responde.
+    setError(null);
+    setCorriendo("lote");
+    setAvance({ hechas: 0, de: lote.aprobables });
     empezar(async () => {
-      setError(null);
-      setCorriendo("lote");
       let estado = APROBACION_INICIAL;
-      setAvance({ hechas: 0, de: lote.aprobables });
       for (;;) {
         const r = await aprobarNuevos(lote.lote);
         if (!r.ok) {
@@ -95,6 +109,7 @@ export function Bandeja({ lote }: { lote: LoteDetalle }) {
       setAvance(null);
       router.refresh();
     });
+  };
 
   return (
     <>
@@ -210,12 +225,12 @@ export function Bandeja({ lote }: { lote: LoteDetalle }) {
             {!decidida && editando !== f.id && (
               <div className="fila-botones">
                 {f.estado === "nuevo" && (
-                  <button className="boton boton--primario" disabled={pendiente} onClick={() => correr(f.id, () => aprobarFila(f.id))}>
+                  <button className="boton boton--primario" disabled={enLote} onClick={() => correr(f.id, () => aprobarFila(f.id), { cambio: { id: f.id, decision: "aprobado" }, texto: `Aprobado: ${f.datos.nombre}` })}>
                     {corriendo === f.id ? "Guardando…" : "Aprobar"}
                   </button>
                 )}
                 {f.estado === "repetido" && f.existenteId !== null && (
-                  <button className="boton boton--primario" disabled={pendiente} onClick={() => correr(f.id, () => completarExistente(f.id))}>
+                  <button className="boton boton--primario" disabled={enLote} onClick={() => correr(f.id, () => completarExistente(f.id), { cambio: { id: f.id, decision: "completado" }, texto: `Completado: ${f.datos.nombre}` })}>
                     {corriendo === f.id ? "Completando…" : "Completar el que existe"}
                   </button>
                 )}
@@ -224,7 +239,7 @@ export function Bandeja({ lote }: { lote: LoteDetalle }) {
                     Corregir
                   </button>
                 )}
-                <button className="boton boton--peligro" disabled={pendiente} onClick={() => correr(f.id, () => descartarFila(f.id))}>
+                <button className="boton boton--peligro" disabled={enLote} onClick={() => correr(f.id, () => descartarFila(f.id), { cambio: { id: f.id, decision: "descartado" }, texto: `Descartado: ${f.datos.nombre || "ficha sin nombre"}` })}>
                   Descartar
                 </button>
               </div>
