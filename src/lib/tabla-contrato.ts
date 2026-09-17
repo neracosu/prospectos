@@ -109,13 +109,26 @@ export function validarFila(f: Record<Columna, string>): { entrada: EntradaValid
     nota: f.nota.trim(), fuentes: fuente ? [fuente] : [], fuentesPorCampo: {},
   };
   if (fuente) for (const c of ["nombre", "ciudad", "estado", "tipo", "tamano", "telefono", "whatsapp", "email", "web", "instagram", "facebook", "tiktok"] as const) if (entrada[c]) entrada.fuentesPorCampo[c] = fuente;
+  errores.push(...validarTopes(entrada));
+  return { entrada, errores };
+}
+
+// Los topes de largo de una entrada ya armada. Vive aparte de validarFila porque
+// las filas que NO vienen de una tabla (Overpass, una ficha de Maps) tienen que
+// pasar por lo mismo: un nombre de 246 caracteres llega igual desde OpenStreetMap
+// y, sin esto, la fila se ve bien en la bandeja y revienta con P2000 al aprobarla.
+export function validarTopes(entrada: EntradaValidada): string[] {
+  const errores: string[] = [];
   // Se mide el valor ya normalizado, que es el que va a la columna: normalizarRed
   // convierte "@usuario" en una URL y eso suma caracteres.
   for (const [campo, etiqueta, max] of LIMITES) {
-    const valor = campo === "fuente" ? fuente : String((entrada as unknown as Record<string, unknown>)[campo] ?? "");
+    const valor =
+      campo === "fuente"
+        ? (entrada.fuentes ?? [])[0] ?? ""
+        : String((entrada as unknown as Record<string, unknown>)[campo] ?? "");
     if (valor.length > max) errores.push(`${etiqueta} no puede pasar de ${max} caracteres`);
   }
   // El par, no cada campo: `clave` es VARCHAR(191) y se arma con los dos.
   if (claveProspecto(entrada.nombre, entrada.ciudad).length > TOPES.clave) errores.push(ERROR_CLAVE_LARGA);
-  return { entrada, errores };
+  return errores;
 }

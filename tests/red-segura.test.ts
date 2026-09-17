@@ -6,6 +6,7 @@ let servidor: http.Server;
 let puerto = 0;
 let temporizadorLento: NodeJS.Timeout | null = null;
 let ultimaFinal: { metodo: string; longitudCuerpo: number } | null = null;
+let ultimasCabeceras: Record<string, string | undefined> = {};
 
 // Espera "ms" sin retener el proceso vivo si nadie mas lo necesita (para no demorar
 // la salida de vitest cuando el timer sobrevive a la promesa que lo usa, p.ej. un
@@ -130,6 +131,7 @@ beforeAll(async () => {
       req.on("data", (c) => (datos += c));
       req.on("end", () => {
         ultimaFinal = { metodo: req.method ?? "", longitudCuerpo: datos.length };
+        ultimasCabeceras = { "content-length": req.headers["content-length"], "transfer-encoding": req.headers["transfer-encoding"] };
         res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
         res.end("<html>hola /final</html>");
       });
@@ -371,6 +373,20 @@ describe("descargar", () => {
     });
     expect(r.ok).toBe(true);
     expect(ultimaFinal).toEqual({ metodo: "POST", longitudCuerpo: 7 });
+  });
+
+  it("un POST con cuerpo lleva content-length y no va troceado", async () => {
+    ultimasCabeceras = {};
+    const cuerpo = "data=" + encodeURIComponent("[out:json];node(1);out;");
+    const r = await descargar(url("/final"), {
+      ...publica,
+      metodo: "POST",
+      cuerpo,
+      contentType: "application/x-www-form-urlencoded",
+    });
+    expect(r.ok).toBe(true);
+    expect(ultimasCabeceras["content-length"]).toBe(String(Buffer.byteLength(cuerpo)));
+    expect(ultimasCabeceras["transfer-encoding"]).toBeUndefined();
   });
 
   it("una redireccion hacia una IP privada se rechaza aunque el origen sea publico", async () => {

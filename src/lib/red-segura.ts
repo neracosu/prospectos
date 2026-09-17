@@ -290,6 +290,10 @@ function conectarFijo(
           accept: "text/html,application/json;q=0.9,*/*;q=0.5",
           "accept-encoding": "identity",
           ...(opts.contentType ? { "content-type": opts.contentType } : {}),
+          // Con cuerpo, el largo va explicito. Sin content-length Node manda la
+          // peticion troceada (Transfer-Encoding: chunked) y varios servidores
+          // (Overpass entre ellos) contestan 411 o la cortan.
+          ...(opts.cuerpo !== undefined ? { "content-length": String(Buffer.byteLength(opts.cuerpo)) } : {}),
         },
         // Limite de INACTIVIDAD (sin datos por timeoutMs). No es el plazo total: un
         // servidor que gotea un byte de vez en cuando nunca dispara esto solo.

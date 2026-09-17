@@ -43,6 +43,11 @@ const AYUDA: Record<(typeof COLUMNAS)[number], string> = {
   fuente: "URL donde el negocio publica estos datos",
 };
 
+// Excel en Windows guarda el CSV en la codificacion del sistema (windows-1252) si
+// no se le dice otra cosa, y ahi los acentos llegan rotos. El aviso va en la hoja
+// de ayuda; leerlo igual cuando no hace caso es trabajo de decodificarTexto.
+export const AVISO_CSV = "Si guardas como CSV, elige UTF-8";
+
 export function generarPlantillaCsv(): string {
   return COLUMNAS.join(";") + "\n" + COLUMNAS.map((c) => EJEMPLO[c]).join(";") + "\n";
 }
@@ -59,6 +64,8 @@ export async function generarPlantillaXlsx(): Promise<Buffer> {
   ayuda.addRow(["Columna", "Qué va"]);
   ayuda.getRow(1).font = { bold: true };
   for (const c of COLUMNAS) ayuda.addRow([c, AYUDA[c]]);
+  ayuda.addRow(["", ""]);
+  ayuda.addRow(["CSV", AVISO_CSV]);
   ayuda.getColumn(1).width = 14;
   ayuda.getColumn(2).width = 60;
   return Buffer.from(await wb.xlsx.writeBuffer());
@@ -90,7 +97,9 @@ function celdaComoTexto(v: unknown): string {
 export async function leerXlsx(buf: Buffer): Promise<string> {
   const wb = new ExcelJS.Workbook();
   await wb.xlsx.load(buf as unknown as ArrayBuffer);
-  const hoja = wb.worksheets[0];
+  // Si el archivo trae la hoja de la plantilla, esa es la buena: alguien pudo
+  // agregar una hoja adelante (un resumen, una portada) sin querer romper nada.
+  const hoja = wb.getWorksheet(HOJA_DATOS) ?? wb.worksheets[0];
   if (!hoja) return "";
   const anchos = Math.max(hoja.columnCount, 1);
   const lineas: string[] = [];
@@ -102,4 +111,18 @@ export async function leerXlsx(buf: Buffer): Promise<string> {
     lineas.push(celdas.map((c) => c.replace(/[\t\r\n]+/g, " ").trim()).join("\t"));
   });
   return lineas.join("\n") + "\n";
+}
+
+// Un .csv o .txt puede venir en UTF-8 (lo normal) o en windows-1252 (lo que deja
+// Excel en Windows si no se elige otra cosa). Se prueba UTF-8 estricto y, si el
+// buffer no es UTF-8 valido, se lee como windows-1252 en vez de llenar el archivo
+// de caracteres de reemplazo.
+export function decodificarTexto(buf: Buffer): string {
+  let texto: string;
+  try {
+    texto = new TextDecoder("utf-8", { fatal: true }).decode(buf);
+  } catch {
+    texto = new TextDecoder("windows-1252").decode(buf);
+  }
+  return texto.replace(/^\uFEFF/, "");
 }
