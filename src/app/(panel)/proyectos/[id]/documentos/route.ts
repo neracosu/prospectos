@@ -40,7 +40,8 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     revalidatePath(`/proyectos/${proyectoId}`);
     return responder(200, { ok: true, datos: { id: r.id } });
   } catch (err) {
-    const conocido = MENSAJES[err instanceof Error ? err.message : ""];
+    const clave = err instanceof Error ? err.message : "";
+    const conocido = Object.prototype.hasOwnProperty.call(MENSAJES, clave) ? MENSAJES[clave] : undefined;
     if (conocido) return responder(conocido[0], { ok: false, mensaje: conocido[1] });
     console.error("subir documento", proyectoId, err);
     return responder(500, { ok: false, mensaje: "No se pudo guardar el documento. Intenta de nuevo." });

@@ -29,7 +29,9 @@ export function TabVersiones({ proyectoId, versiones, hoy }: { proyectoId: numbe
   const avisar = (id: number) => empezar(async () => {
     const r = await marcarAvisada(id);
     if (r.ok) {
-      const ventana = window.open(r.datos.href, "_blank", "noopener");
+      // Sin "noopener" en las opciones: con el, window.open devuelve null SIEMPRE y no se sabria si abrio.
+      const ventana = window.open(r.datos.href, "_blank");
+      if (ventana) ventana.opener = null;
       setEnlaceManual(ventana ? null : { id, href: r.datos.href });
       setError("");
       router.refresh();

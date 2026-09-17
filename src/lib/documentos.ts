@@ -40,7 +40,8 @@ export async function guardarDocumento(d: { proyectoId: number; nombre: string; 
     });
   } catch (err) {
     // La base no lo conoce: ese archivo no es de nadie. Es el unico rm de la pieza y solo toca lo que acaba de escribir.
-    await rm(ruta, { force: true });
+    // Si el rm fallara, el error de la transaccion es el que importa: no se tapa.
+    await rm(ruta, { force: true }).catch(() => {});
     throw err;
   }
 }

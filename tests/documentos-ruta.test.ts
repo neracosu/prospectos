@@ -15,6 +15,12 @@ vi.mock("@/lib/sesion-cliente", async () => {
 vi.mock("@/lib/ip", () => ({ ipCliente: async () => "10.9.8.7" }));
 vi.mock("next/cache", () => ({ revalidatePath: () => {} }));
 
+const guardarRoto = vi.hoisted(() => ({ fallar: false }));
+vi.mock("@/lib/documentos", async (original) => {
+  const real = await original<typeof import("@/lib/documentos")>();
+  return { ...real, guardarDocumento: async (...args: Parameters<typeof real.guardarDocumento>) => { if (guardarRoto.fallar) throw new Error("constructor"); return real.guardarDocumento(...args); } };
+});
+
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
 import { rmSync } from "node:fs";
 import path from "node:path";
@@ -98,6 +104,18 @@ describe.runIf(DB_HABILITADA)("documentos: subir, quitar y servir", () => {
       expect(cuerpo.ok).toBe(false);
       expect(cuerpo.mensaje).toMatch(texto);
     }
+    expect(await prisma.documento.count()).toBe(antes);
+  });
+
+  it("subir: un error con nombre heredado del prototipo (constructor) no se confunde con un mensaje conocido", async () => {
+    const antes = await prisma.documento.count();
+    guardarRoto.fallar = true;
+    try {
+      const r = await subir(proyectoId, new File([PDF], "x.pdf"));
+      expect(r.status).toBe(500);
+      const cuerpo = await r.json();
+      expect(cuerpo).toEqual({ ok: false, mensaje: "No se pudo guardar el documento. Intenta de nuevo." });
+    } finally { guardarRoto.fallar = false; }
     expect(await prisma.documento.count()).toBe(antes);
   });
 
