@@ -3,13 +3,17 @@ vi.mock("@/lib/sesion", async () => {
   const { sesionFalsa } = await import("./ayuda-sesion");
   return { COOKIE_SESION: "pr_sesion", DIAS_SESION: 30, sesionActual: async () => sesionFalsa.actual };
 });
+vi.mock("@/lib/sesion-cliente", async () => {
+  const { sesionClienteFalsa } = await import("./ayuda-sesion");
+  return { COOKIE_CLIENTE: "sesion_cliente", sesionCliente: async () => sesionClienteFalsa.actual };
+});
 
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { prisma } from "@/lib/db";
 import { DB_HABILITADA, limpiarBase, sembrarBasico, sembrarCliente, sembrarProyecto } from "./ayuda-db";
-import { sesionFalsa } from "./ayuda-sesion";
+import { sesionFalsa, sesionClienteFalsa } from "./ayuda-sesion";
 import { rutaDocumento } from "@/lib/recibos";
 import { GET } from "@/app/recibos/[archivo]/route";
 
@@ -18,11 +22,14 @@ function guardar(nombre: string, contenido: string) { const r = rutaDocumento(no
 
 describe.runIf(DB_HABILITADA)("GET /recibos/[archivo]", () => {
   let ids: Awaited<ReturnType<typeof sembrarBasico>>;
+  let clienteId = 0;
+  let otroClienteId = 0;
   beforeAll(async () => {
     await limpiarBase();
     rmSync(path.join(process.env.PROSPECTOS_DIR_ARCHIVOS!, "recibos"), { recursive: true, force: true });
     ids = await sembrarBasico();
     const c = await sembrarCliente();
+    clienteId = c.id;
     const p = await sembrarProyecto(c.id, ids.nichoId);
     const base = { proyectoId: p.id, concepto: "extra", monto: "10.00", vence: "2026-09-01", pagadoEn: new Date(), reciboGeneradoEn: new Date() };
     await prisma.cobro.create({ data: { ...base, detalle: "Con archivo", reciboNumero: "R-2026-0001" } });
@@ -32,8 +39,10 @@ describe.runIf(DB_HABILITADA)("GET /recibos/[archivo]", () => {
     guardar("R-2026-0003", "%PDF-tres");
     guardar("R-2026-0003-A", "%PDF-nota");
     guardar("R-2026-0001-A", "%PDF-huerfano"); // archivo suelto: la base no sabe de esa nota
+    const otro = await sembrarCliente({ nombre: "Otro Cliente" });
+    otroClienteId = otro.id;
   });
-  beforeEach(() => { sesionFalsa.actual = { id: ids.usuarioId, nombre: "Neri", rol: "dueno" }; });
+  beforeEach(() => { sesionFalsa.actual = { id: ids.usuarioId, nombre: "Neri", rol: "dueno" }; sesionClienteFalsa.actual = null; });
   afterAll(async () => { await limpiarBase(); await prisma.$disconnect(); });
 
   it("sin sesion manda a /entrar; el prospectador recibe 403", async () => {
@@ -61,5 +70,26 @@ describe.runIf(DB_HABILITADA)("GET /recibos/[archivo]", () => {
     for (const archivo of ["..%2F..%2Fetc%2Fpasswd", "R-2026-1.pdf", "R-2026-0001", "R-2026-0001.pdf.txt", "R-2026-9999.pdf", "R-2026-0002.pdf", "R-2026-0001-A.pdf"]) {
       expect((await pedir(archivo)).status, archivo).toBe(404);
     }
+  });
+
+  it("el cliente descarga SU recibo; el de otro cliente, uno anulado y una nota le responden 404", async () => {
+    sesionFalsa.actual = null;
+    sesionClienteFalsa.actual = { usuarioId: 1, clienteId, codigo: "x".repeat(22), nombre: "Dueño del recibo" };
+    const mio = await pedir("R-2026-0001.pdf");
+    expect(mio.status).toBe(200);
+    expect(await mio.text()).toBe("%PDF-uno");
+    expect((await pedir("R-2026-0003.pdf")).status).toBe(404);   // anulado
+    expect((await pedir("R-2026-0003-A.pdf")).status).toBe(404); // la nota no es para el cliente
+    const sinArchivo = await pedir("R-2026-0002.pdf");
+    expect(sinArchivo.status).toBe(404);
+    expect(await sinArchivo.text()).toContain("Escríbele");
+    sesionClienteFalsa.actual = { usuarioId: 2, clienteId: otroClienteId, codigo: "y".repeat(22), nombre: "Otro" };
+    expect((await pedir("R-2026-0001.pdf")).status).toBe(404);   // no es suyo: 404, no 403
+  });
+
+  it("sin ninguna de las dos sesiones sigue mandando a /entrar", async () => {
+    sesionFalsa.actual = null;
+    sesionClienteFalsa.actual = null;
+    expect((await pedir("R-2026-0001.pdf")).status).toBe(307);
   });
 });
