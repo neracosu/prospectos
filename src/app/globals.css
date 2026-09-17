@@ -156,3 +156,17 @@ button, input, select, textarea { font: inherit; }
 .pendiente input[type=checkbox] { width: 28px; height: 28px; margin: 8px; flex: 0 0 auto; }
 .tarjeta--compacta { padding: 8px 14px; }
 .tarjeta--compacta > .fila-botones:first-child { margin-top: 0; }
+/* Pasada de UX, fase B. La linea de resultado flota sobre la barra, en la zona del pulgar. Va invertida (clara
+   sobre el panel oscuro) para que no se confunda con una tarjeta mas; sin sombras, como el resto. */
+.flotante-zona { position: fixed; left: 12px; right: 12px; bottom: calc(var(--barra-alto) + env(safe-area-inset-bottom) + 12px); z-index: 11; display: flex; justify-content: center; pointer-events: none; }
+.flotante { pointer-events: auto; display: flex; align-items: center; gap: 8px; width: 100%; max-width: 616px; min-height: 48px; padding: 2px 6px 2px 14px; border-radius: var(--radio); background: var(--tinta); color: #121614; font-size: 15px; animation: flotante-sube .16s ease-out; }
+.flotante__texto { flex: 1; min-width: 0; padding: 8px 0; overflow-wrap: anywhere; }
+.flotante__deshacer { flex: 0 0 auto; min-height: 44px; padding: 0 12px; border: 0; border-radius: 10px; background: transparent; color: #0b5a38; font: inherit; font-weight: 700; cursor: pointer; }
+.flotante__deshacer:disabled { opacity: .6; cursor: progress; }
+.flotante__deshacer:focus-visible { outline: 2px solid #0b5a38; outline-offset: -2px; }
+.flotante--error { background: #f7d9d9; color: #5a1414; }
+@keyframes flotante-sube { from { transform: translateY(8px); opacity: 0; } to { transform: none; opacity: 1; } }
+/* «¿Se envio?» al volver de WhatsApp: la misma pregunta, con borde de marca para que el ojo caiga ahi. */
+.pregunta--resaltada { outline: 2px solid var(--verde); outline-offset: 0; }
+/* Un pago que el servidor todavia no confirmo: se ve pagado, pero todavia no ofrece el recibo. */
+.contenedor .cobro--provisional { opacity: .85; }
