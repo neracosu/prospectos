@@ -1,0 +1,86 @@
+/* src/app/c/portal.css — el portal del cliente. Misma familia que la propuesta y el recibo
+   (papel, tinta, sello verde oscuro, Source Serif/Sans): el cliente ve una sola casa, y el panel
+   oscuro queda como la herramienta de Neri. Reutiliza las clases del panel cambiandoles los tokens. */
+html:has(.portal) {
+  --fondo: #f1f4f2; --panel: #ffffff; --borde: #d0d6d3; --tinta: #1a1d1c; --tinta-suave: #5d6664;
+  --verde: #1f5a45; --rojo: #8f2a23; --ambar: #93661c; --radio: 10px;
+}
+html:has(.portal), html:has(.portal) body { background: var(--fondo); color: var(--tinta); }
+/* Las fuentes las define next/font en el envoltorio del layout (--fuente-sans, --fuente-serif): por eso
+   --sans y --serif se resuelven aqui adentro y no en html, donde esas variables todavia no existen. */
+.portal {
+  --serif: var(--fuente-serif), Georgia, "Times New Roman", serif;
+  --sans: var(--fuente-sans), "Segoe UI", Arial, sans-serif;
+  font-family: var(--sans); font-size: 17px; line-height: 1.5;
+  max-width: 640px; margin: 0 auto; padding: 0 16px 40px; min-height: 100dvh;
+}
+
+.portal__barra { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--borde); margin-bottom: 20px; }
+.portal__logo { font-weight: 700; letter-spacing: .06em; font-size: 16px; text-decoration: none; }
+.portal__logo i { font-style: normal; color: #5ed29c; }
+.portal__nav { display: flex; gap: 2px; }
+.portal__nav a { display: inline-flex; align-items: center; min-height: 44px; padding: 0 10px; border-radius: 8px; color: var(--tinta-suave); text-decoration: none; font-size: 15px; }
+.portal__nav a[aria-current="page"] { color: var(--tinta); font-weight: 600; }
+.portal a:focus-visible, .portal button:focus-visible { outline: 3px solid var(--verde); outline-offset: 2px; }
+
+.portal h1 { font-family: var(--serif); font-weight: 600; font-size: 28px; line-height: 1.15; margin: 0 0 4px; text-wrap: balance; }
+.portal h2 { font-family: var(--serif); font-weight: 600; font-size: 20px; line-height: 1.2; margin: 0; }
+.portal__bajada { color: var(--tinta-suave); margin: 0 0 20px; }
+.portal .tarjeta { padding: 16px; margin-bottom: 14px; }
+.portal .boton { background: var(--panel); }
+.portal .boton--primario { background: var(--verde); border-color: var(--verde); color: #ffffff; }
+.portal .pestanas__item.activa { background: var(--verde); border-color: var(--verde); color: #ffffff; }
+.portal .progreso { height: 6px; background: #e3e8e5; margin: 10px 0 0; }
+
+/* Aviso de cobro: la regla de color dice la gravedad; el texto dice el resto. */
+.portal__aviso { border-left: 4px solid var(--ambar); background: var(--panel); border-radius: 0 var(--radio) var(--radio) 0; padding: 12px 14px; margin: 0 0 18px; }
+.portal__aviso--vencido { border-left-color: var(--rojo); }
+.portal__aviso p { margin: 0 0 8px; }
+
+/* Tarjeta de proyecto: toda la tarjeta es el enlace. */
+.proyecto { display: block; text-decoration: none; }
+.proyecto__cabeza { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.proyecto__datos { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 14px 0 0; }
+.proyecto__datos dt { color: var(--tinta-suave); font-size: 14px; }
+.proyecto__datos dd { margin: 0; font-family: var(--serif); font-weight: 600; font-size: 22px; line-height: 1.2; font-variant-numeric: tabular-nums lining-nums; }
+.proyecto__datos dd small { font-family: var(--sans); font-weight: 400; font-size: 14px; color: var(--tinta-suave); }
+
+.portal .etiqueta { font-size: 13px; padding: 3px 10px; background: #e3e8e5; color: var(--tinta-suave); }
+.portal .etiqueta--proyecto-activo, .portal .etiqueta--pagado { background: #dcebe4; color: var(--verde); }
+.portal .etiqueta--proyecto-en_construccion, .portal .etiqueta--proyecto-pausado, .portal .etiqueta--proyecto-entregado, .portal .etiqueta--por_vencer { background: #f3e9d4; color: #6f4c12; }
+.portal .etiqueta--proyecto-cerrado { background: #e3e8e5; color: var(--tinta-suave); }
+.portal .etiqueta--vencido { background: #f3dcda; color: var(--rojo); }
+
+/* Hitos: la marca dice si esta cumplido; nunca solo el color. */
+.hitos { list-style: none; margin: 14px 0 0; padding: 0; }
+.hitos li { display: grid; grid-template-columns: 26px 1fr; gap: 10px; padding: 12px 0; border-top: 1px solid var(--borde); }
+.hitos__marca { width: 22px; height: 22px; margin-top: 2px; border-radius: 50%; border: 2px solid var(--borde); display: inline-flex; align-items: center; justify-content: center; font-size: 13px; line-height: 1; color: #ffffff; }
+.hitos__marca--hecho { background: var(--verde); border-color: var(--verde); }
+.hitos small { display: block; color: var(--tinta-suave); font-size: 14px; }
+
+/* Bitacora de versiones: el numero al margen, en serif, como el renglon de un libro de obra. */
+.version { display: grid; grid-template-columns: 76px 1fr; gap: 12px; padding: 16px 0; border-top: 1px solid var(--borde); }
+.version:first-of-type { border-top: 0; padding-top: 4px; }
+.version__numero { font-family: var(--serif); font-weight: 600; font-size: 20px; line-height: 1.2; font-variant-numeric: tabular-nums lining-nums; }
+.version__numero small { display: block; font-family: var(--sans); font-weight: 400; font-size: 13px; color: var(--tinta-suave); margin-top: 2px; }
+.version ul { list-style: none; margin: 0; padding: 0; }
+.version li { padding: 0 0 8px; }
+.version li b { display: block; font-size: 13px; font-weight: 600; color: var(--tinta-suave); }
+.version--actual .version__numero { color: var(--verde); }
+
+/* Cobros: monto a la derecha, en serif y con cifras tabulares, como en el recibo. */
+.portal .cobro { grid-template-columns: 1fr auto; padding: 14px 0; border-bottom: 0; border-top: 1px solid var(--borde); }
+.portal .cobro:first-of-type { border-top: 0; }
+.portal .cobro__monto { font-family: var(--serif); font-size: 20px; font-variant-numeric: tabular-nums lining-nums; }
+.portal .cobro small { display: block; color: var(--tinta-suave); font-size: 14px; }
+.acordado { display: grid; grid-template-columns: repeat(3, auto); justify-content: space-between; gap: 10px; margin: 0; }
+.acordado dt { color: var(--tinta-suave); font-size: 14px; }
+.acordado dd { margin: 0; font-family: var(--serif); font-weight: 600; font-size: 19px; font-variant-numeric: tabular-nums lining-nums; }
+
+/* Entrada con PIN: el teclado del panel, en papel. */
+.portal--entrar { display: flex; flex-direction: column; justify-content: center; text-align: center; }
+.portal--entrar .portal__logo { font-size: 18px; display: block; margin-bottom: 28px; }
+.portal .teclado__tecla { background: var(--panel); font-family: var(--serif); }
+.portal .teclado__tecla:active { background: #e3e8e5; }
+.portal .error { font-size: 15px; }
+.portal__pie { margin-top: 28px; padding-top: 16px; border-top: 1px solid var(--borde); color: var(--tinta-suave); font-size: 15px; }

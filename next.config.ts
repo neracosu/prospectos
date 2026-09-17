@@ -17,6 +17,8 @@ const config: NextConfig = {
       { source: "/p/:path*", headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }] },
       // Los recibos son privados: que ningun buscador guarde ni la redireccion.
       { source: "/recibos/:path*", headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }] },
+      // El portal del cliente es privado: ningun buscador guarda ni la pantalla del PIN.
+      { source: "/c/:path*", headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }] },
     ];
   },
 };
