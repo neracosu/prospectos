@@ -1,6 +1,7 @@
 # Pieza 4 — Recibos de pago — diseño
 
-**Fecha:** 2026-09-16 · **Dueño:** Neri Colón · **Estado:** aprobada en la sesión del 16-sep.
+**Fecha:** 2026-09-16 · **Dueño:** Neri Colón · **Estado:** implementada el 17-sep
+(plan: `docs/superpowers/plans/2026-09-17-pieza-4-recibos.md`).
 Depende de la pieza 3. Ver `2026-09-16-plataforma-vision-general.md`.
 
 ## Qué es y qué no es
@@ -67,3 +68,20 @@ una vez y se guarda: **un recibo emitido no cambia**, aunque cambie la plantilla
 
 Bolívares con tasa, IVA, retenciones, firma digital, envío por correo, plantillas por cliente,
 recibos de cobros parciales (un cobro se paga completo o se parte en dos cobros antes).
+
+## Desviaciones al implementar
+
+1. **Un cobro pagado ahora se puede anular** (la pieza 3 lo prohibía): es la única forma de cumplir «anular un
+   cobro con recibo emitido». Aprobado por Neri el 17-sep. El motivo admite hasta 191 caracteres.
+2. **El PDF se genera dentro de la transacción que bloquea el correlativo**: así el número va impreso y a la
+   vez no se gasta si Chromium falla.
+3. **Columna nueva `Cobro.notaAnulacionEn`** (más un índice por `reciboNumero`): la nota se puede reintentar
+   si Chromium falla al anular.
+4. **Fuentes locales** (`plantillas/fuentes/`, OFL), incrustadas en el PDF: un recibo no depende de la red.
+5. **Eventos nuevos** `recibo_generado` y `nota_anulacion`, además de `aviso_cliente`.
+6. **PDF etiquetado** (`tagged: true`) en todo el motor.
+7. **El 403 del `prospectador`** aplica a la ruta de descarga; en las acciones redirige a `/hoy`, como toda la
+   pieza 3.
+8. **Blindaje del disco** (salió de la revisión final): los tests usan siempre un directorio temporal y el
+   módulo se niega a escribir en el directorio real fuera de producción; una guarda corta si el contador
+   quedara por detrás de un número ya emitido.

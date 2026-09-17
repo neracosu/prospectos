@@ -14,13 +14,13 @@ acá a pedido de Neri y esa misma tarde se amplió de un panel a una plataforma 
 |---|---|---|---|
 | 1 | Panel de prospección | `2026-09-16-panel-prospeccion-design.md` | Implementada (16-sep) |
 | 3 | Proyectos y cobros | `2026-09-16-proyectos-cobros-design.md` | Implementada (16-sep) |
-| 2 | Buscador e importación | `2026-09-16-buscador-importacion-design.md` | Aprobada |
-| 4 | Recibos de pago | `2026-09-16-recibos-design.md` | Aprobada |
+| 2 | Buscador e importación | `2026-09-16-buscador-importacion-design.md` | Implementada (17-sep) |
+| 4 | Recibos de pago | `2026-09-16-recibos-design.md` | Implementada (17-sep) |
 | 5 | Portal del cliente | `2026-09-16-portal-cliente-design.md` | Aprobada |
 
 Orden de construcción: **1 → 3 → 2 → 4 → 5**. Cada pieza sale a producción cuando termina.
 
-Estado al 17-sep: **piezas 1, 3 y 2 construidas y en producción.**
+Estado al 17-sep: **piezas 1, 3, 2 y 4 construidas y en producción.**
 
 - Código en `main` (rama `pieza-1` ya fusionada). Proceso PM2 **`prospectos`**, puerto 3013 en
   `127.0.0.1`, proxy en el `.htaccess` (ver abajo). Repo: `git@github.com:neracosu/prospectos.git`.
@@ -37,6 +37,7 @@ Estado al 17-sep: **piezas 1, 3 y 2 construidas y en producción.**
 - Scripts útiles (PIN siempre por stdin, nunca en la línea de comandos): `scripts/crear-usuario.mjs`,
   `scripts/cambiar-pin.mjs <id>`, `scripts/pin-en-uso.mjs`, `scripts/verificar-flujo.mts` (Playwright
   a 390 px contra el dominio), `scripts/verificar-flujo-proyectos.mts`, `scripts/verificar-flujo-buscar.mts`,
+  `scripts/verificar-flujo-recibos.mts` (⚠️ solo contra la base de tests, ver pieza 4),
   `scripts/sembrar-nichos.mjs`, `scripts/importar-hoteles.mts`, `scripts/generar-iconos.mts`.
 - **Pieza 3 (Proyectos y cobros) en producción:** `/proyectos`, `/proyectos/nuevo`, `/proyectos/[id]` (pestañas
   cobros · pendientes · horas · versiones · cliente), `/clientes`, `/clientes/[id]`, `/clientes/nuevo`; Ajustes
@@ -75,7 +76,8 @@ Estado al 17-sep: **piezas 1, 3 y 2 construidas y en producción.**
     también para edge y un import con esquema deja **todas** las rutas en 500; `tsc` y los tests pasan
     igual, solo `next build` lo detecta. Hoy son 9 archivos (`mensualidades`, `revision`,
     `revision-contrato`, `clave-prospecto`, `cobros-contrato`, `db`, `dinero`, `fecha-caracas`); por eso
-    `crearLote` usa el `crypto` global. Revisar el grafo antes de agregarle un import.
+    `crearLote` usa el `crypto` global. Revisar el grafo antes de agregarle un import. Desde la pieza 4 lo vigila
+    `tests/instrumentation-grafo.test.ts` (recorre la cadena y falla si alguien cuela un `node:`).
   - ⚠️ **Migraciones solo con `prisma migrate deploy`; nunca `migrate dev` ni `db push` contra ninguna
     base.** Prisma no emite `DEFAULT` para columnas `Json` en MariaDB y `migrate diff` pide siempre
     `MODIFY … JSON NOT NULL` con `DEFAULT []` sin comillas (SQL inválido): es el desencuentro de Prisma
@@ -89,13 +91,48 @@ Estado al 17-sep: **piezas 1, 3 y 2 construidas y en producción.**
     prospectos; decisión de Neri, pendiente.
   - `scripts/generar-iconos.mts` regenera `public/icono-{192,512}.png` desde `public/icono.svg`; no
     dibujar los PNG a mano.
+- **Pieza 4 (Recibos de pago) en producción:** en `/proyectos/[id]` → Cobros, cada cobro pagado tiene
+  **Generar recibo** (la primera vez; después es el enlace `Recibo R-AAAA-NNNN`), **Enviar por WhatsApp**
+  (copia el mensaje, abre WhatsApp y deja `aviso_cliente`; el PDF lo adjunta Neri desde el teléfono) y
+  **Anular**. Descarga: `/recibos/R-2026-0001.pdf` y `/recibos/R-2026-0001-A.pdf`, solo `dueno` (sin
+  sesión 307 a `/entrar`, otro rol 403). Sin nombre, RIF, WhatsApp y correo del emisor en Ajustes no se
+  genera nada. El título es «Recibo de pago», **nunca «factura»**.
+  - ⚠️ **`~/prospectos-archivos/recibos/<año>/` es lo único del servidor que NO se regenera nunca** (archivos
+    `600`). Un recibo emitido no cambia: con `Cobro.reciboNumero` lleno jamás se vuelve a generar, aunque
+    cambie `plantillas/recibo.html`; si el archivo falta, la descarga da 404. **Ese directorio necesita
+    respaldo** (hoy no tiene). Por eso: `tests/preparar-entorno.ts` fuerza **siempre** un directorio temporal
+    (sin `??=`: el env de producción define `PROSPECTOS_DIR_ARCHIVOS` y los tests de recibos borran
+    `<dir>/recibos`; lo vigila `tests/entorno.test.ts`), y `dirArchivos()` de `src/lib/recibos.ts` se niega
+    a usar `/home/neracosu/prospectos-archivos` fuera de `NODE_ENV=production` (`DIR_ARCHIVOS_DE_PRODUCCION`):
+    un `next dev` o un script jamás escribe ahí.
+  - **El número se asigna con la fila de `Correlativo` bloqueada (`FOR UPDATE`) y el PDF se genera dentro
+    de esa misma transacción** (`src/lib/recibos.ts`): si Chromium falla, se deshace y el número sigue
+    libre. La transacción puede durar hasta ~60 s; es a propósito. El año es el del día de Caracas en que
+    se genera, no el del pago. Si el contador quedara por detrás de un número ya emitido (respaldo viejo,
+    edición a mano) corta con `CORRELATIVO_DESFASADO` antes de pisar nada. Que una transacción colgada sea
+    inocua depende de que PM2 corra `prospectos` en **`fork` con una sola instancia**: no pasarlo a cluster.
+  - **Desde esta pieza un cobro pagado sí se anula** (con motivo, hasta 191 caracteres: el ancho de la
+    columna). Si tenía recibo se genera la nota `R-…-A` y el PDF original no se borra; si Chromium falla al
+    anular, el cobro queda anulado igual y la fila ofrece «Generar nota de anulación»
+    (`Cobro.notaAnulacionEn`). La nota se arma con los datos de hoy (emisor, cliente, concepto), no con los
+    del recibo original, que se conserva aparte. Una mensualidad anulada no la recrea el cron (el mes ya
+    existe) y su reemplazo a mano solo puede ser «Extra» o «Cuota»: sale sin mes ni versiones incluidas.
+  - ⚠️ **`scripts/verificar-flujo-recibos.mts` nunca contra producción**: cada recibo gasta un correlativo
+    real. El script se niega si `DATABASE_URL` no dice `prospectos_test` o si `BASE_URL` es el dominio o el
+    puerto 3013. Se corre contra `node_modules/.bin/next dev -p 3014` del clon `~/dev-clon-prospectos`, con
+    `DATABASE_URL="$TEST_DATABASE_URL"` y `PROSPECTOS_DIR_ARCHIVOS` apuntando a un directorio temporal.
+  - El motor de PDF es `src/lib/pdf.ts` (una sola fila de Chromium para propuestas y recibos, PDF
+    etiquetado). `pdf.ts` y `recibos.ts` usan `node:`: fuera de la cadena de `src/instrumentation.ts`.
+    Las fuentes del recibo son locales (`plantillas/fuentes/`, OFL) y se incrustan como `data:`: el recibo
+    no depende de Google Fonts.
 - ⚠️ **Procesos: matar solo por PID.** Nunca `pkill`/`killall` ni matar por patrón en este servidor:
   `pkill -f next-server` tumbó los cinco sitios de PM2 el 16-sep (Adastram incluido). Un dev server de
   prueba se lanza desde un clon fuera del docroot con `DATABASE_URL` de prueba, con
   `node_modules/.bin/next dev -p <puerto>` (sin `npx`, que deja un hijo que sobrevive al kill del padre),
   guardando `$!`, y al terminar `kill $PID` más `pgrep -af <marca-del-clon>`. Nunca `next dev` ni
   `next build` en este directorio salvo el build del despliegue.
-- Siguiente pieza: **4 (Recibos)**, luego 5 (Portal del cliente). Plan nuevo por pieza en
+- Siguiente pieza: **5 (Portal del cliente)**. Al construirla: el portal debe filtrar los cobros anulados y
+  decidir si el cliente ve el recibo anulado con su nota; la ruta `/recibos/` ya busca por número para reutilizarla. Plan nuevo por pieza en
   `docs/superpowers/plans/`. Pendiente aparte: la **pasada de UX** del panel
   (`docs/superpowers/specs/2026-09-17-ux-panel-design.md`, propuesta sin aprobar).
 - Pendientes de Neri: rotar la contraseña de la base (spec, decisiones abiertas) y decidir los precios
