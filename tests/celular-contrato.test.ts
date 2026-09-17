@@ -34,8 +34,32 @@ describe("normalizarRed", () => {
     expect(normalizarRed("tiktok.com/@hotelx", "tiktok")).toBe("https://www.tiktok.com/@hotelx");
     expect(normalizarRed("https://www.tiktok.com/@hotelx/", "tiktok")).toBe("https://www.tiktok.com/@hotelx");
   });
-  it("una URL con protocolo que no es de esta red se deja tal cual", () => {
-    expect(normalizarRed("https://hotelyare.com", "instagram")).toBe("https://hotelyare.com");
-    expect(normalizarRed("https://wa.me/584121234567", "facebook")).toBe("https://wa.me/584121234567");
+  it("una URL con protocolo que no es de esta red NO normaliza", () => {
+    // Guardarla tal cual la dejaba en la columna de Instagram, y despues cualquiera
+    // la lee como si fuera el Instagram del negocio.
+    expect(normalizarRed("https://hotelyare.com", "instagram")).toBe("");
+    expect(normalizarRed("https://wa.me/584121234567", "facebook")).toBe("");
+    expect(normalizarRed("https://instagram.com.ejemplo.test/hotelx", "instagram")).toBe("");
+    expect(normalizarRed("https://", "instagram")).toBe("");
+  });
+  it("acepta los otros hosts de la misma red", () => {
+    expect(normalizarRed("https://m.instagram.com/hotelx", "instagram")).toBe("https://www.instagram.com/hotelx/");
+    expect(normalizarRed("https://fb.com/hotelx", "facebook")).toBe("https://www.facebook.com/hotelx");
+    expect(normalizarRed("https://web.facebook.com/hotelx/", "facebook")).toBe("https://www.facebook.com/hotelx");
+  });
+  it("un enlace corto de TikTok se guarda tal cual: su codigo no es el usuario", () => {
+    // "ZMabc123" es el codigo del enlace, no la cuenta: armar "@ZMabc123" seria
+    // inventar un perfil que no existe.
+    expect(normalizarRed("https://vm.tiktok.com/ZMabc123/", "tiktok")).toBe("https://vm.tiktok.com/ZMabc123/");
+    expect(normalizarRed("https://vt.tiktok.com/ZSabc123", "tiktok")).toBe("https://vt.tiktok.com/ZSabc123");
+  });
+  it("sin protocolo distingue un dominio de un usuario", () => {
+    // Un perfil compartido desde la app trae la query pegada: no es parte del usuario.
+    expect(normalizarRed("instagram.com/usuario?igsh=abc", "instagram")).toBe("https://www.instagram.com/usuario/");
+    expect(normalizarRed("https://www.instagram.com/usuario/?igsh=abc", "instagram")).toBe("https://www.instagram.com/usuario/");
+    // Un dominio ajeno sin protocolo tampoco es un usuario de la red.
+    expect(normalizarRed("mi-sitio.com/x", "instagram")).toBe("");
+    // Pero un usuario con punto (son comunes en Instagram) sigue siendo un usuario.
+    expect(normalizarRed("hotel.yare", "instagram")).toBe("https://www.instagram.com/hotel.yare/");
   });
 });

@@ -13,33 +13,46 @@ const BASE_RED = {
   tiktok: (u: string) => `https://www.tiktok.com/@${u}`,
 } as const;
 
-const DOMINIO_RED: Record<keyof typeof BASE_RED, string> = {
-  instagram: "instagram.com",
-  facebook: "facebook.com",
-  tiktok: "tiktok.com",
+// Hosts que de verdad son de cada red (con o sin www/m/web). Una URL de otro
+// dominio no es un usuario de esta red: la web del negocio, un acortador o un
+// enlace de WhatsApp guardados en la columna de Instagram se leen despues como si
+// fueran el Instagram del negocio, y eso es un dato inventado.
+const HOSTS_RED: Record<keyof typeof BASE_RED, RegExp> = {
+  instagram: /^(?:www\.|m\.)?instagram\.com$/i,
+  facebook: /^(?:www\.|m\.|web\.)?(?:facebook\.com|fb\.com|fb\.me)$/i,
+  tiktok: /^(?:www\.|m\.|vm\.|vt\.)?tiktok\.com$/i,
 };
 
-// Si `v` empieza por el dominio de esta red (con o sin protocolo, con o sin
-// www), devuelve lo que sigue despues de la barra; si no, null.
-function trasDominio(v: string, dominio: string): string | null {
-  const re = new RegExp(`^(?:https?:\\/\\/)?(?:www\\.)?${dominio.replace(/\./g, "\\.")}\\/+`, "i");
-  const m = re.exec(v);
-  return m ? v.slice(m[0].length) : null;
-}
+// Los enlaces cortos de TikTok (vm./vt.) no llevan el usuario: el trozo que traen
+// es el codigo del enlace ("ZMabc123"), asi que armar "@ZMabc123" seria inventar
+// una cuenta que no existe. Se guardan tal cual, que es un enlace que si lleva al
+// negocio; resolverlos pediria salir a la red desde una funcion pura.
+const CORTOS_TIKTOK = /^(?:vm|vt)\.tiktok\.com$/i;
 
-// Acepta @usuario, usuario suelto, o la URL completa en cualquier forma
-// (con/sin protocolo, con/sin www, con/sin barra final) y siempre devuelve la
-// URL canonica. Una URL con protocolo que NO es de esta red (la web propia
-// del negocio, por ejemplo) se deja tal cual: no hay usuario que extraerle.
 export function normalizarRed(valor: string, red: keyof typeof BASE_RED): string {
   const v = (valor ?? "").trim();
   if (!v) return "";
-  const resto = trasDominio(v, DOMINIO_RED[red]);
-  if (resto === null) {
-    if (/^https?:\/\//i.test(v)) return v;
-    const usuario = v.replace(/^@/, "").replace(/\/+$/, "");
+  if (/^https?:\/\//i.test(v)) {
+    let u: URL;
+    try {
+      u = new URL(v);
+    } catch {
+      return "";
+    }
+    if (!HOSTS_RED[red].test(u.hostname)) return "";
+    if (red === "tiktok" && CORTOS_TIKTOK.test(u.hostname)) return u.toString();
+    // Del pathname, nunca de la URL entera: asi se cae solo el "?igsh=..." que
+    // pega Instagram al compartir y dos veces el mismo perfil no son dos valores.
+    const usuario = decodeURIComponent(u.pathname).replace(/^\/+/, "").replace(/\/+$/, "").replace(/^@/, "");
     return usuario ? BASE_RED[red](usuario) : "";
   }
-  const usuario = resto.replace(/^@/, "").replace(/\/+$/, "");
+  // Sin protocolo hay dos formas distintas: un dominio con camino
+  // ("instagram.com/hotelx", "mi-sitio.com/x") y un usuario suelto ("hotel.yare").
+  // Se mira si lo que va antes de la primera barra parece un host: si lo parece,
+  // se trata como URL (y ahi se aplica el filtro de dominio de arriba); si no, es
+  // un usuario. Un usuario con punto y sin barra sigue siendo un usuario.
+  const barra = v.indexOf("/");
+  if (barra > 0 && v.slice(0, barra).includes(".")) return normalizarRed("https://" + v, red);
+  const usuario = v.replace(/^@/, "").replace(/\/+$/, "");
   return usuario ? BASE_RED[red](usuario) : "";
 }

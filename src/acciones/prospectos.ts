@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { exigirSesion } from "@/lib/sesion";
 import { CANALES, type Canal } from "@/lib/canales-contrato";
@@ -9,6 +10,7 @@ import { ETAPAS, ETIQUETA_ETAPA, puedePasar, type Etapa } from "@/lib/embudo-con
 import { hoyCaracas, sumarDias, esFechaIso } from "@/lib/fecha-caracas";
 import { normalizarCelular, normalizarRed } from "@/lib/celular-contrato";
 import { claveProspecto } from "@/lib/clave-prospecto";
+import { TOPES, ERROR_CLAVE_LARGA } from "@/lib/tabla-contrato";
 import { generarCodigo } from "@/lib/codigo";
 import { fallo, exito, type Resultado } from "@/acciones/resultado";
 
@@ -207,9 +209,10 @@ export async function editarSeguimiento(prospectoId: number, fecha: string): Pro
 
 const Nuevo = z.object({
   nichoId: z.coerce.number().int().positive(),
-  nombre: z.string().trim().min(2).max(120),
-  ciudad: z.string().trim().min(2).max(80),
-  estado: z.string().trim().max(60).default(""),
+  // Los tres que comparte con la importacion salen de TOPES (src/lib/tabla-contrato.ts).
+  nombre: z.string().trim().min(2).max(TOPES.nombre),
+  ciudad: z.string().trim().min(2).max(TOPES.ciudad),
+  estado: z.string().trim().max(TOPES.estado).default(""),
   tipo: z.string().trim().max(60).default(""),
   tamano: z.string().trim().max(40).default(""),
   telefono: z.string().trim().max(80).default(""),
@@ -221,20 +224,45 @@ const Nuevo = z.object({
   tiktok: z.string().trim().max(200).default(""),
   nota: z.string().trim().max(2000).default(""),
   fuente: z.string().trim().max(300).default(""),
-});
+// El par, no cada campo: `clave` es VARCHAR(191) y se arma con nombre + ciudad, que
+// juntos pueden dar 201 aunque cada uno quepa en su tope. Mismo criterio y mismo
+// texto que validarFila, que es por donde entra lo importado.
+}).refine((d) => claveProspecto(d.nombre, d.ciudad).length <= TOPES.clave, { message: ERROR_CLAVE_LARGA, path: ["nombre"] });
 
 export async function crearProspecto(formData: FormData): Promise<Resultado<{ id: number }>> {
   const u = await exigirSesion();
   const e = Nuevo.safeParse(Object.fromEntries(formData));
-  if (!e.success) return fallo("Revisa nombre, ciudad y nicho.");
+  // El unico fallo del formulario que "revisa nombre, ciudad y nicho" no explica
+  // es el del par: ese se devuelve con su propio texto.
+  if (!e.success) {
+    const clave = e.error.issues.some((i) => i.message === ERROR_CLAVE_LARGA);
+    return fallo(clave ? ERROR_CLAVE_LARGA : "Revisa nombre, ciudad y nicho.");
+  }
   const d = e.data;
+  // Los datos de contacto ya normalizados, que son los que se guardan y los que
+  // la ficha muestra con su flecha a la fuente.
+  const contacto = {
+    telefono: d.telefono,
+    whatsapp: normalizarCelular(d.whatsapp) || normalizarCelular(d.telefono),
+    email: d.email,
+    web: d.web,
+    instagram: normalizarRed(d.instagram, "instagram"),
+    facebook: normalizarRed(d.facebook, "facebook"),
+    tiktok: normalizarRed(d.tiktok, "tiktok"),
+  };
+  // Mismo criterio que validarFila (src/lib/tabla-contrato.ts): la fuente que se
+  // escribio vale para cada dato de contacto que entro con ella. Sin fuente no
+  // se inventa ninguna y el mapa queda vacio. Sin esto, lo cargado a mano era
+  // lo unico que se veia en la ficha sin decir donde lo publican.
+  const fuentesPorCampo: Record<string, string> = {};
+  if (d.fuente) for (const [campo, valor] of Object.entries(contacto)) if (valor) fuentesPorCampo[campo] = d.fuente;
   try {
     const p = await prisma.prospecto.create({
       data: {
-        nichoId: d.nichoId, nombre: d.nombre, ciudad: d.ciudad, estado: d.estado, tipo: d.tipo, tamano: d.tamano, telefono: d.telefono,
-        whatsapp: normalizarCelular(d.whatsapp) || normalizarCelular(d.telefono), email: d.email, web: d.web,
-        instagram: normalizarRed(d.instagram, "instagram"), facebook: normalizarRed(d.facebook, "facebook"), tiktok: normalizarRed(d.tiktok, "tiktok"),
-        nota: d.nota, fuentes: d.fuente ? [d.fuente] : [], origen: "manual", codigo: generarCodigo(), clave: claveProspecto(d.nombre, d.ciudad),
+        nichoId: d.nichoId, nombre: d.nombre, ciudad: d.ciudad, estado: d.estado, tipo: d.tipo, tamano: d.tamano,
+        ...contacto,
+        nota: d.nota, fuentes: d.fuente ? [d.fuente] : [], fuentesPorCampo: fuentesPorCampo as Prisma.InputJsonValue,
+        origen: "manual", codigo: generarCodigo(), clave: claveProspecto(d.nombre, d.ciudad),
         ordenCola: ((await prisma.prospecto.aggregate({ _max: { ordenCola: true } }))._max.ordenCola ?? 0) + 1,
         eventos: { create: { tipo: "importado", usuarioId: u.id, texto: "manual" } },
       },

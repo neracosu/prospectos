@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, beforeEach, afterAll } from "vitest";
 import { prisma } from "@/lib/db";
-import { DB_HABILITADA, limpiarBase, sembrarBasico, crearProspectoDePrueba, sembrarCliente, sembrarProyecto } from "./ayuda-db";
+import { DB_HABILITADA, limpiarBase, sembrarBasico, crearProspectoDePrueba, sembrarCliente, sembrarProyecto, sembrarLote } from "./ayuda-db";
 
 describe.runIf(DB_HABILITADA)("esquema", () => {
   beforeAll(limpiarBase);
@@ -26,5 +26,15 @@ describe.runIf(DB_HABILITADA)("esquema", () => {
     await expect(sembrarCliente({ prospectoId: pr.id })).rejects.toThrow(/Unique/);
     // Un evento de proyecto no necesita prospecto
     await prisma.evento.create({ data: { proyectoId: p.id, tipo: "proyecto_creado" } });
+  });
+
+  it("una busqueda OSM es unica por nicho y area; la revision guarda datos JSON", async () => {
+    const { nichoId, usuarioId } = await sembrarBasico();
+    await prisma.busquedaOsm.create({ data: { nichoId, area: "caracas", resultados: [] } });
+    await expect(prisma.busquedaOsm.create({ data: { nichoId, area: "caracas", resultados: [] } })).rejects.toThrow(/Unique/);
+    const lote = await sembrarLote("importado", [{ nombre: "X", ciudad: "Y" }], usuarioId);
+    const r = await prisma.revision.findFirstOrThrow({ where: { lote } });
+    expect(r).toMatchObject({ estado: "nuevo", decision: "pendiente", fila: 1 });
+    expect((r.datos as { nombre: string }).nombre).toBe("X");
   });
 });
