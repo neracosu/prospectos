@@ -21,7 +21,8 @@ acá a pedido de Neri y esa misma tarde se amplió de un panel a una plataforma 
 Orden de construcción: **1 → 3 → 2 → 4 → 5**. Cada pieza sale a producción cuando termina.
 
 Estado al 17-sep: **las cinco piezas construidas y en producción** (la 5 en dos entregas: 5a acceso y
-lectura, 5b documentos y avisos). Lo que sigue es la pasada de UX del panel, sin aprobar.
+lectura, 5b documentos y avisos). Lo que sigue es la pasada de UX del panel: Fases A y B construidas en sus
+ramas, **sin fusionar ni desplegar hasta que Neri las vea**.
 
 - Código en `main` (rama `pieza-1` ya fusionada). Proceso PM2 **`prospectos`**, puerto 3013 en
   `127.0.0.1`, proxy en el `.htaccess` (ver abajo). Repo: `git@github.com:neracosu/prospectos.git`.
@@ -219,6 +220,48 @@ lectura, 5b documentos y avisos). Lo que sigue es la pasada de UX del panel, sin
     barre la rama buscando caracteres por debajo de 0x20, el 0x7F y los combinantes U+0300–U+036F.
   - ⚠️ **La próxima migración debe llevar un sello posterior a `20260919090000`** (la de esta pieza va dos días
     por delante del calendario y ya está aplicada en producción: no se renombra).
+- **Pasada de UX del panel** (spec `2026-09-17-ux-panel-design.md`): **Fase A** (visual) en la rama `ux-fase-a` y
+  **Fase B** (reactividad) en `ux-fase-b`, que sale de la A. **Ninguna está fusionada ni desplegada: esperan el
+  visto bueno de Neri** (antes y después en el artefacto `KMx9tx5cUwkSDN6zQKDMdT`). Falta la Fase C (esqueletos,
+  validación en línea, service worker). Plan de la B: `docs/superpowers/plans/2026-09-17-ux-fase-b-reactividad.md`.
+  Lo que trae la B y sus trampas:
+  - **Una sola línea de resultado** (`src/componentes/LineaFlotante.tsx`, `useFlotante()`), montada en el layout del
+    panel. Lo reversible trae «Deshacer»; lo irreversible (anular, descartar) sigue con su confirmación en la
+    tarjeta y **no** pasa por ahí. Un `prospectador` ve los avisos de Hoy y de Prospectos: **sin montos**.
+  - **«Deshacer» es una Server Action real, no un guardado demorado** (demorar un pago lo pierde si el teléfono
+    cambia de app). `deshacerPago` es una regla estrecha a propósito: **60 s desde el evento `cobro_pagado` y solo
+    sin recibo ni anulación**; pasado eso, se anula como desde la pieza 4. Por eso `generarRecibo` confirma el
+    recibo solo si `pagadoEn`, `canal` y `referencia` siguen siendo los que leyó e imprimió. «Respondió», «Sí» y
+    «Descartar» no llevan Deshacer: el embudo no retrocede.
+  - ⚠️ **`deshacerSalto(id)` no recibe el orden del navegador**: lo lee del evento `saltado` (`Evento.de`), con la
+    fila bloqueada y solo si ese es el último movimiento. `ordenCola` es lo único que `saltar`, `aprobarFila` e
+    `importar` calculan como `max + 1`: un valor venido de afuera en el tope del INT los dejaba rotos a los tres
+    (lo encontró la revisión). **Ningún `ordenCola` se acepta de un cliente.**
+  - ⚠️ **Dentro de `startTransition(async …)`, un `setState` normal que va antes del primer `await` no se pinta
+    hasta que el servidor responde.** Lo que tiene que verse al tocar es `useOptimistic` (adentro de la
+    transición) o un `setState` llamado **antes** de `empezar(...)` (así va `ajustar` en las tarjetas de Hoy y
+    `setCorriendo` en la bandeja). Después de un `await`, los `setState` vuelven a ser inmediatos.
+  - **No hay `router.refresh()` después de una acción**: todas llaman a `revalidatePath` de la ruta desde la que
+    se usan y la respuesta ya trae el árbol nuevo; el refresh era un segundo viaje. **Una acción nueva que no
+    revalide su ruta deja la pantalla vieja.** `Bandeja.aprobarTodas` conserva el suyo (varias pasadas).
+  - Las cifras de Hoy con el toque encima: `ProveedorHoy`/`ResumenHoy`; el ajuste se pone en cero **durante el
+    render** cuando cambia `firmaCifras` (con un efecto, un cuadro contaba el envío dos veces).
+  - «¿Se envió?» es `PreguntaEnvio` + `useEnvioPendiente` (las tres pantallas que envían): sale al tocar el canal,
+    se resalta al volver (`visibilitychange`) y se recuerda 30 min en `sessionStorage` (`pr:envio-pendiente`, uno
+    solo a la vez) por si el navegador recargó la pestaña. El recuerdo lleva la **acción** (`envio` o
+    `seguimiento`): sin ella, un envío recordado aparecía en la ficha ya enviada y su «Sí» registraba un
+    seguimiento que no existió.
+  - Los reductores de `src/lib/optimista-contrato.ts` **copian lo que hace cada Server Action** (desmarcar un
+    pendiente borra su «avisado», mover intercambia con el vecino): si la acción cambia, el reductor cambia con
+    ella. Ese archivo lo importa el navegador: de `@/lib/proyectos` solo `import type`.
+  - **El éxito de una fila solo cierra lo de esa fila** (`setAbierto((a) => a?.id === id ? null : a)`): con varias
+    acciones en vuelo, cerrar «lo que esté abierto» se llevaba lo escrito en otra. En la bandeja, un error por ficha.
+  - Una tarjeta que se esconde con el foco adentro lo pasa antes a la siguiente (`src/componentes/foco.ts`); la
+    línea flotante no se va mientras tenga el foco o el dedo encima (WCAG 2.2.1).
+  - Una fila de cobro `provisional` (pagada a la vista, sin confirmar) **no dibuja `AccionesRecibo`**.
+  - Recorrido real: `scripts/verificar-flujo-ux.mts` (⚠️ solo contra el clon y la base de tests): retiene cada
+    Server Action 2 s y exige que la pantalla cambie antes, que «Deshacer» deshaga en la base y que no haya un
+    segundo GET a la misma ruta. `scripts/capturas-panel.mts` también captura la línea flotante.
 - ⚠️ **Procesos: matar solo por PID.** Nunca `pkill`/`killall` ni matar por patrón en este servidor:
   `pkill -f next-server` tumbó los cinco sitios de PM2 el 16-sep (Adastram incluido). Un dev server de
   prueba se lanza desde un clon fuera del docroot con `DATABASE_URL` de prueba, con

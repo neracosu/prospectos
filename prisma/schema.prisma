@@ -97,7 +97,8 @@ model Evento {
   // etapa | enviado | abierto | nota | saltado | importado | seguimiento | lectura_web |
   // proyecto_creado | proyecto_estado | proyecto_editado | cobro_pagado | cobro_anulado | cobro_agregado |
   // recordatorio | hito_cumplido | version_publicada | aviso_cliente | horas | recibo_generado | nota_anulacion | portal_abierto |
-  // documento_subido | documento_quitado
+  // documento_subido | documento_quitado | salto_deshecho | pago_deshecho (fase B de la pasada de UX)
+  // `saltado` guarda en `de` el ordenCola que tenia: de ahi lo repone deshacerSalto.
   tipo        String
   de          String     @default("")
   a           String     @default("")

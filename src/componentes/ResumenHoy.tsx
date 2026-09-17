@@ -1,14 +1,16 @@
 "use client";
-import { createContext, useCallback, useContext, useState, type ReactNode } from "react";
-import { aplicarAjuste, firmaCifras, porcentajeDelDia, sumarAjustes, type AjusteHoy, type CifrasHoy } from "@/lib/hoy-contrato";
+import { createContext, useCallback, useContext, useRef, useState, type ReactNode } from "react";
+import { aplicarAjuste, firmaCifras, invertir, porcentajeDelDia, sumarAjustes, type AjusteHoy, type CifrasHoy } from "@/lib/hoy-contrato";
 
 // Las cifras de Hoy con el ajuste optimista de las tarjetas (pasada de UX, fase B): al tocar «Si» el numero del
 // dia sube ya, sin esperar al servidor. Cuando el servidor trae cifras nuevas, el ajuste ya esta contado ahi.
 const CtxAjuste = createContext<AjusteHoy>({});
-const CtxAjustar = createContext<(a: AjusteHoy) => void>(() => {});
+// ajustar() devuelve como revertirlo si la accion falla.
+type Ajustar = (a: AjusteHoy) => () => void;
+const CtxAjustar = createContext<Ajustar>(() => () => {});
 
 // Fuera de Hoy (la ficha del prospecto) ajustar no hace nada.
-export function useAjusteHoy(): (a: AjusteHoy) => void {
+export function useAjusteHoy(): Ajustar {
   return useContext(CtxAjustar);
 }
 
@@ -18,7 +20,15 @@ export function ProveedorHoy({ cifras, children }: { cifras: CifrasHoy; children
   // Se pone en cero DURANTE el render y no en un efecto: con un efecto habria un cuadro con la cifra nueva del
   // servidor y el ajuste viejo sumados (el envio contado dos veces).
   if (estado.firma !== firma) setEstado({ firma, ajuste: {} });
-  const ajustar = useCallback((a: AjusteHoy) => setEstado((e) => ({ ...e, ajuste: sumarAjustes(e.ajuste, a) })), []);
+  const firmaActual = useRef(firma);
+  firmaActual.current = firma;
+  const ajustar = useCallback<Ajustar>((a) => {
+    const firmaAlAjustar = firmaActual.current;
+    setEstado((e) => ({ ...e, ajuste: sumarAjustes(e.ajuste, a) }));
+    // Revertir solo vale sobre las mismas cifras: si el servidor ya trajo otras, el ajuste se puso en cero con
+    // ellas y restarlo dejaria el numero uno por debajo.
+    return () => setEstado((e) => (e.firma === firmaAlAjustar ? { ...e, ajuste: sumarAjustes(e.ajuste, invertir(a)) } : e));
+  }, []);
   return (
     <CtxAjustar.Provider value={ajustar}>
       <CtxAjuste.Provider value={estado.firma === firma ? estado.ajuste : {}}>{children}</CtxAjuste.Provider>

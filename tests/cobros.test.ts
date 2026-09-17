@@ -208,6 +208,16 @@ describe.runIf(DB_HABILITADA)("acciones de cobros", () => {
       expect((await prisma.cobro.findUniqueOrThrow({ where: { id } })).pagadoEn).not.toBeNull();
     });
 
+    it("la ventana mira el ULTIMO pago: pagar, deshacer y volver a pagar se puede deshacer aunque el primer pago sea viejo", async () => {
+      const id = await pagar("Deshacer segundo pago");
+      expect((await deshacerPago(id)).ok).toBe(true);
+      await prisma.evento.updateMany({ where: { cobroId: id, tipo: "cobro_pagado" }, data: { creadoEn: new Date(Date.now() - 10 * 60 * 1000) } });
+      expect((await marcarPagado(fd({ cobroId: String(id), pagadoEn: hoyCaracas(), canal: "efectivo", referencia: "", nota: "" }))).ok).toBe(true);
+      expect(await prisma.evento.count({ where: { cobroId: id, tipo: "cobro_pagado" } })).toBe(2);
+      expect((await deshacerPago(id)).ok).toBe(true);
+      expect((await prisma.cobro.findUniqueOrThrow({ where: { id } })).pagadoEn).toBeNull();
+    });
+
     it("un cobro que nunca se pago, uno anulado o uno que no existe no se deshacen", async () => {
       expect((await agregarCobro(fd({ proyectoId: String(proyectoId), concepto: "extra", detalle: "Nunca pagado", monto: "10", vence: "2026-10-01" }))).ok).toBe(true);
       const sinPagar = await prisma.cobro.findFirstOrThrow({ where: { proyectoId, detalle: "Nunca pagado" } });

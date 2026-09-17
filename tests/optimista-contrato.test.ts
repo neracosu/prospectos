@@ -29,9 +29,11 @@ describe("aplicarCambioPendiente", () => {
     const r = aplicarCambioPendiente([pend(1, { hecho: true, avisado: true })], { tipo: "marcar", id: 1, hecho: false });
     expect(r[0]).toMatchObject({ hecho: false, avisado: false });
   });
-  it("visible alterna", () => {
-    expect(aplicarCambioPendiente([pend(1)], { tipo: "visible", id: 1 })[0].visibleCliente).toBe(false);
-    expect(aplicarCambioPendiente([pend(1, { visibleCliente: false })], { tipo: "visible", id: 1 })[0].visibleCliente).toBe(true);
+  it("visible fija el valor que se pidio: aplicarlo dos veces (el rebase de useOptimistic) da lo mismo", () => {
+    const una = aplicarCambioPendiente([pend(1)], { tipo: "visible", id: 1, visible: false });
+    expect(una[0].visibleCliente).toBe(false);
+    expect(aplicarCambioPendiente(una, { tipo: "visible", id: 1, visible: false })[0].visibleCliente).toBe(false);
+    expect(aplicarCambioPendiente([pend(1, { visibleCliente: false })], { tipo: "visible", id: 1, visible: true })[0].visibleCliente).toBe(true);
   });
   it("mover intercambia con el vecino", () => {
     const lista = [pend(1), pend(2), pend(3)];
@@ -65,6 +67,10 @@ describe("aplicarDecision", () => {
     const l = { ...lote(), filas: [fila(1, "nuevo", "aprobado")] };
     expect(aplicarDecision(l, { id: 1, decision: "descartado" })).toBe(l);
     expect(aplicarDecision(l, { id: 99, decision: "descartado" })).toBe(l);
+  });
+  it("aplicada dos veces (el rebase de useOptimistic sobre una base que ya trae la decision) descuenta una sola", () => {
+    const una = aplicarDecision(lote(), { id: 1, decision: "aprobado" });
+    expect(aplicarDecision(una, { id: 1, decision: "aprobado" })).toBe(una);
   });
   it("los contadores no bajan de cero", () => {
     const l = { ...lote(), pendientes: 0, aprobables: 0 };

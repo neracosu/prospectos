@@ -14,7 +14,8 @@ export function aplicarCambioCobro(cobros: CobroOptimista[], c: CambioCobro): Co
 
 export type CambioPendiente =
   | { tipo: "marcar"; id: number; hecho: boolean }
-  | { tipo: "visible"; id: number }
+  // Lleva el valor destino y no «alternar»: si useOptimistic lo reaplica sobre una base que ya trae el cambio, da lo mismo.
+  | { tipo: "visible"; id: number; visible: boolean }
   | { tipo: "mover"; id: number; direccion: "arriba" | "abajo" };
 
 export function aplicarCambioPendiente(lista: PendienteFila[], c: CambioPendiente): PendienteFila[] {
@@ -22,7 +23,7 @@ export function aplicarCambioPendiente(lista: PendienteFila[], c: CambioPendient
     // Desmarcar borra el avisado, igual que marcarPendiente en el servidor.
     return lista.map((p) => (p.id === c.id ? { ...p, hecho: c.hecho, avisado: c.hecho ? p.avisado : false } : p));
   }
-  if (c.tipo === "visible") return lista.map((p) => (p.id === c.id ? { ...p, visibleCliente: !p.visibleCliente } : p));
+  if (c.tipo === "visible") return lista.map((p) => (p.id === c.id ? { ...p, visibleCliente: c.visible } : p));
   const i = lista.findIndex((p) => p.id === c.id);
   const j = c.direccion === "arriba" ? i - 1 : i + 1;
   if (i < 0 || j < 0 || j >= lista.length) return lista;

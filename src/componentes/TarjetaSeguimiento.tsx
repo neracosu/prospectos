@@ -1,8 +1,8 @@
 "use client";
-import { useOptimistic, useState, useTransition } from "react";
+import { useOptimistic, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import type { ProspectoTarjeta } from "@/lib/prospectos-contrato";
-import { AJUSTE_DESCARTE_ENVIADO, AJUSTE_RESPONDIO, invertir, type AjusteHoy } from "@/lib/hoy-contrato";
+import { AJUSTE_DESCARTE_ENVIADO, AJUSTE_RESPONDIO, type AjusteHoy } from "@/lib/hoy-contrato";
 import { escribirDeNuevo, marcarRespondio, descartar } from "@/acciones/prospectos";
 import { fechaVisible } from "@/lib/fecha-caracas";
 import { BotonesCanal } from "./BotonesCanal";
@@ -10,37 +10,40 @@ import { MasAcciones } from "./MasAcciones";
 import { PreguntaEnvio, useEnvioPendiente } from "./PreguntaEnvio";
 import { useFlotante } from "./LineaFlotante";
 import { useAjusteHoy } from "./ResumenHoy";
+import { sacarFocoDe } from "./foco";
 
 // Mismo patron que TarjetaCola (pasada de UX, fase B): la tarjeta se va al tocar y vuelve con su error si el
 // servidor dice que no. Ninguna de estas acciones lleva «Deshacer»: el embudo no retrocede.
 export function TarjetaSeguimiento({ p, hoy }: { p: ProspectoTarjeta; hoy: string }) {
   const avisar = useFlotante();
   const ajustar = useAjusteHoy();
-  const envio = useEnvioPendiente(p.id);
+  const envio = useEnvioPendiente(p.id, "seguimiento");
   const [modo, setModo] = useState<"normal" | "escribir" | "descartar">("normal");
   const [motivo, setMotivo] = useState("");
   const [error, setError] = useState("");
   const [hecha, setHecha] = useState(false);
   const [oculta, ocultar] = useOptimistic(false);
   const [pendiente, empezar] = useTransition();
+  const tarjeta = useRef<HTMLElement>(null);
   if (oculta || hecha) return null;
   const atrasado = (p.proximoSeguimiento ?? hoy) < hoy;
 
   // `ajustar` va ANTES de la transicion: adentro no se pintaria hasta que el servidor responda.
   function correr(fn: () => Promise<{ ok: boolean; mensaje?: string }>, texto: string, ajuste: AjusteHoy = {}) {
     setError("");
-    ajustar(ajuste);
+    sacarFocoDe(tarjeta.current);
+    const revertir = ajustar(ajuste);
     empezar(async () => {
       ocultar(true);
       const r = await fn();
       if (r.ok) { envio.cerrar(); setHecha(true); avisar({ texto }); }
-      else { ajustar(invertir(ajuste)); setError(r.mensaje ?? "No se pudo guardar. Intenta de nuevo."); }
+      else { revertir(); setError(r.mensaje ?? "No se pudo guardar. Intenta de nuevo."); }
     });
   }
 
   const canal = envio.canal;
   return (
-    <article className={`tarjeta tarjeta--franja tarjeta--${atrasado ? "rojo" : "ambar"}`}>
+    <article ref={tarjeta} className={`tarjeta tarjeta--franja tarjeta--${atrasado ? "rojo" : "ambar"}`}>
       <Link href={`/prospectos/${p.id}`}><b>{p.nombre}</b></Link>
       {/* La franja dice la urgencia; el texto tambien: nunca solo el color. */}
       <div className="suave">{p.ciudad}. {atrasado ? `Atrasado desde el ${fechaVisible(p.proximoSeguimiento ?? hoy)}` : "Toca hoy"}</div>
@@ -64,7 +67,11 @@ export function TarjetaSeguimiento({ p, hoy }: { p: ProspectoTarjeta; hoy: strin
             <div className="pregunta">
               <label className="campo"><span>Motivo</span><input value={motivo} onChange={(e) => setMotivo(e.target.value)} autoFocus /></label>
               <div className="fila-botones">
-                <button className="boton boton--peligro" disabled={pendiente} onClick={() => correr(() => descartar(p.id, motivo), `Descartaste a ${p.nombre}`, AJUSTE_DESCARTE_ENVIADO)}>Descartar</button>
+                <button className="boton boton--peligro" disabled={pendiente} onClick={() => {
+                  // Lo que el servidor va a rechazar se dice aca: esconder la tarjeta para devolverla con un error es peor.
+                  if (motivo.trim().length < 2) return setError("Escribe el motivo.");
+                  correr(() => descartar(p.id, motivo), `Descartaste a ${p.nombre}`, AJUSTE_DESCARTE_ENVIADO);
+                }}>Descartar</button>
                 <button className="boton" onClick={() => setModo("normal")}>Cancelar</button>
               </div>
             </div>

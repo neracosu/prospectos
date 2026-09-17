@@ -54,7 +54,7 @@ export function TabPendientes({ proyectoId, pendientes }: { proyectoId: number; 
           </div>
           {abierta === p.id && (
             <div className="fila-botones fila-botones--secundarias" style={{ margin: "0 0 8px" }}>
-              <button className="boton mini" onClick={() => correr(() => alternarVisible(p.id), { tipo: "visible", id: p.id })}>{p.visibleCliente ? "Pasar a interno" : "Mostrar al cliente"}</button>
+              <button className="boton mini" onClick={() => correr(() => alternarVisible(p.id), { tipo: "visible", id: p.id, visible: !p.visibleCliente })}>{p.visibleCliente ? "Pasar a interno" : "Mostrar al cliente"}</button>
               <button className="boton mini" disabled={i === 0} onClick={() => correr(() => moverPendiente(p.id, "arriba"), { tipo: "mover", id: p.id, direccion: "arriba" })}>Subir</button>
               <button className="boton mini" disabled={i === lista.length - 1} onClick={() => correr(() => moverPendiente(p.id, "abajo"), { tipo: "mover", id: p.id, direccion: "abajo" })}>Bajar</button>
               <button className="boton mini boton--peligro" disabled={pendiente} onClick={() => { if (confirm("¿Eliminar este pendiente?")) correr(() => eliminarPendiente(p.id)); }}>Eliminar</button>

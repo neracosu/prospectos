@@ -13,7 +13,7 @@ import { useFlotante } from "./LineaFlotante";
 // revalidan esta ficha y su respuesta trae la pagina nueva (la etapa de arriba la pinta el servidor).
 export function FichaAcciones(props: { id: number; etapa: Etapa; nota: string; proximoSeguimiento: string | null; contacto: ContactoProspecto; mensaje: string; rol: "dueno" | "prospectador" }) {
   const avisar = useFlotante();
-  const envio = useEnvioPendiente(props.id);
+  const envio = useEnvioPendiente(props.id, props.etapa === "por_contactar" ? "envio" : "seguimiento");
   const [nota, setNota] = useState(props.nota);
   const [fecha, setFecha] = useState(props.proximoSeguimiento ?? "");
   // Al marcar enviado el servidor fija el seguimiento: el campo tiene que seguirlo. Sin esto se quedaba con la

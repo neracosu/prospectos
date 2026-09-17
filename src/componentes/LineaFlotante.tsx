@@ -30,11 +30,14 @@ export function ProveedorFlotante({ children }: { children: ReactNode }) {
   const cuenta = useRef(0);
 
   const parar = () => { if (reloj.current) { clearTimeout(reloj.current); reloj.current = null; } };
-  const avisar = useCallback((a: AvisoFlotante) => {
+  const arrancar = (id: number, conDeshacer: boolean) => {
     parar();
+    reloj.current = setTimeout(() => setActual((v) => (v?.id === id ? null : v)), conDeshacer ? DURACION_CON_DESHACER_MS : DURACION_MS);
+  };
+  const avisar = useCallback((a: AvisoFlotante) => {
     const id = ++cuenta.current;
     setActual({ ...a, id });
-    reloj.current = setTimeout(() => setActual((v) => (v?.id === id ? null : v)), a.deshacer ? DURACION_CON_DESHACER_MS : DURACION_MS);
+    arrancar(id, !!a.deshacer);
   }, []);
   useEffect(() => parar, []);
 
@@ -45,6 +48,8 @@ export function ProveedorFlotante({ children }: { children: ReactNode }) {
     empezar(async () => {
       let r: { ok: boolean; mensaje?: string };
       try { r = await a.deshacer!(); } catch { r = { ok: false }; }
+      // Si mientras tanto llego otro aviso (con su propio «Deshacer»), un «Deshecho» no lo pisa. Un error si: hay que verlo.
+      if (r.ok && cuenta.current !== a.id) return;
       avisar(r.ok ? { texto: a.textoDeshecho ?? "Deshecho" } : { texto: r.mensaje ?? "No se pudo deshacer. Intenta de nuevo.", tono: "error" });
     });
   };
@@ -55,7 +60,10 @@ export function ProveedorFlotante({ children }: { children: ReactNode }) {
       {/* La zona existe siempre: una region viva que nace junto con su contenido no se anuncia. */}
       <div className="flotante-zona" role="status" aria-live="polite">
         {actual && (
-          <div key={actual.id} className={"flotante" + (actual.tono === "error" ? " flotante--error" : "")}>
+          // Con el foco o el dedo encima no se va (WCAG 2.2.1): quien llega a «Deshacer» con teclado o lector tiene su tiempo.
+          <div key={actual.id} className={"flotante" + (actual.tono === "error" ? " flotante--error" : "")}
+            onFocus={parar} onPointerEnter={parar}
+            onBlur={() => { if (!deshaciendo) arrancar(actual.id, !!actual.deshacer); }} onPointerLeave={() => { if (!deshaciendo) arrancar(actual.id, !!actual.deshacer); }}>
             <span className="flotante__texto">{actual.texto}</span>
             {actual.deshacer && <button type="button" className="flotante__deshacer" disabled={deshaciendo} onClick={deshacer}>{deshaciendo ? "Deshaciendo…" : "Deshacer"}</button>}
           </div>

@@ -23,7 +23,15 @@ export function TabCobros({ proyectoId, cobros, hoy, emisorListo }: { proyectoId
   // Pasada de UX, fase B. La fila pasa a «Pagado» al tocar Confirmar, no cuando responde el servidor; si el
   // servidor dice que no, vuelve sola a como estaba. No hay router.refresh(): cada accion ya revalida esta ruta.
   const [lista, aplicar] = useOptimistic<CobroOptimista[], CambioCobro>(cobros, aplicarCambioCobro);
-  const correr = (fn: () => Promise<{ ok: boolean; mensaje?: string }>, texto: string) => empezar(async () => { const r = await fn(); if (r.ok) { setError(""); setAbierto(null); setNuevo(false); avisarResultado({ texto }); } else setError(r.mensaje ?? "No se pudo guardar. Intenta de nuevo."); });
+  // `cierra` es la fila cuyo formulario abrio esta accion: solo esa se cierra. Mientras el servidor responde se
+  // puede haber abierto el de otra fila, con cosas escritas (los inputs no son controlados).
+  const correr = (fn: () => Promise<{ ok: boolean; mensaje?: string }>, texto: string, cierra?: number) => empezar(async () => {
+    const r = await fn();
+    if (!r.ok) return setError(r.mensaje ?? "No se pudo guardar. Intenta de nuevo.");
+    setError("");
+    if (cierra === undefined) setNuevo(false); else setAbierto((a) => (a?.id === cierra ? null : a));
+    avisarResultado({ texto });
+  });
   const pagar = (c: CobroOptimista, fd: FormData) => {
     setError("");
     empezar(async () => {
@@ -31,7 +39,7 @@ export function TabCobros({ proyectoId, cobros, hoy, emisorListo }: { proyectoId
       aplicar({ tipo: "pagado", id: c.id, pagadoEn: new Date(`${String(fd.get("pagadoEn"))}T12:00:00-04:00`), canal: String(fd.get("canal") ?? ""), referencia: String(fd.get("referencia") ?? "").trim() });
       const r = await marcarPagado(fd);
       if (!r.ok) return setError(r.mensaje);
-      setAbierto(null);
+      setAbierto((a) => (a?.id === c.id ? null : a));
       // El «Deshacer» vale un minuto y solo mientras no haya recibo (deshacerPago); despues, el camino es Anular.
       avisarResultado({ texto: `Pagado ${formatoUSD(c.monto)}`, deshacer: () => deshacerPago(c.id), textoDeshecho: "Pago deshecho" });
     });
@@ -98,7 +106,7 @@ export function TabCobros({ proyectoId, cobros, hoy, emisorListo }: { proyectoId
                   : c.pagadoEn ? "Este cobro ya está pagado. Al anularlo deja de contar como cobrado; el rastro del pago no se borra." : "El cobro queda anulado con su motivo; no se borra."}
               </p>
               <label className="campo"><span>Motivo</span><input value={motivo} onChange={(e) => setMotivo(e.target.value)} maxLength={191} autoFocus /></label>
-              <div className="fila-botones"><button className="boton boton--peligro" disabled={pendiente} onClick={() => correr(() => anularCobro(c.id, motivo), "Cobro anulado")}>{pendiente ? "Anulando…" : "Anular cobro"}</button><button className="boton" onClick={() => setAbierto(null)}>Conservar</button></div>
+              <div className="fila-botones"><button className="boton boton--peligro" disabled={pendiente} onClick={() => correr(() => anularCobro(c.id, motivo), "Cobro anulado", c.id)}>{pendiente ? "Anulando…" : "Anular cobro"}</button><button className="boton" onClick={() => setAbierto(null)}>Conservar</button></div>
               {error && <p className="error" role="alert">{error}</p>}
             </div>
           )}

@@ -82,8 +82,10 @@ export async function generarRecibo(cobroId: number, usuarioId: number): Promise
     // Pisa el archivo si existiera: solo puede ser el resto de una transaccion que no llego a confirmar.
     await conTurnoGlobal(async () => escribirAtomico(rutaDocumento(numero), await imprimirPdf(html)));
     await tx.$executeRaw`UPDATE Correlativo SET ultimo = ultimo + 1 WHERE serie = ${SERIE_RECIBO} AND anio = ${anio}`;
-    const r = await tx.cobro.updateMany({ where: { id: cobroId, reciboNumero: "", anuladoEn: null, pagadoEn: { not: null } }, data: { reciboNumero: numero, reciboGeneradoEn: new Date() } });
-    if (r.count === 0) throw new Error("RECIBO_NO_APLICA"); // lo anularon mientras se generaba
+    // Desde la fase B de la pasada de UX un pago se puede deshacer (y volver a marcar con otros datos) durante un
+    // minuto: el recibo solo se confirma si el pago sigue siendo EL MISMO que se leyo arriba y se imprimio.
+    const r = await tx.cobro.updateMany({ where: { id: cobroId, reciboNumero: "", anuladoEn: null, pagadoEn: c.pagadoEn, canal: c.canal, referencia: c.referencia }, data: { reciboNumero: numero, reciboGeneradoEn: new Date() } });
+    if (r.count === 0) throw new Error("RECIBO_NO_APLICA"); // lo anularon, o deshicieron el pago, mientras se generaba
     await tx.evento.create({ data: { proyectoId: c.proyectoId, cobroId, usuarioId, tipo: "recibo_generado", texto: numero } });
     return { numero, nuevo: true, proyectoId: c.proyectoId };
     // ReadCommitted: la lectura del cobro tiene que ver lo que confirmo quien tenia el bloqueo antes.

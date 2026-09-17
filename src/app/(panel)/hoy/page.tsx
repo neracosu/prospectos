@@ -35,11 +35,11 @@ export default async function Hoy() {
         )}
       </ResumenHoy>
 
-      <h2 className="titulo">Seguimientos que tocan ({seguimientos.length})</h2>
+      <h2 className="titulo" tabIndex={-1}>Seguimientos que tocan ({seguimientos.length})</h2>
       {seguimientos.length === 0 && <p className="suave">Ninguno hoy.</p>}
       {seguimientos.map((p) => <TarjetaSeguimiento key={p.id} p={p} hoy={hoy} />)}
 
-      <h2 className="titulo">Por contactar</h2>
+      <h2 className="titulo" tabIndex={-1}>Por contactar</h2>
       {cola.length === 0 && <p className="suave">La cola está vacía. <Link href="/prospectos/nuevo">Agrega un prospecto</Link>.</p>}
       {cola.map((p) => <TarjetaCola key={p.id} p={p} />)}
     </ProveedorHoy>

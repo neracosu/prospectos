@@ -109,13 +109,21 @@ try {
   revisar((await numero()) === antes + 1, "con la respuesta del servidor el numero sigue en su sitio (no se cuenta dos veces)");
   revisar((await prisma.prospecto.findUniqueOrThrow({ where: { id: yare.id } })).etapa === "enviado", "el envio quedo guardado en la base");
   revisar((await tarjetaYare().count()) === 0, "la tarjeta enviada no reaparece");
+  // Un recuerdo de «envio» que quedara vivo no puede hacer que la ficha (ya enviada) registre un seguimiento.
+  await pg.evaluate(([id]) => sessionStorage.setItem("pr:envio-pendiente", JSON.stringify({ prospectoId: id, canal: "whatsapp", accion: "envio", en: Date.now() })), [yare.id]);
+  retener = 0;
+  await pg.goto(`${BASE}/prospectos/${yare.id}`, { waitUntil: "networkidle" });
+  revisar((await pg.getByText("¿Se envió?").count()) === 0, "la ficha ya enviada no toma el recuerdo de un envio");
+  await pg.evaluate(() => sessionStorage.removeItem("pr:envio-pendiente"));
+  await pg.goto(`${BASE}/hoy`, { waitUntil: "networkidle" });
+  retener = RETENCION_MS;
 
   // 3. «Saltar» y «Deshacer»: vuelve a su lugar, delante de la que venia despues.
   const nombres = [`Posada El Morro ${marca}`, `Hotel Gran Sabana ${marca}`];
   await pg.locator("article", { hasText: nombres[0] }).getByRole("button", { name: "Saltar" }).click();
   const tSaltar = await cuantoTarda(() => pg.locator("article", { hasText: nombres[0] }).waitFor({ state: "detached", timeout: RETENCION_MS - 200 })).catch(() => -1);
   revisar(tSaltar >= 0 && tSaltar < INSTANTE_MS, `la tarjeta saltada se va al instante (${tSaltar} ms)`);
-  await flotante.getByText(`Saltaste a ${nombres[0]}`).waitFor({ timeout: RETENCION_MS + 8000 });
+  await flotante.getByText(`${nombres[0]} pasó al final de la cola`).waitFor({ timeout: RETENCION_MS + 8000 });
   const ordenSaltado = (await prisma.prospecto.findUniqueOrThrow({ where: { id: morro.id } })).ordenCola;
   revisar(ordenSaltado > 3, `el salto quedo guardado (ordenCola ${ordenSaltado})`);
   retener = 0;

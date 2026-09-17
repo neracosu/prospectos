@@ -64,7 +64,7 @@ export async function marcarEnviado(prospectoId: number, canal: Canal): Promise<
   }
 }
 
-export async function saltar(prospectoId: number): Promise<Resultado<{ ordenAnterior: number }>> {
+export async function saltar(prospectoId: number): Promise<Resultado> {
   const u = await exigirSesion();
   const e = Id.safeParse(prospectoId);
   if (!e.success) return fallo(ERROR);
@@ -78,30 +78,42 @@ export async function saltar(prospectoId: number): Promise<Resultado<{ ordenAnte
       data: { ordenCola: (max._max.ordenCola ?? 0) + 1 },
     });
     if (r.count === 0) return fallo("Solo se salta a un prospecto por contactar.");
-    await prisma.evento.create({ data: { prospectoId: e.data, usuarioId: u.id, tipo: "saltado" } });
+    // `de` guarda el lugar que tenia: es de donde lo lee deshacerSalto (pasada de UX, fase B).
+    await prisma.evento.create({ data: { prospectoId: e.data, usuarioId: u.id, tipo: "saltado", de: String(p.ordenCola) } });
     refrescar();
-    // El orden que tenia viaja al navegador para el «Deshacer» del aviso (pasada de UX, fase B).
-    return exito({ ordenAnterior: p.ordenCola });
+    return exito();
   } catch (err) {
     console.error("saltar", err);
     return fallo(ERROR);
   }
 }
 
-// El «Deshacer» de un salto: repone el lugar que tenia en la cola. El orden lo manda el navegador, pero lo
-// unico que puede hacer con el es reordenar la cola de alguien que ya tiene sesion en el panel.
-export async function deshacerSalto(prospectoId: number, ordenAnterior: number): Promise<Resultado> {
+// El «Deshacer» de un salto: repone el lugar que tenia en la cola. El orden NO viene del navegador: sale del
+// evento del ultimo salto. Si viniera de afuera, cualquiera con sesion podria poner ordenCola en el tope del INT
+// y dejar rotos «Saltar», «Aprobar» y la importacion, que calculan max(ordenCola) + 1.
+const NADA_QUE_DESHACER = "NADA_QUE_DESHACER";
+const YA_NO_ESTA_EN_COLA = "YA_NO_ESTA_EN_COLA";
+export async function deshacerSalto(prospectoId: number): Promise<Resultado> {
   const u = await exigirSesion();
-  const e = z.object({ id: Id, orden: z.number().int().min(0).max(2147483647) }).safeParse({ id: prospectoId, orden: ordenAnterior });
+  const e = Id.safeParse(prospectoId);
   if (!e.success) return fallo(ERROR);
   try {
-    // Condicionado a la etapa: si entre el salto y el deshacer alguien lo envio, ya no vuelve a la cola.
-    const r = await prisma.prospecto.updateMany({ where: { id: e.data.id, etapa: "por_contactar" }, data: { ordenCola: e.data.orden } });
-    if (r.count === 0) return fallo("Ese prospecto ya no está en la cola.");
-    await prisma.evento.create({ data: { prospectoId: e.data.id, usuarioId: u.id, tipo: "salto_deshecho" } });
+    await prisma.$transaction(async (tx) => {
+      // Con la fila bloqueada, dos toques en «Deshacer» se atienden de a uno: el segundo ya ve el salto deshecho.
+      await tx.$executeRaw`SELECT id FROM Prospecto WHERE id = ${e.data} FOR UPDATE`;
+      const ultimo = await tx.evento.findFirst({ where: { prospectoId: e.data, tipo: { in: ["saltado", "salto_deshecho"] } }, orderBy: { id: "desc" }, select: { tipo: true, de: true } });
+      // Un salto de antes de la fase B no guardo su orden (`de` vacio): tampoco se deshace.
+      if (!ultimo || ultimo.tipo !== "saltado" || !/^\d{1,10}$/.test(ultimo.de)) throw new Error(NADA_QUE_DESHACER);
+      // Condicionado a la etapa: si entre el salto y el deshacer alguien lo envio, ya no vuelve a la cola.
+      const r = await tx.prospecto.updateMany({ where: { id: e.data, etapa: "por_contactar" }, data: { ordenCola: Number(ultimo.de) } });
+      if (r.count === 0) throw new Error(YA_NO_ESTA_EN_COLA);
+      await tx.evento.create({ data: { prospectoId: e.data, usuarioId: u.id, tipo: "salto_deshecho" } });
+    });
     refrescar();
     return exito();
   } catch (err) {
+    if (err instanceof Error && err.message === NADA_QUE_DESHACER) return fallo("No hay un salto que deshacer.");
+    if (err instanceof Error && err.message === YA_NO_ESTA_EN_COLA) return fallo("Ese prospecto ya no está en la cola.");
     console.error("deshacerSalto", err);
     return fallo(ERROR);
   }

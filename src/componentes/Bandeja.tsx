@@ -37,7 +37,6 @@ const ILEGIBLE = "Datos inválidos";
 const ERROR_GENERICO = "No se pudo completar. Intenta de nuevo.";
 
 type Accion = number | "lote";
-type Aviso = { donde: Accion; mensaje: string };
 
 function esUrl(v: string): boolean {
   return /^https?:\/\//i.test(v);
@@ -50,7 +49,9 @@ export function Bandeja({ lote: loteDelServidor }: { lote: LoteDetalle }) {
   // toque y siguen esperando al servidor.
   const [lote, decidir] = useOptimistic<LoteDetalle, CambioFila>(loteDelServidor, aplicarDecision);
   const [editando, setEditando] = useState<number | null>(null);
-  const [error, setError] = useState<Aviso | null>(null);
+  // Un error por ficha (y uno del lote): con varias decisiones en vuelo, el de una no borra el de otra.
+  const [errores, setErrores] = useState<Record<string, string>>({});
+  const ponerError = (donde: Accion, mensaje: string | null) => setErrores((e) => { const r = { ...e }; if (mensaje === null) delete r[String(donde)]; else r[String(donde)] = mensaje; return r; });
   const [corriendo, setCorriendo] = useState<Accion | null>(null);
   const [avance, setAvance] = useState<{ hechas: number; de: number } | null>(null);
   const [pendiente, empezar] = useTransition();
@@ -60,17 +61,18 @@ export function Bandeja({ lote: loteDelServidor }: { lote: LoteDetalle }) {
 
   // Sin router.refresh(): cada accion de revision ya revalida /buscar y su respuesta trae el lote nuevo.
   const correr = (donde: Accion, fn: () => Promise<{ ok: true; datos: unknown } | { ok: false; mensaje: string }>, optimista?: { cambio: CambioFila; texto: string }) => {
-    setError(null);
+    ponerError(donde, null);
     // Con cambio optimista no hay «Guardando…»: la ficha ya se ve decidida.
     if (!optimista) setCorriendo(donde);
     empezar(async () => {
       if (optimista) decidir(optimista.cambio);
       const r = await fn();
-      setCorriendo(null);
+      // Solo se cierra y se apaga lo de ESTA ficha: mientras tanto se pudo abrir «Corregir» en otra.
+      setCorriendo((c) => (c === donde ? null : c));
       if (r.ok) {
-        setEditando(null);
+        setEditando((e) => (e === donde ? null : e));
         if (optimista) avisar({ texto: optimista.texto });
-      } else setError({ donde, mensaje: r.mensaje });
+      } else ponerError(donde, r.mensaje);
     });
   };
 
@@ -79,7 +81,7 @@ export function Bandeja({ lote: loteDelServidor }: { lote: LoteDetalle }) {
   // fila que siempre falla no puede dejar la pantalla girando sin fin.
   const aprobarTodas = () => {
     // Antes de la transicion: adentro, lo que va antes del primer await no se pinta hasta que el servidor responde.
-    setError(null);
+    ponerError("lote", null);
     setCorriendo("lote");
     setAvance({ hechas: 0, de: lote.aprobables });
     empezar(async () => {
@@ -87,7 +89,7 @@ export function Bandeja({ lote: loteDelServidor }: { lote: LoteDetalle }) {
       for (;;) {
         const r = await aprobarNuevos(lote.lote);
         if (!r.ok) {
-          setError({ donde: "lote", mensaje: r.mensaje });
+          ponerError("lote", r.mensaje);
           break;
         }
         const paso = siguientePasada(estado, r.datos);
@@ -97,10 +99,10 @@ export function Bandeja({ lote: loteDelServidor }: { lote: LoteDetalle }) {
           // Los numeros que se muestran son los de la ultima pasada: las mismas
           // filas vuelven a fallar en cada vuelta y sumarlas no dice nada.
           if (estado.fallidas > 0) {
-            setError({
-              donde: "lote",
-              mensaje: `Se aprobaron ${estado.aprobadas}. En la última pasada fallaron ${estado.fallidas} y quedan ${estado.quedan} sin aprobar. La primera falla dice: ${estado.primerError || ERROR_GENERICO}`,
-            });
+            ponerError(
+              "lote",
+              `Se aprobaron ${estado.aprobadas}. En la última pasada fallaron ${estado.fallidas} y quedan ${estado.quedan} sin aprobar. La primera falla dice: ${estado.primerError || ERROR_GENERICO}`,
+            );
           }
           break;
         }
@@ -136,9 +138,9 @@ export function Bandeja({ lote: loteDelServidor }: { lote: LoteDetalle }) {
             </p>
           </>
         )}
-        {error?.donde === "lote" && (
+        {errores.lote && (
           <p className="error" role="alert">
-            {error.mensaje}
+            {errores.lote}
           </p>
         )}
         <div className="fila-botones">
@@ -216,9 +218,9 @@ export function Bandeja({ lote: loteDelServidor }: { lote: LoteDetalle }) {
               </p>
             )}
 
-            {error?.donde === f.id && (
+            {errores[String(f.id)] && (
               <p className="error" role="alert">
-                {error.mensaje}
+                {errores[String(f.id)]}
               </p>
             )}
 

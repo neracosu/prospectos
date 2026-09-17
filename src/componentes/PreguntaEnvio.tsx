@@ -1,13 +1,14 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Canal } from "@/lib/canales-contrato";
-import { CLAVE_ENVIO_PENDIENTE, leerEnvio, serializarEnvio } from "@/lib/envio-pendiente-contrato";
+import { CLAVE_ENVIO_PENDIENTE, leerEnvio, serializarEnvio, type AccionEnvio } from "@/lib/envio-pendiente-contrato";
 
 // «Toque el canal y me fui a WhatsApp» (pasada de UX, fase B). La pregunta sale al tocar el canal, como siempre
 // (un tel: cancelado o un «copiar» nunca esconden la pestana, y ahi tambien hay que preguntar); `volvio` pasa a
 // true cuando la pestana regresa a primer plano, y ahi la pregunta se resalta. Si el navegador recargo la
 // pestana mientras tanto, sessionStorage recuerda que quedo pendiente y la tarjeta vuelve a preguntar.
-export function useEnvioPendiente(prospectoId: number) {
+// `accion` es lo que ejecutaria el «Si» de quien llama: un recuerdo de OTRA accion no es suyo y no lo toma.
+export function useEnvioPendiente(prospectoId: number, accion: AccionEnvio) {
   const [canal, setCanal] = useState<Canal | null>(null);
   const [volvio, setVolvio] = useState(false);
 
@@ -15,9 +16,9 @@ export function useEnvioPendiente(prospectoId: number) {
   useEffect(() => {
     try {
       const e = leerEnvio(sessionStorage.getItem(CLAVE_ENVIO_PENDIENTE), Date.now());
-      if (e?.prospectoId === prospectoId) { setCanal(e.canal); setVolvio(true); }
+      if (e?.prospectoId === prospectoId && e.accion === accion) { setCanal(e.canal); setVolvio(true); }
     } catch { /* sin sessionStorage (modo privado, bloqueado) solo se pierde el recuerdo tras una recarga */ }
-  }, [prospectoId]);
+  }, [prospectoId, accion]);
 
   useEffect(() => {
     if (!canal) return;
@@ -28,8 +29,8 @@ export function useEnvioPendiente(prospectoId: number) {
 
   const abrir = useCallback((c: Canal) => {
     setCanal(c); setVolvio(false);
-    try { sessionStorage.setItem(CLAVE_ENVIO_PENDIENTE, serializarEnvio({ prospectoId, canal: c, en: Date.now() })); } catch {}
-  }, [prospectoId]);
+    try { sessionStorage.setItem(CLAVE_ENVIO_PENDIENTE, serializarEnvio({ prospectoId, canal: c, accion, en: Date.now() })); } catch {}
+  }, [prospectoId, accion]);
 
   const cerrar = useCallback(() => {
     setCanal(null); setVolvio(false);
