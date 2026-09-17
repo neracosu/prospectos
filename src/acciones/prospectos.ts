@@ -9,7 +9,7 @@ import { ETAPAS, ETIQUETA_ETAPA, puedePasar, type Etapa } from "@/lib/embudo-con
 import { hoyCaracas, sumarDias, esFechaIso } from "@/lib/fecha-caracas";
 import { normalizarCelular, normalizarRed } from "@/lib/celular-contrato";
 import { claveProspecto } from "@/lib/clave-prospecto";
-import { TOPES } from "@/lib/tabla-contrato";
+import { TOPES, ERROR_CLAVE_LARGA } from "@/lib/tabla-contrato";
 import { generarCodigo } from "@/lib/codigo";
 import { fallo, exito, type Resultado } from "@/acciones/resultado";
 
@@ -223,12 +223,20 @@ const Nuevo = z.object({
   tiktok: z.string().trim().max(200).default(""),
   nota: z.string().trim().max(2000).default(""),
   fuente: z.string().trim().max(300).default(""),
-});
+// El par, no cada campo: `clave` es VARCHAR(191) y se arma con nombre + ciudad, que
+// juntos pueden dar 201 aunque cada uno quepa en su tope. Mismo criterio y mismo
+// texto que validarFila, que es por donde entra lo importado.
+}).refine((d) => claveProspecto(d.nombre, d.ciudad).length <= TOPES.clave, { message: ERROR_CLAVE_LARGA, path: ["nombre"] });
 
 export async function crearProspecto(formData: FormData): Promise<Resultado<{ id: number }>> {
   const u = await exigirSesion();
   const e = Nuevo.safeParse(Object.fromEntries(formData));
-  if (!e.success) return fallo("Revisa nombre, ciudad y nicho.");
+  // El unico fallo del formulario que "revisa nombre, ciudad y nicho" no explica
+  // es el del par: ese se devuelve con su propio texto.
+  if (!e.success) {
+    const clave = e.error.issues.some((i) => i.message === ERROR_CLAVE_LARGA);
+    return fallo(clave ? ERROR_CLAVE_LARGA : "Revisa nombre, ciudad y nicho.");
+  }
   const d = e.data;
   try {
     const p = await prisma.prospecto.create({

@@ -152,4 +152,20 @@ describe.runIf(DB_HABILITADA)("acciones de prospectos", () => {
     expect(d).toMatchObject({ whatsapp: "584141234567", instagram: "https://www.instagram.com/posadanueva/", origen: "manual", fuentes: ["https://posadanueva.com/contacto"] });
     expect((await crearProspecto(fd)).ok).toBe(false);
   });
+
+  it("crearProspecto rechaza el par que no cabe en la clave", async () => {
+    // Cada campo entra en su tope (120 y 80) pero juntos dan 201 y la columna
+    // `clave` es de 191: antes esto llegaba a MySQL y volvia como error generico.
+    const nombre = "M".repeat(120);
+    const fd = new FormData();
+    fd.set("nichoId", String(ids.nichoId)); fd.set("nombre", nombre); fd.set("ciudad", "V".repeat(80));
+    expect(await crearProspecto(fd)).toMatchObject({
+      ok: false, mensaje: "El nombre y la ciudad juntos no pueden pasar de 191 caracteres",
+    });
+    expect(await prisma.prospecto.count({ where: { nombre } })).toBe(0);
+    // Con la ciudad en 70 el par cabe justo y entra.
+    fd.set("ciudad", "V".repeat(70));
+    expect((await crearProspecto(fd)).ok).toBe(true);
+    expect((await prisma.prospecto.findFirstOrThrow({ where: { nombre } })).clave).toHaveLength(191);
+  });
 });

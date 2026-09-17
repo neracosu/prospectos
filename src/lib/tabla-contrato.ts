@@ -25,6 +25,8 @@ const MAX_FILAS = 5000;
 // validarFila es el unico paso por donde pasan los cuatro caminos de importacion:
 // cortar aqui es lo que evita el "Data too long" al aprobar la fila.
 export const TOPES = { nombre: 120, ciudad: 80, estado: 60, texto: 191, nota: 16000, fuente: 2000, clave: 191 } as const;
+// Un solo texto para el largo del par: lo usan validarFila y el formulario manual.
+export const ERROR_CLAVE_LARGA = `El nombre y la ciudad juntos no pueden pasar de ${TOPES.clave} caracteres`;
 const LIMITES: [Columna, string, number][] = [
   ["nicho", "El nicho", TOPES.texto],
   ["nombre", "El nombre", TOPES.nombre],
@@ -114,8 +116,6 @@ export function validarFila(f: Record<Columna, string>): { entrada: EntradaValid
     if (valor.length > max) errores.push(`${etiqueta} no puede pasar de ${max} caracteres`);
   }
   // El par, no cada campo: `clave` es VARCHAR(191) y se arma con los dos.
-  if (claveProspecto(entrada.nombre, entrada.ciudad).length > TOPES.clave) {
-    errores.push(`El nombre y la ciudad juntos no pueden pasar de ${TOPES.clave} caracteres`);
-  }
+  if (claveProspecto(entrada.nombre, entrada.ciudad).length > TOPES.clave) errores.push(ERROR_CLAVE_LARGA);
   return { entrada, errores };
 }
