@@ -16,12 +16,12 @@ acá a pedido de Neri y esa misma tarde se amplió de un panel a una plataforma 
 | 3 | Proyectos y cobros | `2026-09-16-proyectos-cobros-design.md` | Implementada (16-sep) |
 | 2 | Buscador e importación | `2026-09-16-buscador-importacion-design.md` | Implementada (17-sep) |
 | 4 | Recibos de pago | `2026-09-16-recibos-design.md` | Implementada (17-sep) |
-| 5 | Portal del cliente | `2026-09-16-portal-cliente-design.md` | **5a implementada (17-sep)** · 5b pendiente |
+| 5 | Portal del cliente | `2026-09-16-portal-cliente-design.md` | Implementada (5a y 5b, 17-sep) |
 
 Orden de construcción: **1 → 3 → 2 → 4 → 5**. Cada pieza sale a producción cuando termina.
 
-Estado al 17-sep: **piezas 1, 3, 2, 4 y 5a construidas y en producción.** Falta la 5b (documentos con
-subida de archivos y plantillas de aviso), sin plan todavía.
+Estado al 17-sep: **las cinco piezas construidas y en producción** (la 5 en dos entregas: 5a acceso y
+lectura, 5b documentos y avisos). Lo que sigue es la pasada de UX del panel, sin aprobar.
 
 - Código en `main` (rama `pieza-1` ya fusionada). Proceso PM2 **`prospectos`**, puerto 3013 en
   `127.0.0.1`, proxy en el `.htaccess` (ver abajo). Repo: `git@github.com:neracosu/prospectos.git`.
@@ -39,7 +39,8 @@ subida de archivos y plantillas de aviso), sin plan todavía.
   `scripts/cambiar-pin.mjs <id>`, `scripts/pin-en-uso.mjs`, `scripts/verificar-flujo.mts` (Playwright
   a 390 px contra el dominio), `scripts/verificar-flujo-proyectos.mts`, `scripts/verificar-flujo-buscar.mts`,
   `scripts/verificar-flujo-recibos.mts` (⚠️ solo contra la base de tests, ver pieza 4),
-  `scripts/verificar-flujo-portal.mts` (⚠️ igual: solo contra el clon y la base de tests, ver pieza 5a),
+  `scripts/verificar-flujo-portal.mts` (⚠️ igual: solo contra el clon y la base de tests, ver pieza 5a; desde la 5b también entra al panel
+  con un dueño temporal, sube y quita un documento),
   `scripts/sembrar-nichos.mjs`, `scripts/importar-hoteles.mts`, `scripts/generar-iconos.mts`.
 - **Pieza 3 (Proyectos y cobros) en producción:** `/proyectos`, `/proyectos/nuevo`, `/proyectos/[id]` (pestañas
   cobros · pendientes · horas · versiones · cliente), `/clientes`, `/clientes/[id]`, `/clientes/nuevo`; Ajustes
@@ -165,8 +166,59 @@ subida de archivos y plantillas de aviso), sin plan todavía.
     no ofrece instalar la PWA del panel), tema claro propio con las fuentes locales del recibo
     (`next/font/local` desde `plantillas/fuentes/`: **solo `next build` lo valida**, por eso antes de desplegar
     algo del portal se compila primero en el clon) y `src/app/c/not-found.tsx` para el 404 en español.
-  - Pendiente menor: `guardarUsuario` y el restablecer PIN de Ajustes aceptan el id de una cuenta `cliente` si
-    el dueño fabrica el formulario a mano (falta `rol: { in: ROLES_PANEL }` en el `where`).
+  - Ajustes solo administra cuentas del panel: `guardarUsuario` y `restablecerPin` filtran por `ROLES_PANEL`
+    (5b). La cuenta del portal de un cliente se maneja desde su ficha, nunca desde Ajustes.
+- **Pieza 5b (Documentos y avisos) en producción:** en `/proyectos/[id]?t=documentos` Neri sube PDF, JPG, PNG
+  o ZIP de hasta 10 MB y los quita; el cliente los ve y baja en la pestaña Documentos de su portal, por
+  `/c/documentos/<id>`. «Avisar al cliente» abre WhatsApp al cumplir un hito visible, al publicar una versión
+  y al registrar una **cuota o un extra** (las mensualidades ya tienen «Recordar» y los pagos el recibo); los
+  tres mensajes se editan en Ajustes → Avisos al cliente (`mensaje_aviso_hito|version|cobro`).
+  - ⚠️ **`~/prospectos-archivos/documentos/<clienteId>/` es el SEGUNDO directorio del servidor que no se
+    regenera** (el primero es `recibos/`). **Necesita respaldo** (hoy no tiene). `dirArchivos()` y
+    `escribirAtomico()` viven en `src/lib/archivos.ts` y los comparten recibos y documentos: el guarda que se
+    niega a usar el directorio real fuera de `NODE_ENV=production` es uno solo. `src/lib/propuesta.ts` conserva
+    su propia copia **sin** guarda (solo maneja PDFs regenerables): no copiarla.
+  - **La subida es un route handler, no una Server Action** (`POST /proyectos/<id>/documentos`): el tope de
+    cuerpo de las acciones es global y subirlo a 11 MB se lo abriría también a `entrarPortal`, que no pide
+    sesión. El handler valida la sesión `dueno` **antes** de leer el cuerpo y comprueba el origen con
+    `src/lib/origen.ts` (`Origin` contra `X-Forwarded-Host`/`Host`), que es lo que Next hace solo en una
+    acción. La pantalla sube por `XMLHttpRequest` porque `fetch` no da el porcentaje. No pasar nada de esto a
+    Server Action ni tocar `serverActions.bodySizeLimit`.
+  - **El tipo de archivo lo decide la firma de bytes** (`detectarTipo` en `src/lib/documentos-contrato.ts`),
+    nunca la extensión ni el `type` del navegador. En la base va la ruta **relativa**
+    (`documentos/<clienteId>/<uuid>.<ext>`) y `rutaDeDocumento()` no lee nada que no tenga esa forma. El nombre
+    original del archivo no se usa para la ruta. `documentos-contrato.ts` es puro (lo importa también el
+    navegador); `src/lib/documentos.ts` usa `node:`: en un componente `"use client"` solo con `import type`.
+  - **Quitar no borra** (`Documento.quitadoEn`): el cliente deja de verlo y el archivo queda en disco. El único
+    `rm` de la pieza es el de rescate de `guardarDocumento` (si la base falla tras escribir), y solo alcanza el
+    archivo que acaba de crear. Para el cliente, lo ajeno, lo quitado y lo inexistente son **el mismo 404**.
+    No se registra qué documento abrió.
+  - **Todo mensaje de WhatsApp que sale de una plantilla pasa por `armarMensaje`** (`src/lib/plantilla-mensaje.ts`):
+    **el renglón que lleva `{enlace}` se quita entero** cuando el cliente no tiene acceso al portal (si la
+    plantilla es de un solo renglón se conserva y `{enlace}` sale vacío). Por eso `{enlace}` va siempre en su
+    propio renglón, y por eso los textos de fábrica del recordatorio y del vencido ya traen el renglón del
+    portal (decisión aceptada por Neri el 17-sep).
+  - ⚠️ **En un aviso, el mensaje y el enlace se arman ANTES de la transacción que marca `avisadoEn`** y crea el
+    `Evento aviso_cliente` (`avisarHito`, `avisarCobro`, `marcarAvisada`): al revés, un fallo al leer la
+    plantilla deja algo «avisado» que nunca abrió WhatsApp, y el botón ya no vuelve. Desmarcar un hito le borra
+    el `avisadoEn`. Sin WhatsApp del cliente no se marca nada.
+  - ⚠️ **`window.open(url, "_blank", "noopener")` devuelve `null` SIEMPRE**: el componente creería que el
+    navegador bloqueó la ventana. El patrón es el de `TabCobros`: abrir sin `"noopener"` y después
+    `ventana.opener = null`.
+  - **Sesión vencida del cliente:** los enlaces del portal a recibos y documentos llevan `?c=<código>`; sin
+    ninguna sesión y con un `c` bien formado, la ruta redirige a `/c/<c>` (su PIN), no al teclado del panel.
+    Sin `c`, un documento responde 404: decir de quién es sería regalar su código.
+  - `tests/portal-guardas.test.ts` falla si una `page.tsx` o `route.ts` nueva bajo `src/app/c/` no llama a
+    `exigirCliente(`/`sesionCliente(` (es textual: una alarma, no una prueba de autorización; no mira
+    `layout.tsx`). El test «nada interno» de `tests/portal.test.ts` busca `/horas|tarifa|nota/i` en **todo** lo
+    que sale del portal, también en los datos sembrados: un documento de prueba llamado «…tarifas» lo dispara.
+  - ⚠️ **Trampa de herramienta:** una secuencia de escape unicode escrita como texto (barra invertida, `u` y
+    cuatro dígitos) que pase por una herramienta de escritura o por un comando de shell armado por un agente
+    llega **decodificada**: en `documentos-contrato.ts` quedaron bytes NUL crudos y git trató el archivo como
+    binario. Esas líneas se escriben con un script que arme la secuencia con `chr(92)`, y antes de fusionar se
+    barre la rama buscando caracteres por debajo de 0x20, el 0x7F y los combinantes U+0300–U+036F.
+  - ⚠️ **La próxima migración debe llevar un sello posterior a `20260919090000`** (la de esta pieza va dos días
+    por delante del calendario y ya está aplicada en producción: no se renombra).
 - ⚠️ **Procesos: matar solo por PID.** Nunca `pkill`/`killall` ni matar por patrón en este servidor:
   `pkill -f next-server` tumbó los cinco sitios de PM2 el 16-sep (Adastram incluido). Un dev server de
   prueba se lanza desde un clon fuera del docroot con `DATABASE_URL` de prueba, con
@@ -174,14 +226,15 @@ subida de archivos y plantillas de aviso), sin plan todavía.
   es el envoltorio y no node), guardando `$!`; `next dev` deja además un hijo `next-server`: al terminar
   `kill $PID $(pgrep -P $PID)` y comprobar el puerto con `ss -ltnp`, no solo `pgrep`. Nunca `next dev` ni
   `next build` en este directorio salvo el build del despliegue.
-- Siguiente pieza: **5b (documentos del cliente con subida de archivos y plantillas de aviso)**, sin plan.
-  Al construirla: vigía de que toda ruta bajo `src/app/c/` exija la sesión (al estilo de
-  `tests/instrumentation-grafo.test.ts`), y resolver a dónde va el cliente con la sesión vencida (hoy
-  `/recibos/*` sin sesión manda al teclado del **panel**). Plan nuevo por pieza en
-  `docs/superpowers/plans/`. Pendiente aparte: la **pasada de UX** del panel
+- La plataforma de cinco piezas está completa. Plan nuevo por pieza en `docs/superpowers/plans/`.
+  Menores que quedaron anotados y pueden esperar: el desalojo FIFO de `src/lib/rate-limit.ts` (desalojar
+  primero las entradas no bloqueadas), `mismoOrigen` toma el primer `X-Forwarded-Host` (teórico: un navegador
+  ajeno no puede poner esa cabecera y Next hace lo mismo), y el vigía de guardas no mira `layout.tsx`.
+  Pendiente aparte: la **pasada de UX** del panel
   (`docs/superpowers/specs/2026-09-17-ux-panel-design.md`, propuesta sin aprobar).
-- Pendientes de Neri: decidir si los recordatorios de cobro llevan el enlace del portal por defecto (hoy
-  solo si él agrega `{enlace}` al mensaje en Ajustes); rotar la contraseña de la base (spec, decisiones abiertas) y decidir los precios
+- Pendientes de Neri: **decidir el respaldo de `~/prospectos-archivos/`** (recibos y documentos no se
+  regeneran); probar una subida real de ~10 MB desde el teléfono (el tope de Apache/ModSecurity de este cPanel
+  no se puede probar desde el clon); rotar la contraseña de la base (spec, decisiones abiertas) y decidir los precios
   de farmacias (bloquea la propuesta de ese nicho; hoy `farmacias` no tiene plantilla y la ficha no
   muestra enlace de propuesta).
 
