@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import { prisma } from "@/lib/db";
 import { sesionActual } from "@/lib/sesion";
 import { sesionCliente } from "@/lib/sesion-cliente";
+import { CODIGO_VALIDO } from "@/lib/codigo";
 import { ARCHIVO_RECIBO } from "@/lib/recibos-contrato";
 import { rutaDocumento } from "@/lib/recibos";
 
@@ -10,11 +11,15 @@ const noEncontrado = (texto = "No encontrado") => new Response(texto, { status: 
 
 // /recibos/R-2026-0001.pdf y /recibos/R-2026-0001-A.pdf. Entra el dueno, o (pieza 5) el cliente
 // dueno de ese cobro: solo su recibo vigente; lo ajeno, lo anulado y las notas le responden 404.
-export async function GET(_req: Request, ctx: { params: Promise<{ archivo: string }> }) {
+export async function GET(req: Request, ctx: { params: Promise<{ archivo: string }> }) {
   const u = await sesionActual();
   const cliente = u ? null : await sesionCliente();
   // Location relativa: detras del proxy de Apache, la URL de la peticion es la de 127.0.0.1.
-  if (!u && !cliente) return new Response(null, { status: 307, headers: { location: "/entrar", ...SIN_CACHE } });
+  if (!u && !cliente) {
+    // Enlace del portal con la sesion vencida: trae ?c=<codigo> y vuelve al PIN del portal, no al del panel.
+    const c = new URL(req.url).searchParams.get("c") ?? "";
+    return new Response(null, { status: 307, headers: { location: CODIGO_VALIDO.test(c) ? `/c/${c}` : "/entrar", ...SIN_CACHE } });
+  }
   if (u && u.rol !== "dueno") return new Response("No tienes permiso para ver recibos.", { status: 403, headers: SIN_CACHE });
   const { archivo } = await ctx.params;
   const m = ARCHIVO_RECIBO.exec(archivo);

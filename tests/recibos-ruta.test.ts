@@ -92,4 +92,16 @@ describe.runIf(DB_HABILITADA)("GET /recibos/[archivo]", () => {
     sesionClienteFalsa.actual = null;
     expect((await pedir("R-2026-0001.pdf")).status).toBe(307);
   });
+
+  it("sin ninguna sesion pero con ?c= bien formado (enlace del portal con la sesion vencida) vuelve al PIN del portal, no al del panel", async () => {
+    sesionFalsa.actual = null;
+    sesionClienteFalsa.actual = null;
+    const codigo = "Ab3-_".repeat(5).slice(0, 22);
+    const pedirCon = (consulta: string) => GET(new Request(`http://prueba.test/recibos/R-2026-0001.pdf${consulta}`), { params: Promise.resolve({ archivo: "R-2026-0001.pdf" }) });
+    const r = await pedirCon(`?c=${codigo}`);
+    expect(r.status).toBe(307);
+    expect(r.headers.get("location")).toBe(`/c/${codigo}`);
+    expect((await pedirCon("?c=//malo.test")).headers.get("location")).toBe("/entrar");
+    expect((await pedirCon("")).headers.get("location")).toBe("/entrar");
+  });
 });
