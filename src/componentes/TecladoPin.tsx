@@ -1,10 +1,14 @@
 "use client";
 import { useActionState, useEffect, useRef, useState } from "react";
 import { entrar } from "@/acciones/entrar";
+import type { Resultado } from "@/acciones/resultado";
+
+type AccionPin = (estado: unknown, formData: FormData) => Promise<Resultado>;
 
 // Teclado numerico grande: se usa con el pulgar. Al sexto digito envia solo.
-export function TecladoPin() {
-  const [estado, accion, pendiente] = useActionState(entrar, null);
+// Por defecto entra al panel; el portal del cliente le pasa su accion y el codigo como campo oculto.
+export function TecladoPin({ accion: accionPropia, campos }: { accion?: AccionPin; campos?: Record<string, string> } = {}) {
+  const [estado, accion, pendiente] = useActionState(accionPropia ?? entrar, null);
   const [pin, setPin] = useState("");
   const formRef = useRef<HTMLFormElement>(null);
   const teclas = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "⌫"];
@@ -27,6 +31,7 @@ export function TecladoPin() {
   return (
     <form ref={formRef} action={accion} className="teclado" onSubmit={() => setTimeout(() => setPin(""), 300)}>
       <input type="hidden" name="pin" value={pin} />
+      {campos && Object.entries(campos).map(([nombre, valor]) => <input key={nombre} type="hidden" name={nombre} value={valor} />)}
       <div className="teclado__puntos" aria-label={`${pin.length} de 6`}>
         {Array.from({ length: 6 }, (_, i) => <span key={i} className={i < pin.length ? "lleno" : ""} />)}
       </div>

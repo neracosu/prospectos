@@ -26,3 +26,23 @@ export async function verificarToken(token: string): Promise<SesionUsuario | nul
     return null;
   }
 }
+
+// --- Portal del cliente (pieza 5). Misma firma, otra audiencia: un token del portal no pasa
+// verificarToken (no trae rol del panel) y uno del panel no pasa verificarTokenCliente (no trae la audiencia).
+export type SesionCliente = { usuarioId: number; clienteId: number; v: number };
+const AUDIENCIA_PORTAL = "portal";
+const PayloadCliente = z.object({ usuarioId: z.number().int().positive(), clienteId: z.number().int().positive(), v: z.number().int().min(0) });
+
+export async function crearTokenCliente(s: SesionCliente): Promise<string> {
+  return new SignJWT({ ...s }).setProtectedHeader({ alg: "HS256" }).setAudience(AUDIENCIA_PORTAL).setIssuedAt().setExpirationTime("30d").sign(secreto());
+}
+
+export async function verificarTokenCliente(token: string): Promise<SesionCliente | null> {
+  try {
+    const { payload } = await jwtVerify(token, secreto(), { algorithms: ["HS256"], audience: AUDIENCIA_PORTAL });
+    const p = PayloadCliente.safeParse(payload);
+    return p.success ? p.data : null;
+  } catch {
+    return null;
+  }
+}
