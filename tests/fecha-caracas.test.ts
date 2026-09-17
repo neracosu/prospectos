@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { hoyCaracas, sumarDias, tocaHoy, esFechaIso } from "@/lib/fecha-caracas";
+import { hoyCaracas, sumarDias, tocaHoy, esFechaIso, fechaVisible } from "@/lib/fecha-caracas";
 
 describe("hoyCaracas", () => {
   it("a las 02:00 UTC todavia es el dia anterior en Caracas (UTC-4)", () => {
@@ -38,5 +38,11 @@ describe("esFechaIso", () => {
     expect(esFechaIso("2026-02-28")).toBe(true);
     expect(esFechaIso("2026-02-30")).toBe(false);
     expect(esFechaIso("16/09/2026")).toBe(false);
+  });
+});
+
+describe("fechaVisible", () => {
+  it("pasa de ISO a dd/mm/aaaa", () => {
+    expect(fechaVisible("2026-09-17")).toBe("17/09/2026");
   });
 });

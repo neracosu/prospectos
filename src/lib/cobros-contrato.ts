@@ -26,6 +26,13 @@ export function mesDe(fecha: string): string {
   return fecha.slice(0, 7);
 }
 
+const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+// "2026-10" -> "octubre 2026". Lo usan el detalle de la mensualidad y el concepto del recibo.
+export function nombreMes(mes: string): string {
+  const [a, m] = mes.split("-");
+  return `${MESES[Number(m) - 1]} ${a}`;
+}
+
 // Mes de Caracas de un instante: se corre 4 horas y se recorta.
 function mesCaracas(d: Date): string {
   return new Date(d.getTime() - 4 * 60 * 60 * 1000).toISOString().slice(0, 7);

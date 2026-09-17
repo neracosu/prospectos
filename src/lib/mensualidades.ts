@@ -2,13 +2,7 @@
 // menos para su dia de cobro. Idempotente: (proyectoId, mes) es unico en la base.
 import { prisma } from "@/lib/db";
 import { hoyCaracas } from "@/lib/fecha-caracas";
-import { mensualidadesQueTocan } from "@/lib/cobros-contrato";
-
-const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
-function nombreMes(mes: string): string {
-  const [a, m] = mes.split("-");
-  return `${MESES[Number(m) - 1]} ${a}`;
-}
+import { mensualidadesQueTocan, nombreMes } from "@/lib/cobros-contrato";
 
 function esConflictoUnico(err: unknown): boolean {
   return typeof err === "object" && err !== null && "code" in err && (err as { code?: string }).code === "P2002";

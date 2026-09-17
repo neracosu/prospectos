@@ -1,0 +1,8 @@
+Fuentes del recibo de pago (plantillas/recibo.html). Se incrustan en el PDF al generarlo:
+un recibo emitido no cambia, asi que no puede depender de que Google Fonts responda ese dia.
+
+source-sans-3.woff2   Source Sans 3, variable 400-700, subconjunto latin.
+source-serif-4.woff2  Source Serif 4, variable 400-700, subconjunto latin.
+
+Copyright Adobe. Licencia SIL Open Font License 1.1 (https://openfontlicense.org).
+Bajadas de fonts.gstatic.com el 2026-09-17. Son las mismas familias de la propuesta de hoteles.

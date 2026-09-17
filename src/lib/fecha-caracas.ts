@@ -21,3 +21,9 @@ export function sumarDias(fecha: string, dias: number): string {
 export function tocaHoy(proximo: string | null, hoy: string): boolean {
   return proximo !== null && proximo <= hoy;
 }
+
+// Fecha de negocio (YYYY-MM-DD) como se escribe en Venezuela: dd/mm/aaaa.
+export function fechaVisible(iso: string): string {
+  const [a, m, d] = iso.split("-");
+  return `${d}/${m}/${a}`;
+}

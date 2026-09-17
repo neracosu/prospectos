@@ -1,0 +1,105 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`render de la plantilla > el HTML del recibo de ejemplo no cambia sin que alguien lo decida (snapshot) 1`] = `
+"<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Recibo de pago R-2026-0001 - NERACOSU</title>
+<style>
+  /* Fuentes locales (OFL), incrustadas al renderizar: un recibo no puede depender de la red. */
+  @font-face { font-family: "Source Sans 3"; font-weight: 400 700; font-style: normal; src: url("fuentes/source-sans-3.woff2") format("woff2"); }
+  @font-face { font-family: "Source Serif 4"; font-weight: 400 700; font-style: normal; src: url("fuentes/source-serif-4.woff2") format("woff2"); }
+  @page { size: A4; margin: 0; }
+  :root {
+    --papel: #ffffff; --tinta: #1a1d1c; --tinta-2: #3c4240; --gris: #5d6664; --regla: #c3cbc7;
+    --sello: #1f5a45; --anulado: #8f2a23; --verde-marca: #5ed29c;
+    --serif: "Source Serif 4", Georgia, "Times New Roman", serif;
+    --sans: "Source Sans 3", "Segoe UI", Arial, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--papel); color: var(--tinta); }
+  /* El cliente lo abre en el visor del telefono, donde el A4 se ve a la mitad:
+     nada baja de 12pt y lo que importa (quien, cuanto, por que) va en grande. */
+  body { font-family: var(--sans); font-size: 13pt; line-height: 1.4; -webkit-font-smoothing: antialiased; }
+  .hoja { width: 210mm; min-height: 297mm; padding: 20mm 20mm 16mm; display: flex; flex-direction: column; }
+
+  .cabecera { display: flex; justify-content: space-between; align-items: flex-start; gap: 10mm; }
+  .logo { font-weight: 700; font-size: 21pt; letter-spacing: .06em; line-height: 1; margin: 0 0 4mm; }
+  .logo i { font-style: normal; color: var(--verde-marca); }
+  .emisor { margin: 0; color: var(--tinta-2); }
+  .emisor b { color: var(--tinta); font-weight: 600; }
+  .documento { text-align: right; }
+  .documento h1 { font-family: var(--serif); font-weight: 600; font-size: 23pt; line-height: 1.1; margin: 0 0 3mm; }
+  .numero { font-size: 19pt; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: .02em; margin: 0; }
+  .emitido { margin: 1mm 0 0; color: var(--gris); }
+  .anulacion .documento h1 { color: var(--anulado); }
+
+  /* La linea punteada es la del talonario: separa el taco del recibo. */
+  .corte { border: 0; border-top: 2.5pt dotted var(--regla); margin: 11mm 0 10mm; }
+
+  .frase { margin: 0; }
+  .frase dt { color: var(--gris); font-size: 14pt; margin: 0 0 1mm; }
+  .frase dd { margin: 0 0 8mm; font-family: var(--serif); font-weight: 600; font-size: 24pt; line-height: 1.2; text-wrap: balance; }
+  .frase dd small { display: block; font-family: var(--sans); font-weight: 400; font-size: 13pt; color: var(--tinta-2); margin-top: 1.5mm; }
+  .frase dd.monto { font-weight: 700; font-size: 56pt; line-height: 1; color: var(--sello); font-variant-numeric: tabular-nums lining-nums; }
+  .frase dd.monto small { margin-top: 3mm; }
+  .frase dd.motivo { font-size: 17pt; font-weight: 400; }
+  /* La nota de anulacion lleva tres renglones mas: se aprieta para seguir en una sola hoja. */
+  .anulacion .corte { margin: 8mm 0 7mm; }
+  .anulacion .frase dd { font-size: 20pt; margin-bottom: 5mm; }
+  .anulacion .frase dd.monto { font-size: 40pt; color: var(--anulado); }
+  .anulacion .frase dd.motivo { font-size: 16pt; }
+
+  .datos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6mm; margin: 2mm 0 0; padding: 7mm 0 0; border-top: 1pt solid var(--regla); }
+  .datos div { min-width: 0; }
+  .datos dt { color: var(--gris); font-size: 13pt; }
+  .datos dd { margin: .5mm 0 0; font-size: 17pt; font-weight: 600; overflow-wrap: anywhere; }
+
+  .pie { margin-top: auto; padding-top: 8mm; border-top: 1pt solid var(--regla); color: var(--gris); font-size: 12pt; }
+  .pie p { margin: 0; }
+</style>
+</head>
+<body>
+<main class="hoja ">
+  <header class="cabecera">
+    <div>
+      <p class="logo">NERACOSU<i>.</i></p>
+      <p class="emisor"><b>Neri Colón</b><br>RIF V-12345678-9<br>WhatsApp +58 412-1234567<br>neri@ejemplo.test</p>
+    </div>
+    <div class="documento">
+      <h1>Recibo de pago</h1>
+      <p class="numero">R-2026-0001</p>
+      <p class="emitido">Emitido el 17/09/2026</p>
+    </div>
+  </header>
+
+  <hr class="corte">
+
+  <dl class="frase">
+    
+    <dt>Recibí de</dt>
+    
+    
+    <dd>Hotel &lt;Prueba&gt; &amp; Hijos<small>RIF J-40123456-7</small><small>Contacto: Ana Pérez</small></dd>
+    <dt>la cantidad de</dt>
+    <dd class="monto">$1.250,00<small>dólares de los Estados Unidos (USD)</small></dd>
+    <dt>por concepto de</dt>
+    <dd>PMS Hotel: Mensualidad — octubre 2026<small>Incluye v1.4.0 a v1.4.2</small></dd>
+    
+  </dl>
+
+  <dl class="datos">
+    <div><dt>Fecha de pago</dt><dd>16/09/2026</dd></div>
+    <div><dt>Canal</dt><dd>Pago móvil</dd></div>
+    <div><dt>Referencia</dt><dd>0102-44819</dd></div>
+  </dl>
+
+  <footer class="pie">
+    <p>Este documento es un recibo de pago y no constituye factura fiscal.</p>
+  </footer>
+</main>
+</body>
+</html>
+"
+`;

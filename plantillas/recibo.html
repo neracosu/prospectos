@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>{{titulo}} {{numero}} - NERACOSU</title>
+<style>
+  /* Fuentes locales (OFL), incrustadas al renderizar: un recibo no puede depender de la red. */
+  @font-face { font-family: "Source Sans 3"; font-weight: 400 700; font-style: normal; src: url("fuentes/source-sans-3.woff2") format("woff2"); }
+  @font-face { font-family: "Source Serif 4"; font-weight: 400 700; font-style: normal; src: url("fuentes/source-serif-4.woff2") format("woff2"); }
+  @page { size: A4; margin: 0; }
+  :root {
+    --papel: #ffffff; --tinta: #1a1d1c; --tinta-2: #3c4240; --gris: #5d6664; --regla: #c3cbc7;
+    --sello: #1f5a45; --anulado: #8f2a23; --verde-marca: #5ed29c;
+    --serif: "Source Serif 4", Georgia, "Times New Roman", serif;
+    --sans: "Source Sans 3", "Segoe UI", Arial, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--papel); color: var(--tinta); }
+  /* El cliente lo abre en el visor del telefono, donde el A4 se ve a la mitad:
+     nada baja de 12pt y lo que importa (quien, cuanto, por que) va en grande. */
+  body { font-family: var(--sans); font-size: 13pt; line-height: 1.4; -webkit-font-smoothing: antialiased; }
+  .hoja { width: 210mm; min-height: 297mm; padding: 20mm 20mm 16mm; display: flex; flex-direction: column; }
+
+  .cabecera { display: flex; justify-content: space-between; align-items: flex-start; gap: 10mm; }
+  .logo { font-weight: 700; font-size: 21pt; letter-spacing: .06em; line-height: 1; margin: 0 0 4mm; }
+  .logo i { font-style: normal; color: var(--verde-marca); }
+  .emisor { margin: 0; color: var(--tinta-2); }
+  .emisor b { color: var(--tinta); font-weight: 600; }
+  .documento { text-align: right; }
+  .documento h1 { font-family: var(--serif); font-weight: 600; font-size: 23pt; line-height: 1.1; margin: 0 0 3mm; }
+  .numero { font-size: 19pt; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: .02em; margin: 0; }
+  .emitido { margin: 1mm 0 0; color: var(--gris); }
+  .anulacion .documento h1 { color: var(--anulado); }
+
+  /* La linea punteada es la del talonario: separa el taco del recibo. */
+  .corte { border: 0; border-top: 2.5pt dotted var(--regla); margin: 11mm 0 10mm; }
+
+  .frase { margin: 0; }
+  .frase dt { color: var(--gris); font-size: 14pt; margin: 0 0 1mm; }
+  .frase dd { margin: 0 0 8mm; font-family: var(--serif); font-weight: 600; font-size: 24pt; line-height: 1.2; text-wrap: balance; }
+  .frase dd small { display: block; font-family: var(--sans); font-weight: 400; font-size: 13pt; color: var(--tinta-2); margin-top: 1.5mm; }
+  .frase dd.monto { font-weight: 700; font-size: 56pt; line-height: 1; color: var(--sello); font-variant-numeric: tabular-nums lining-nums; }
+  .frase dd.monto small { margin-top: 3mm; }
+  .frase dd.motivo { font-size: 17pt; font-weight: 400; }
+  /* La nota de anulacion lleva tres renglones mas: se aprieta para seguir en una sola hoja. */
+  .anulacion .corte { margin: 8mm 0 7mm; }
+  .anulacion .frase dd { font-size: 20pt; margin-bottom: 5mm; }
+  .anulacion .frase dd.monto { font-size: 40pt; color: var(--anulado); }
+  .anulacion .frase dd.motivo { font-size: 16pt; }
+
+  .datos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6mm; margin: 2mm 0 0; padding: 7mm 0 0; border-top: 1pt solid var(--regla); }
+  .datos div { min-width: 0; }
+  .datos dt { color: var(--gris); font-size: 13pt; }
+  .datos dd { margin: .5mm 0 0; font-size: 17pt; font-weight: 600; overflow-wrap: anywhere; }
+
+  .pie { margin-top: auto; padding-top: 8mm; border-top: 1pt solid var(--regla); color: var(--gris); font-size: 12pt; }
+  .pie p { margin: 0; }
+</style>
+</head>
+<body>
+<main class="hoja {{clase}}">
+  <header class="cabecera">
+    <div>
+      <p class="logo">NERACOSU<i>.</i></p>
+      <p class="emisor"><b>{{emisor_nombre}}</b><br>RIF {{emisor_rif}}<br>WhatsApp {{emisor_whatsapp}}<br>{{emisor_email}}</p>
+    </div>
+    <div class="documento">
+      <h1>{{titulo}}</h1>
+      <p class="numero">{{numero}}</p>
+      <p class="emitido">{{emitido_texto}}</p>
+    </div>
+  </header>
+
+  <hr class="corte">
+
+  <dl class="frase">
+    <!--si:es_recibo-->
+    <dt>Recibí de</dt>
+    <!--fin:es_recibo-->
+    <!--si:es_anulacion-->
+    <dt>Queda anulado el recibo</dt>
+    <dd>{{recibo_anulado}}<small>emitido el {{recibo_emitido}}</small></dd>
+    <dt>que se había entregado a</dt>
+    <!--fin:es_anulacion-->
+    <dd>{{cliente_nombre}}<!--si:cliente_rif--><small>RIF {{cliente_rif}}</small><!--fin:cliente_rif--><!--si:cliente_contacto--><small>Contacto: {{cliente_contacto}}</small><!--fin:cliente_contacto--></dd>
+    <dt>{{monto_etiqueta}}</dt>
+    <dd class="monto">{{monto}}<small>dólares de los Estados Unidos (USD)</small></dd>
+    <dt>por concepto de</dt>
+    <dd>{{concepto}}<!--si:versiones--><small>{{versiones}}</small><!--fin:versiones--></dd>
+    <!--si:motivo-->
+    <dt>Motivo de la anulación</dt>
+    <dd class="motivo">{{motivo}}</dd>
+    <!--fin:motivo-->
+  </dl>
+
+  <dl class="datos">
+    <div><dt>Fecha de pago</dt><dd>{{fecha_pago}}</dd></div>
+    <div><dt>Canal</dt><dd>{{canal}}</dd></div>
+    <!--si:referencia--><div><dt>Referencia</dt><dd>{{referencia}}</dd></div><!--fin:referencia-->
+  </dl>
+
+  <footer class="pie">
+    <p>{{pie}}</p>
+  </footer>
+</main>
+</body>
+</html>
