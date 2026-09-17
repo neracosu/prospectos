@@ -55,8 +55,9 @@ Estado al 17-sep: **piezas 1, 3 y 2 construidas y en producción.**
   pegado y archivos crean un lote; cada fila se aprueba, completa (solo campos vacíos del existente),
   corrige o descarta. Cada dato lleva su fuente: `Prospecto.fuentes` (lista) y `fuentesPorCampo` (mapa).
   Recorrido real: `scripts/verificar-flujo-buscar.mts` (PIN por stdin; escribe en la base de
-  `DATABASE_URL` y maneja el sitio de `BASE_URL`, por defecto `127.0.0.1:3013`: tienen que ser la misma
-  instancia; limpia lo que crea por la marca `(PRUEBA) <timestamp>`).
+  `DATABASE_URL` y maneja el sitio de `BASE_URL`, por defecto el dominio público: por `127.0.0.1` la
+  descarga de la plantilla falla porque la cookie de sesión es `Secure`; base y sitio tienen que ser la
+  misma instancia; limpia lo que crea por la marca `(PRUEBA) <timestamp>`).
   - **Toda petición saliente va por `src/lib/red-segura.ts`** (`descargar`), nunca `fetch` en el servidor:
     solo http(s), sin IPs privadas ni nombres locales, DNS resuelto y fijado, plazo total 30 s separado
     de la inactividad de 10 s, tope de bytes, máximo 3 redirecciones.
