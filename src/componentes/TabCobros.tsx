@@ -5,8 +5,9 @@ import type { CobroFila } from "@/lib/proyectos";
 import { CANALES_COBRO, ETIQUETA_CANAL_COBRO, ETIQUETA_CONCEPTO, ETIQUETA_COBRO } from "@/lib/cobros-contrato";
 import { formatoUSD } from "@/lib/dinero";
 import { marcarPagado, anularCobro, agregarCobro, registrarRecordatorio } from "@/acciones/cobros";
+import { AccionesRecibo } from "@/componentes/AccionesRecibo";
 
-export function TabCobros({ proyectoId, cobros, hoy }: { proyectoId: number; cobros: CobroFila[]; hoy: string }) {
+export function TabCobros({ proyectoId, cobros, hoy, emisorListo }: { proyectoId: number; cobros: CobroFila[]; hoy: string; emisorListo: boolean }) {
   const [abierto, setAbierto] = useState<{ id: number; modo: "pagar" | "anular" } | null>(null);
   const [nuevo, setNuevo] = useState(false);
   const [motivo, setMotivo] = useState("");
@@ -20,7 +21,8 @@ export function TabCobros({ proyectoId, cobros, hoy }: { proyectoId: number; cob
   const recordar = (id: number) => empezar(async () => {
     const r = await registrarRecordatorio(id);
     if (r.ok) {
-      const ventana = window.open(r.datos.href, "_blank", "noopener");
+      const ventana = window.open(r.datos.href, "_blank");
+      if (ventana) ventana.opener = null;
       setEnlaceManual(ventana ? null : { id, href: r.datos.href });
       setError("");
       router.refresh();
@@ -37,8 +39,11 @@ export function TabCobros({ proyectoId, cobros, hoy }: { proyectoId: number; cob
             <div className="fila-botones" style={{ gridColumn: "1 / -1" }}>
               <button className="boton mini boton--primario" onClick={() => setAbierto({ id: c.id, modo: "pagar" })}>Marcar pagado</button>
               <button className="boton mini" disabled={pendiente} onClick={() => recordar(c.id)}>{c.recordadoHoy ? "Recordado hoy · reabrir" : "Recordar"}</button>
-              <button className="boton mini boton--peligro" onClick={() => setAbierto({ id: c.id, modo: "anular" })}>Anular</button>
+              <button className="boton mini boton--peligro" onClick={() => { setMotivo(""); setAbierto({ id: c.id, modo: "anular" }); }}>Anular</button>
             </div>
+          )}
+          {(c.estado === "pagado" || (c.estado === "anulado" && c.reciboNumero !== "")) && (
+            <AccionesRecibo cobro={c} emisorListo={emisorListo} onAnular={() => { setMotivo(""); setError(""); setAbierto({ id: c.id, modo: "anular" }); }} />
           )}
           {enlaceManual?.id === c.id && (
             <p className="suave" style={{ gridColumn: "1 / -1" }}>El navegador bloqueó la ventana: <a href={enlaceManual.href} target="_blank" rel="noopener">Abrir WhatsApp</a></p>
@@ -55,8 +60,14 @@ export function TabCobros({ proyectoId, cobros, hoy }: { proyectoId: number; cob
           )}
           {abierto?.id === c.id && abierto.modo === "anular" && (
             <div className="pregunta" style={{ gridColumn: "1 / -1" }}>
-              <label className="campo"><span>Motivo</span><input value={motivo} onChange={(e) => setMotivo(e.target.value)} autoFocus /></label>
-              <div className="fila-botones"><button className="boton boton--peligro" disabled={pendiente} onClick={() => correr(() => anularCobro(c.id, motivo))}>Anular</button><button className="boton" onClick={() => setAbierto(null)}>Cancelar</button></div>
+              <p style={{ margin: "0 0 8px" }}>
+                {c.reciboNumero
+                  ? `Este cobro ya tiene el recibo ${c.reciboNumero}. Al anularlo se genera la nota ${c.reciboNumero}-A; el PDF del recibo no se borra.`
+                  : c.pagadoEn ? "Este cobro ya está pagado. Al anularlo deja de contar como cobrado; el rastro del pago no se borra." : "El cobro queda anulado con su motivo; no se borra."}
+              </p>
+              <label className="campo"><span>Motivo</span><input value={motivo} onChange={(e) => setMotivo(e.target.value)} maxLength={300} autoFocus /></label>
+              <div className="fila-botones"><button className="boton boton--peligro" disabled={pendiente} onClick={() => correr(() => anularCobro(c.id, motivo))}>{pendiente ? "Anulando…" : "Anular cobro"}</button><button className="boton" onClick={() => setAbierto(null)}>Conservar</button></div>
+              {error && <p className="error" role="alert">{error}</p>}
             </div>
           )}
         </div>
@@ -72,7 +83,7 @@ export function TabCobros({ proyectoId, cobros, hoy }: { proyectoId: number; cob
           <button className="boton boton--primario" disabled={pendiente}>Agregar</button>
         </form>
       )}
-      {error && <p className="error" role="alert">{error}</p>}
+      {error && abierto?.modo !== "anular" && <p className="error" role="alert">{error}</p>}
     </section>
   );
 }

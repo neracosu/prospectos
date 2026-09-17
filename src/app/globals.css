@@ -101,3 +101,9 @@ button, input, select, textarea { font: inherit; }
    tiene que ver distinto de uno vacio, o parece que se olvido de llenarlo. */
 .campo input[readonly] { background: transparent; color: var(--tinta-suave); border-style: dashed; }
 .fila__valor { display: flex; align-items: center; gap: 4px; justify-content: flex-end; min-width: 0; text-align: right; overflow-wrap: anywhere; }
+
+/* Pieza 4: recibos. El boton en curso usa aria-disabled (no pierde el foco); el clic lo frena el componente. */
+.boton[aria-disabled="true"] { opacity: .6; cursor: progress; }
+.estado-fila { margin: 8px 0 0; font-size: 14px; color: var(--verde); min-height: 0; }
+.estado-fila:empty { display: none; }
+.estado-fila--error { color: var(--rojo); }

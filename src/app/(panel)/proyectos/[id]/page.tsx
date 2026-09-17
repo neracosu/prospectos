@@ -3,7 +3,8 @@ import { notFound } from "next/navigation";
 import { exigirRol } from "@/lib/sesion";
 import { hoyCaracas } from "@/lib/fecha-caracas";
 import { fichaProyecto } from "@/lib/proyectos";
-import { leerTarifaHora } from "@/lib/configuracion";
+import { leerTarifaHora, leerEmisor } from "@/lib/configuracion";
+import { faltantesEmisor } from "@/lib/recibos-contrato";
 import { formatoUSD } from "@/lib/dinero";
 import { Semaforo } from "@/componentes/Semaforo";
 import { EstadoProyecto } from "@/componentes/EstadoProyecto";
@@ -17,13 +18,13 @@ import { canalesDisponibles } from "@/lib/canales-contrato";
 
 export const dynamic = "force-dynamic";
 const PESTANAS = [{ clave: "cobros", texto: "Cobros" }, { clave: "pendientes", texto: "Pendientes" }, { clave: "horas", texto: "Horas" }, { clave: "versiones", texto: "Versiones" }, { clave: "cliente", texto: "Cliente" }];
-const TEXTO_EVENTO: Record<string, string> = { proyecto_creado: "Proyecto creado", proyecto_estado: "Estado", proyecto_editado: "Proyecto editado", cobro_pagado: "Cobro pagado", cobro_anulado: "Cobro anulado", cobro_agregado: "Cobro agregado", recordatorio: "Recordatorio enviado", hito_cumplido: "Hito cumplido", version_publicada: "Versión publicada", aviso_cliente: "Aviso al cliente", horas: "Horas" };
+const TEXTO_EVENTO: Record<string, string> = { proyecto_creado: "Proyecto creado", proyecto_estado: "Estado", proyecto_editado: "Proyecto editado", cobro_pagado: "Cobro pagado", cobro_anulado: "Cobro anulado", cobro_agregado: "Cobro agregado", recordatorio: "Recordatorio enviado", hito_cumplido: "Hito cumplido", version_publicada: "Versión publicada", aviso_cliente: "Aviso al cliente", horas: "Horas", recibo_generado: "Recibo generado", nota_anulacion: "Nota de anulación" };
 
 export default async function Proyecto({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<Record<string, string | undefined>> }) {
   await exigirRol("dueno");
   const id = Number((await params).id);
   const hoy = hoyCaracas();
-  const [p, tarifa] = await Promise.all([Number.isInteger(id) ? fichaProyecto(id, hoy) : null, leerTarifaHora()]);
+  const [p, tarifa, emisor] = await Promise.all([Number.isInteger(id) ? fichaProyecto(id, hoy) : null, leerTarifaHora(), leerEmisor()]);
   if (!p) notFound();
   const tParam = (await searchParams).t;
   const t = tParam && PESTANAS.some((pestana) => pestana.clave === tParam) ? tParam : "cobros";
@@ -34,7 +35,7 @@ export default async function Proyecto({ params, searchParams }: { params: Promi
       <p className="suave"><Link href={`/clientes/${p.clienteId}`}>{p.clienteNombre}</Link> · {p.nichoNombre} · {formatoUSD(p.pagoUnico)} + {formatoUSD(p.mensualidad)}/mes · día {p.diaCobroMensual}{p.versionActual ? ` · v${p.versionActual}` : ""}{p.avance !== null ? ` · ${p.avance} %` : ""}</p>
       <AccionesProyecto proyecto={{ id: p.id, nombre: p.nombre, estado: p.estado, mensualidad: p.mensualidad, horasCotizadas: p.horasCotizadas, fechaEntregaEstimada: p.fechaEntregaEstimada, diaCobroMensual: p.diaCobroMensual }} />
       <Pestanas base={base} activa={t} items={PESTANAS} />
-      {t === "cobros" && <TabCobros proyectoId={p.id} cobros={p.cobros} hoy={hoy} />}
+      {t === "cobros" && <TabCobros proyectoId={p.id} cobros={p.cobros} hoy={hoy} emisorListo={faltantesEmisor(emisor).length === 0} />}
       {t === "pendientes" && <TabPendientes proyectoId={p.id} pendientes={p.pendientes} avance={p.avance} />}
       {t === "horas" && <TabHoras proyectoId={p.id} horas={p.horas} cotizadas={p.horasCotizadas} reales={p.horasReales} tarifa={tarifa} hoy={hoy} />}
       {t === "versiones" && <TabVersiones proyectoId={p.id} versiones={p.versiones} hoy={hoy} />}

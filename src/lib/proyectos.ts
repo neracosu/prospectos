@@ -7,7 +7,7 @@ import { redondear2 } from "@/lib/dinero";
 import type { ClienteFila } from "@/lib/clientes";
 
 export type ProyectoResumen = { id: number; nombre: string; clienteId: number; clienteNombre: string; estado: EstadoProyecto; versionActual: string; semaforo: Semaforo; avance: number | null };
-export type CobroFila = { id: number; concepto: Concepto; detalle: string; monto: number; vence: string; estado: EstadoCobro; pagadoEn: Date | null; canal: string; referencia: string; nota: string; anuladoMotivo: string; recordadoHoy: boolean };
+export type CobroFila = { id: number; concepto: Concepto; detalle: string; monto: number; vence: string; estado: EstadoCobro; pagadoEn: Date | null; canal: string; referencia: string; nota: string; anuladoMotivo: string; recordadoHoy: boolean; reciboNumero: string; notaAnulacion: boolean };
 export type PendienteFila = { id: number; texto: string; hecho: boolean; visibleCliente: boolean; orden: number; fechaEstimada: string | null };
 export type HorasFila = { id: number; fecha: string; horas: number; descripcion: string; usuarioNombre: string };
 export type VersionFila = { id: number; version: string; fecha: string; avisadoEn: Date | null; cambios: { id: number; tipo: TipoCambio; texto: string }[] };
@@ -68,6 +68,7 @@ export async function fichaProyecto(id: number, hoy: string): Promise<ProyectoFi
   const cobros: CobroFila[] = p.cobros.map((c) => ({
     id: c.id, concepto: c.concepto as Concepto, detalle: c.detalle, monto: Number(c.monto), vence: c.vence, estado: estadoCobro(c, hoy), pagadoEn: c.pagadoEn,
     canal: c.canal, referencia: c.referencia, nota: c.nota, anuladoMotivo: c.anuladoMotivo, recordadoHoy: recordadosHoy.has(c.id),
+    reciboNumero: c.reciboNumero, notaAnulacion: c.notaAnulacionEn !== null,
   }));
   const versiones: VersionFila[] = [...p.versiones].sort((a, b) => compararSemver(b.version, a.version)).map((v) => ({ id: v.id, version: v.version, fecha: v.fecha, avisadoEn: v.avisadoEn, cambios: v.cambios.map((c) => ({ id: c.id, tipo: c.tipo as TipoCambio, texto: c.texto })) }));
   const { _count, ...cl } = p.cliente;

@@ -12,13 +12,14 @@ vi.mock("next/cache", () => ({ revalidatePath: () => {} }));
 
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
 import { prisma } from "@/lib/db";
-import { DB_HABILITADA, limpiarBase, sembrarBasico, crearProspectoDePrueba, sembrarCliente } from "./ayuda-db";
+import { DB_HABILITADA, limpiarBase, sembrarBasico, crearProspectoDePrueba, sembrarCliente, sembrarProyecto } from "./ayuda-db";
 import { sesionFalsa } from "./ayuda-sesion";
 import { crearProyecto, cambiarEstadoProyecto, editarProyecto } from "@/acciones/proyectos";
 import { crearCliente } from "@/acciones/clientes";
 import { listarProyectos, ganadosSinProyecto, fichaProyecto, resumenMes } from "@/lib/proyectos";
 import { clienteDesdeProspecto, listarClientes } from "@/lib/clientes";
 import { leerTarifaHora, guardarConfig, CLAVES } from "@/lib/configuracion";
+import { hoyCaracas } from "@/lib/fecha-caracas";
 
 const fd = (o: Record<string, string>) => { const f = new FormData(); for (const [k, v] of Object.entries(o)) f.set(k, v); return f; };
 
@@ -132,6 +133,17 @@ describe.runIf(DB_HABILITADA)("clientes y proyectos", () => {
     expect(f?.avance).toBeNull();
     expect(f?.horasReales).toBe(0);
     expect(await fichaProyecto(999999, hoy)).toBeNull();
+  });
+
+  it("fichaProyecto expone el numero de recibo y si ya existe la nota de anulacion", async () => {
+    const cl = await sembrarCliente({ nombre: "Hotel Ficha Recibo" });
+    const nicho = await prisma.nicho.findFirstOrThrow();
+    const p = await sembrarProyecto(cl.id, nicho.id, { estado: "activo" });
+    await prisma.cobro.create({ data: { proyectoId: p.id, concepto: "extra", detalle: "A", monto: "10.00", vence: "2026-09-01", pagadoEn: new Date(), reciboNumero: "R-2026-0007", reciboGeneradoEn: new Date() } });
+    await prisma.cobro.create({ data: { proyectoId: p.id, concepto: "extra", detalle: "B", monto: "10.00", vence: "2026-09-02", pagadoEn: new Date(), reciboNumero: "R-2026-0008", reciboGeneradoEn: new Date(), anuladoEn: new Date(), anuladoMotivo: "x", notaAnulacionEn: new Date() } });
+    await prisma.cobro.create({ data: { proyectoId: p.id, concepto: "extra", detalle: "C", monto: "10.00", vence: "2026-09-03" } });
+    const f = await fichaProyecto(p.id, hoyCaracas());
+    expect(f!.cobros.map((c) => [c.detalle, c.reciboNumero, c.notaAnulacion])).toEqual([["A", "R-2026-0007", false], ["B", "R-2026-0008", true], ["C", "", false]]);
   });
 
   it("editarProyecto cambia lo editable, deja un evento con lo que cambio y no repite si nada cambio", async () => {
