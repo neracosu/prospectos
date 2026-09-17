@@ -27,8 +27,11 @@ export async function entrar(_: unknown, formData: FormData): Promise<Resultado>
   try {
     const e = Entrada.safeParse({ pin: String(formData.get("pin") ?? "") });
     if (!e.success) { registrarFallo(clave); return fallo("El PIN tiene 6 números."); }
+    // El intento se cuenta ANTES del await: la misma carrera que I1 en el portal (una rafaga en
+    // paralelo pasaria entera el bloqueado() de arriba antes de que ninguna hubiera registrado nada).
+    registrarFallo(clave);
     const u = await buscarPorPin(e.data.pin);
-    if (!u) { registrarFallo(clave); return fallo("PIN incorrecto."); }
+    if (!u) return fallo("PIN incorrecto.");
     olvidarFallos(clave);
     const token = await crearToken(u);
     (await cookies()).set(COOKIE_SESION, token, {
