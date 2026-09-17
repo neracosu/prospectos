@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { DB_HABILITADA, limpiarBase, sembrarBasico, sembrarCliente } from "./ayuda-db";
 import { _reiniciarIntentos } from "@/lib/rate-limit";
 import { crearToken, verificarTokenCliente } from "@/lib/auth";
+import { generarCodigo } from "@/lib/codigo";
 import { generarPinCliente, estadoAcceso, darAcceso, regenerarPin, desactivarAcceso, intentarEntrada, sesionDesdeToken, enlaceSiTieneAcceso } from "@/lib/acceso-cliente";
 
 describe("generarPinCliente", () => {
@@ -120,5 +121,39 @@ describe.runIf(DB_HABILITADA)("acceso del cliente al portal", () => {
     expect(await intentarEntrada({ codigo: "../basura-nueva", pin: "123456", ip: "9.9.8.8" })).toEqual({ ok: false, motivo: "bloqueado" });
     const { pin } = await regenerarPin(cliente.id);
     expect((await intentarEntrada({ codigo: cliente.codigo, pin, ip: "9.9.8.9" })).ok).toBe(true);
+  });
+
+  // I1: el bloqueo tiene que aguantar peticiones en PARALELO, no solo en serie. Codigos e IPs propios,
+  // ajenos al resto del archivo, para no depender del orden en que corran las demas pruebas.
+  it("I1: una rafaga en paralelo contra la MISMA cuenta desde IPs distintas no se salta el bloqueo", async () => {
+    const { pin } = await regenerarPin(cliente.id);
+    const malo = pin === "000000" ? "111111" : "000000";
+    const ips = Array.from({ length: 20 }, (_, i) => `10.1.1.${i}`);
+    const resultados = await Promise.all(ips.map((ip) => intentarEntrada({ codigo: cliente.codigo, pin: malo, ip })));
+    const incorrectos = resultados.filter((r) => !r.ok && r.motivo === "incorrecto").length;
+    const bloqueados = resultados.filter((r) => !r.ok && r.motivo === "bloqueado").length;
+    expect(incorrectos).toBeLessThanOrEqual(5);
+    expect(incorrectos + bloqueados).toBe(20);
+  });
+
+  it("I1: una rafaga en paralelo con codigos bien formados distintos desde UNA IP no se salta el bloqueo", async () => {
+    const ip = "10.1.2.1";
+    const codigos = Array.from({ length: 20 }, () => generarCodigo()); // 22 caracteres validos, inexistentes
+    const resultados = await Promise.all(codigos.map((codigo) => intentarEntrada({ codigo, pin: "123456", ip })));
+    const incorrectos = resultados.filter((r) => !r.ok && r.motivo === "incorrecto").length;
+    const bloqueados = resultados.filter((r) => !r.ok && r.motivo === "bloqueado").length;
+    expect(incorrectos).toBeLessThanOrEqual(5);
+    expect(incorrectos + bloqueados).toBe(20);
+  });
+
+  it("I1: un acierto despues de fallos previos sigue limpiando los contadores de IP y cuenta", async () => {
+    const { pin } = await regenerarPin(cliente.id);
+    const malo = pin === "000000" ? "111111" : "000000";
+    const ip = "10.1.3.1";
+    for (let i = 0; i < 3; i++) expect(await intentarEntrada({ codigo: cliente.codigo, pin: malo, ip })).toEqual({ ok: false, motivo: "incorrecto" });
+    expect((await intentarEntrada({ codigo: cliente.codigo, pin, ip })).ok).toBe(true);
+    // tras el acierto el contador quedo en 0: 4 fallos mas todavia no bloquean
+    for (let i = 0; i < 4; i++) expect(await intentarEntrada({ codigo: cliente.codigo, pin: malo, ip })).toEqual({ ok: false, motivo: "incorrecto" });
+    expect((await intentarEntrada({ codigo: cliente.codigo, pin, ip })).ok).toBe(true);
   });
 });

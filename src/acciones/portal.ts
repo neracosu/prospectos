@@ -5,6 +5,7 @@ import { z } from "zod";
 import { intentarEntrada } from "@/lib/acceso-cliente";
 import { COOKIE_CLIENTE, DIAS_SESION_CLIENTE } from "@/lib/sesion-cliente";
 import { ipCliente } from "@/lib/ip";
+import { permitirIntento } from "@/lib/rate-limit";
 import { fallo, type Resultado } from "@/acciones/resultado";
 
 // La UNICA accion con sesion de cliente: el portal solo lee. Salir es una ruta que borra la cookie.
@@ -12,6 +13,9 @@ const Entrada = z.object({ codigo: z.string().max(40), pin: z.string().max(12) }
 
 export async function entrarPortal(_: unknown, formData: FormData): Promise<Resultado> {
   const ip = await ipCliente();
+  // Misma clave que limitarPortal() (el render de las paginas de /c/*): asi paginas y accion comparten
+  // el cupo de 120/min por IP, y esta accion (la mas cara: base + bcrypt) tambien queda dentro del limite.
+  if (!permitirIntento(`c:${ip}`, 120, 60_000)) return fallo("Demasiados intentos. Espera un minuto.");
   // redirect() usa una excepcion interna de Next: tiene que quedar FUERA del try.
   let destino = "";
   try {

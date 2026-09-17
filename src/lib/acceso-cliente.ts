@@ -67,7 +67,8 @@ export async function desactivarAcceso(clienteId: number): Promise<void> {
 }
 
 // Bloqueo de 5 fallos / 15 min por CUENTA y por IP. Un codigo que no existe, un acceso apagado y un
-// PIN errado responden igual ("incorrecto"): desde afuera no se distingue si el codigo existe.
+// PIN errado responden igual ("incorrecto"): la ACCION responde igual en los tres casos. Que el codigo
+// exista no es secreto frente a quien ya lo tiene (un GET lo muestra, por diseno) y son 128 bits.
 export async function intentarEntrada(d: { codigo: string; pin: string; ip: string }): Promise<{ ok: true; token: string } | { ok: false; motivo: "bloqueado" | "incorrecto" }> {
   const claveIp = `portal:ip:${d.ip}`;
   // Un codigo mal formado no es de ninguna cuenta: solo cuenta contra la IP, y jamas acuna una clave de cuenta
@@ -79,12 +80,16 @@ export async function intentarEntrada(d: { codigo: string; pin: string; ip: stri
   }
   const claveCuenta = `portal:c:${d.codigo}`;
   if (bloqueado(claveIp) || bloqueado(claveCuenta)) return { ok: false, motivo: "bloqueado" };
-  const fallar = (): { ok: false; motivo: "incorrecto" } => { registrarFallo(claveIp); registrarFallo(claveCuenta); return { ok: false, motivo: "incorrecto" }; };
-  if (!PIN_VALIDO.test(d.pin)) return fallar();
+  // El intento se cuenta ANTES de cualquier await: una rafaga en paralelo no pasa entera la consulta de
+  // arriba (bloqueado() y registrarFallo() son sincronos; sin esto, N peticiones juntas pasan todas el
+  // chequeo antes de que ninguna haya registrado nada).
+  registrarFallo(claveIp); registrarFallo(claveCuenta);
+  const incorrecto = { ok: false, motivo: "incorrecto" } as const;
+  if (!PIN_VALIDO.test(d.pin)) return incorrecto;
   const c = await prisma.cliente.findUnique({ where: { codigo: d.codigo }, select: { id: true, usuario: { select: { id: true, activo: true, rol: true, pinHash: true, sesionVersion: true } } } });
   const u = c?.usuario;
-  if (!c || !u || !u.activo || u.rol !== "cliente") return fallar();
-  if (!(await bcrypt.compare(d.pin, u.pinHash))) return fallar();
+  if (!c || !u || !u.activo || u.rol !== "cliente") return incorrecto;
+  if (!(await bcrypt.compare(d.pin, u.pinHash))) return incorrecto;
   olvidarFallos(claveIp); olvidarFallos(claveCuenta);
   // Para que Neri sepa si el cliente lo usa. No se registra que pestana abrio.
   await prisma.evento.create({ data: { clienteId: c.id, usuarioId: u.id, tipo: "portal_abierto" } });
