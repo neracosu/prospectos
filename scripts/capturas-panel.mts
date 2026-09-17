@@ -106,6 +106,30 @@ try {
   await pg.bringToFront();
   await pg.waitForTimeout(400);
   await pg.screenshot({ path: `${SALIDA}/13-hoy-se-envio.png` });
+  // Fase B de la pasada de UX (si la pantalla ya la tiene): la pregunta resaltada al volver, y la linea flotante.
+  for (const otra of ctx.pages()) if (otra !== pg) await otra.close().catch(() => {});
+  await pg.reload({ waitUntil: "networkidle" });
+  if (await pg.locator(".pregunta--resaltada").count()) {
+    await pg.waitForTimeout(500);
+    await pg.screenshot({ path: `${SALIDA}/13b-hoy-se-envio-al-volver.png` });
+    await tarjeta.getByRole("button", { name: "No" }).click();
+    await pg.locator("article", { hasText: "Posada El Morro" }).getByRole("button", { name: "Saltar" }).click();
+    await pg.locator(".flotante").getByRole("button", { name: "Deshacer" }).waitFor({ timeout: 10000 });
+    await pg.evaluate(() => window.scrollTo(0, 0));
+    await pg.waitForTimeout(300);
+    await pg.screenshot({ path: `${SALIDA}/14-hoy-aviso-deshacer.png` });
+    await pg.locator(".flotante").getByRole("button", { name: "Deshacer" }).click();
+    await pg.locator(".flotante").getByText("Volvió a su lugar en la cola").waitFor({ timeout: 10000 });
+    await pg.goto(`${BASE}/proyectos/${pms.id}?t=cobros`, { waitUntil: "networkidle" });
+    await pg.getByRole("button", { name: "Marcar pagado" }).first().click();
+    await pg.getByRole("button", { name: "Confirmar" }).click();
+    await pg.locator(".flotante").getByRole("button", { name: "Deshacer" }).waitFor({ timeout: 10000 });
+    await pg.waitForTimeout(300);
+    await pg.screenshot({ path: `${SALIDA}/15-cobros-aviso-pagado.png` });
+    await pg.locator(".flotante").getByRole("button", { name: "Deshacer" }).click();
+    await pg.locator(".flotante").getByText("Pago deshecho").waitFor({ timeout: 10000 });
+    await pg.screenshot({ path: `${SALIDA}/16-cobros-pago-deshecho.png` });
+  }
 } catch (e) {
   errores.push(`excepcion: ${(e as Error).message}`);
 } finally {
