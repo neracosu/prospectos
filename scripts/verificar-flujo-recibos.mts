@@ -73,7 +73,9 @@ try {
   // 5. Anular: la confirmacion dice que pasa con el recibo
   await pg.getByRole("button", { name: "Anular", exact: true }).click();
   await pg.getByText(`se genera la nota ${numero}-A`).waitFor();
-  await pg.getByLabel("Motivo").fill("Recorrido de prueba");
+  // exact: true porque el proyecto activo tambien puede pasar a "cerrado" y esa tarjeta trae su
+  // propio campo "Motivo (solo para cerrar)": sin exact, getByLabel("Motivo") ve los dos.
+  await pg.getByLabel("Motivo", { exact: true }).fill("Recorrido de prueba");
   await pg.screenshot({ path: "capturas/p4-05-confirmar-anular.png", fullPage: true });
   await pg.getByRole("button", { name: "Anular cobro" }).click();
   await pg.getByRole("link", { name: "Nota de anulación" }).waitFor({ timeout: 90_000 });
