@@ -25,6 +25,7 @@ model Usuario {
   eventos    Evento[]
   horas      Horas[]
   revisiones Revision[]
+  documentos Documento[]
 }
 
 model Nicho {
@@ -95,7 +96,8 @@ model Evento {
   usuario     Usuario?   @relation(fields: [usuarioId], references: [id])
   // etapa | enviado | abierto | nota | saltado | importado | seguimiento | lectura_web |
   // proyecto_creado | proyecto_estado | proyecto_editado | cobro_pagado | cobro_anulado | cobro_agregado |
-  // recordatorio | hito_cumplido | version_publicada | aviso_cliente | horas | recibo_generado | nota_anulacion | portal_abierto
+  // recordatorio | hito_cumplido | version_publicada | aviso_cliente | horas | recibo_generado | nota_anulacion | portal_abierto |
+  // documento_subido | documento_quitado
   tipo        String
   de          String     @default("")
   a           String     @default("")
@@ -195,6 +197,7 @@ model Proyecto {
   horas                Horas[]
   versiones            Version[]
   eventos              Evento[]
+  documentos           Documento[]
 
   @@index([estado])
 }
@@ -222,6 +225,8 @@ model Cobro {
   reciboGeneradoEn DateTime?
   // Nota de anulacion R-AAAA-NNNN-A: cuando se genero su PDF. Nulo = todavia no existe.
   notaAnulacionEn  DateTime?
+  // Pieza 5b: cuando se le aviso al cliente de este cobro (solo cuota y extra; ver acciones/cobros.ts).
+  avisadoEn        DateTime?
   creadoEn         DateTime  @default(now())
   eventos          Evento[]
 
@@ -241,6 +246,8 @@ model Pendiente {
   visibleCliente Boolean   @default(false)
   orden          Int       @default(0)
   fechaEstimada  String?
+  // Pieza 5b: cuando se le aviso al cliente que el hito quedo listo. Desmarcar el hito lo borra.
+  avisadoEn      DateTime?
   creadoEn       DateTime  @default(now())
 
   @@index([proyectoId, orden])
@@ -281,6 +288,26 @@ model Cambio {
   tipo      String
   texto     String
   orden     Int     @default(0)
+}
+
+// Pieza 5b: archivos que Neri sube a un proyecto y el cliente ve en su portal.
+model Documento {
+  id         Int       @id @default(autoincrement())
+  proyectoId Int
+  proyecto   Proyecto  @relation(fields: [proyectoId], references: [id])
+  // Lo que ve el cliente. El nombre original del archivo no se guarda ni se usa para la ruta.
+  nombre     String
+  // Ruta RELATIVA a PROSPECTOS_DIR_ARCHIVOS: documentos/<clienteId>/<uuid>.<ext>
+  archivo    String    @unique
+  tipoMime   String
+  tamano     Int
+  usuarioId  Int?
+  usuario    Usuario?  @relation(fields: [usuarioId], references: [id])
+  subidoEn   DateTime  @default(now())
+  // Quitar no borra: el cliente deja de verlo y el archivo queda en disco.
+  quitadoEn  DateTime?
+
+  @@index([proyectoId, subidoEn])
 }
 
 // Contador por serie y anio (pieza 4: serie "R" de los recibos). Se incrementa con la

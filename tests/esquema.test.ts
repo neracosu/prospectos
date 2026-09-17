@@ -61,4 +61,19 @@ describe.runIf(DB_HABILITADA)("esquema", () => {
     const conUsuario = await prisma.cliente.findUniqueOrThrow({ where: { id: c.id }, include: { usuario: true } });
     expect(conUsuario.usuario?.id).toBe(u.id);
   });
+
+  it("un documento cuelga de un proyecto, su archivo es unico, y hitos y cobros nacen sin avisar", async () => {
+    const { nichoId, usuarioId } = await sembrarBasico();
+    const c = await sembrarCliente();
+    const p = await sembrarProyecto(c.id, nichoId);
+    const datos = { proyectoId: p.id, nombre: "Manual", archivo: `documentos/${c.id}/11111111-1111-4111-8111-111111111111.pdf`, tipoMime: "application/pdf", tamano: 1234, usuarioId };
+    const d = await prisma.documento.create({ data: datos });
+    expect(d.quitadoEn).toBeNull();
+    expect(d.subidoEn).toBeInstanceOf(Date);
+    await expect(prisma.documento.create({ data: datos })).rejects.toThrow(/Unique/);
+    const h = await prisma.pendiente.create({ data: { proyectoId: p.id, texto: "Hito" } });
+    const k = await prisma.cobro.create({ data: { proyectoId: p.id, concepto: "extra", monto: "10.00", vence: "2026-10-01" } });
+    expect(h.avisadoEn).toBeNull();
+    expect(k.avisadoEn).toBeNull();
+  });
 });

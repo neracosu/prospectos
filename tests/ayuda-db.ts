@@ -19,6 +19,7 @@ export async function limpiarBase(): Promise<void> {
   await prisma.horas.deleteMany();
   await prisma.pendiente.deleteMany();
   await prisma.cobro.deleteMany();
+  await prisma.documento.deleteMany(); // cuelga del proyecto y del usuario (pieza 5b)
   await prisma.proyecto.deleteMany();
   await prisma.usuario.deleteMany({ where: { rol: "cliente" } }); // cuelgan del cliente (pieza 5)
   await prisma.cliente.deleteMany();
