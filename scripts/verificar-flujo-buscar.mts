@@ -13,7 +13,7 @@ import { prisma } from "../src/lib/db";
 import { claveProspecto } from "../src/lib/clave-prospecto";
 import { generarCodigo } from "../src/lib/codigo";
 
-const BASE = process.env.BASE_URL ?? "https://prospectos.neracosu.com";
+const BASE = process.env.BASE_URL ?? "http://127.0.0.1:3013";
 const pin = readFileSync(0, "utf8").trim();
 mkdirSync("capturas", { recursive: true });
 const errores: string[] = [];

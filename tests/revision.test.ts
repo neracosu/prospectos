@@ -123,6 +123,26 @@ describe.runIf(DB_HABILITADA)("bandeja de revision", () => {
     expect(p2).toMatchObject({ desde: 4, hasta: 6, total: 7, pendientes: 6 });
     expect(p3).toMatchObject({ desde: 7, hasta: 7 });
     expect(await loteConDetalle("00000000-0000-4000-8000-000000000000")).toBeNull();
+
+    // La pagina pedida se acota al total: ni una lista vacia con un "Filas
+    // 151-200 de 7" que miente, ni un skip fuera de rango que revienta.
+    const lejos = (await loteConDetalle(r.lote, { pagina: 99999, porPagina: 3 }))!;
+    expect(lejos).toMatchObject({ pagina: 3, paginas: 3, desde: 7, hasta: 7 });
+    expect(lejos.filas).toHaveLength(1);
+    // "1e309" es Infinity y "hola" es NaN: los dos valen 1 y no lanzan.
+    for (const mala of [Number("1e309"), Number("hola"), -5, 0] as number[]) {
+      const d = (await loteConDetalle(r.lote, { pagina: mala, porPagina: 3 }))!;
+      expect(d).toMatchObject({ pagina: 1, paginas: 3, desde: 1 });
+    }
+    // Sin filas por pagina que se entiendan, se usa el valor por defecto.
+    const porDefecto = (await loteConDetalle(r.lote, { porPagina: Number("1e309") }))!;
+    expect(porDefecto).toMatchObject({ pagina: 1, paginas: 1, porPagina: 50 });
+  });
+
+  it("un lote de una sola pagina siempre dice pagina 1 de 1", async () => {
+    const r = await crearLote("maps", [fila({ nombre: "Hotel Solito", ciudad: "Coro" })], ids.prospectadorId);
+    const d = (await loteConDetalle(r.lote, { pagina: 7 }))!;
+    expect(d).toMatchObject({ total: 1, pagina: 1, paginas: 1, desde: 1, hasta: 1 });
   });
 
   // El boton "Aprobar las N nuevas" no puede contar filas que la accion nunca

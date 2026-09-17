@@ -53,7 +53,6 @@ export default async function Buscar({ searchParams }: { searchParams: Promise<R
   ]);
   const porRevisar = lotes.filter((l) => l.pendientes > 0);
   const listos = lotes.filter((l) => l.pendientes === 0);
-  const paginas = lote ? Math.max(1, Math.ceil(lote.total / lote.porPagina)) : 1;
   const enlacePagina = (n: number) => `/buscar?t=bandeja&lote=${lote!.lote}&p=${n}`;
 
   return (
@@ -87,7 +86,7 @@ export default async function Buscar({ searchParams }: { searchParams: Promise<R
                 ) : (
                   <span />
                 )}
-                {lote.pagina < paginas ? (
+                {lote.pagina < lote.paginas ? (
                   <Link className="boton" href={enlacePagina(lote.pagina + 1)} rel="next">
                     Siguientes
                   </Link>

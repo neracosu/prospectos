@@ -174,7 +174,7 @@ export type LoteDetalle = {
   // Del lote ENTERO, no de la pagina: el resumen de arriba no puede cambiar
   // segun en que pagina estes parado.
   total: number; pendientes: number; aprobables: number;
-  pagina: number; porPagina: number; desde: number; hasta: number;
+  pagina: number; paginas: number; porPagina: number; desde: number; hasta: number;
   filas: FilaRevision[];
 };
 
@@ -220,9 +220,13 @@ export async function loteConDetalle(
   lote: string,
   opciones: { pagina?: number; porPagina?: number } = {},
 ): Promise<LoteDetalle | null> {
-  const porPagina = Math.min(Math.max(1, Math.trunc(opciones.porPagina ?? POR_PAGINA)), 200);
-  const pagina = Math.max(1, Math.trunc(opciones.pagina ?? 1));
-  const saltar = (pagina - 1) * porPagina;
+  // Lo que llega por la URL es texto de afuera: un numero que no se entiende
+  // ("1e309" es Infinity, "hola" es NaN) vale 1, no revienta la consulta.
+  const entero = (v: unknown, porDefecto: number): number => {
+    const n = Math.trunc(Number(v));
+    return Number.isFinite(n) ? n : porDefecto;
+  };
+  const porPagina = Math.min(Math.max(1, entero(opciones.porPagina ?? POR_PAGINA, POR_PAGINA)), 200);
 
   const [total, pendientes, nuevas, primera] = await Promise.all([
     prisma.revision.count({ where: { lote } }),
@@ -231,6 +235,13 @@ export async function loteConDetalle(
     prisma.revision.findFirst({ where: { lote }, orderBy: { fila: "asc" }, select: { origen: true, creadoEn: true } }),
   ]);
   if (!primera) return null;
+
+  // La pagina se acota al total DESPUES de contarlo: pedir la 4 de un lote de
+  // tres paginas devuelve la 3, no una lista vacia con un "Filas 151-200 de
+  // 120" que miente, y el skip nunca se va de rango.
+  const paginas = Math.max(1, Math.ceil(total / porPagina));
+  const pagina = Math.min(Math.max(1, entero(opciones.pagina, 1)), paginas);
+  const saltar = (pagina - 1) * porPagina;
 
   const incluir = { existente: { select: SELECT_EXISTENTE } } as const;
   const crudas = [];
@@ -254,7 +265,7 @@ export async function loteConDetalle(
   return {
     lote, origen: primera.origen, creadoEn: primera.creadoEn,
     total, pendientes, aprobables: await contarAprobables(lote, nuevas),
-    pagina, porPagina,
+    pagina, paginas, porPagina,
     desde: total === 0 ? 0 : saltar + 1,
     hasta: saltar + crudas.length,
     filas: crudas.map(aFilaRevision),
