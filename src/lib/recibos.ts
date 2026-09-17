@@ -6,6 +6,7 @@ import { prisma } from "@/lib/db";
 import { hoyCaracas } from "@/lib/fecha-caracas";
 import { leerEmisor } from "@/lib/configuracion";
 import { conTurnoGlobal, imprimirPdf, escribirAtomico } from "@/lib/pdf";
+import { dirArchivos } from "@/lib/archivos";
 import type { Concepto } from "@/lib/cobros-contrato";
 import {
   SERIE_RECIBO, anioDeDocumento, numeroRecibo, numeroNota, conceptoRecibo, versionesIncluidas, faltantesEmisor,
@@ -13,14 +14,6 @@ import {
 } from "@/lib/recibos-contrato";
 
 const DIR_PLANTILLAS = path.join(process.cwd(), "plantillas");
-const DIR_PRODUCCION = "/home/neracosu/prospectos-archivos";
-// Los recibos no se regeneran nunca y generarRecibo pisa el archivo del numero que toca. Fuera de produccion
-// (next dev, tests, scripts) el correlativo de la base de pruebas arranca bajo: jamas se escribe en el directorio real.
-function dirArchivos(): string {
-  const dir = process.env.PROSPECTOS_DIR_ARCHIVOS ?? DIR_PRODUCCION;
-  if (process.env.NODE_ENV !== "production" && path.resolve(dir) === DIR_PRODUCCION) throw new Error("DIR_ARCHIVOS_DE_PRODUCCION");
-  return dir;
-}
 
 // nombre = "R-2026-0001" o "R-2026-0001-A" (sin .pdf). Fuera del docroot, una carpeta por anio.
 export function rutaDocumento(nombre: string): string {

@@ -1,8 +1,5 @@
 // src/lib/pdf.ts — HTML -> PDF con Playwright. Lo comparten las propuestas y los recibos.
 // Usa node: -> NO importarlo desde la cadena de src/instrumentation.ts (ver CLAUDE.md).
-import { randomUUID } from "node:crypto";
-import { mkdir, rename, rm, writeFile } from "node:fs/promises";
-import path from "node:path";
 
 // --- Fila global de generacion -------------------------------------------
 // El daemon PM2 de este servidor es compartido con otros sitios (incluido uno
@@ -67,15 +64,5 @@ export async function imprimirPdf(html: string): Promise<Buffer> {
   }
 }
 
-// Escritura atomica: nunca se debe leer un archivo a medio escribir. Pisa lo que hubiera.
-export async function escribirAtomico(salida: string, bytes: Buffer): Promise<void> {
-  await mkdir(path.dirname(salida), { recursive: true, mode: 0o700 });
-  const temporal = `${salida}.${process.pid}.${randomUUID()}.tmp`;
-  try {
-    await writeFile(temporal, bytes, { mode: 0o600 });
-    await rename(temporal, salida);
-  } catch (err) {
-    await rm(temporal, { force: true });
-    throw err;
-  }
-}
+// La escritura atomica vive en archivos.ts (la comparten recibos y documentos); se reexporta para no mover a quien ya la importa de aqui.
+export { escribirAtomico } from "@/lib/archivos";
