@@ -16,11 +16,12 @@ acá a pedido de Neri y esa misma tarde se amplió de un panel a una plataforma 
 | 3 | Proyectos y cobros | `2026-09-16-proyectos-cobros-design.md` | Implementada (16-sep) |
 | 2 | Buscador e importación | `2026-09-16-buscador-importacion-design.md` | Implementada (17-sep) |
 | 4 | Recibos de pago | `2026-09-16-recibos-design.md` | Implementada (17-sep) |
-| 5 | Portal del cliente | `2026-09-16-portal-cliente-design.md` | Aprobada |
+| 5 | Portal del cliente | `2026-09-16-portal-cliente-design.md` | **5a implementada (17-sep)** · 5b pendiente |
 
 Orden de construcción: **1 → 3 → 2 → 4 → 5**. Cada pieza sale a producción cuando termina.
 
-Estado al 17-sep: **piezas 1, 3, 2 y 4 construidas y en producción.**
+Estado al 17-sep: **piezas 1, 3, 2, 4 y 5a construidas y en producción.** Falta la 5b (documentos con
+subida de archivos y plantillas de aviso), sin plan todavía.
 
 - Código en `main` (rama `pieza-1` ya fusionada). Proceso PM2 **`prospectos`**, puerto 3013 en
   `127.0.0.1`, proxy en el `.htaccess` (ver abajo). Repo: `git@github.com:neracosu/prospectos.git`.
@@ -38,6 +39,7 @@ Estado al 17-sep: **piezas 1, 3, 2 y 4 construidas y en producción.**
   `scripts/cambiar-pin.mjs <id>`, `scripts/pin-en-uso.mjs`, `scripts/verificar-flujo.mts` (Playwright
   a 390 px contra el dominio), `scripts/verificar-flujo-proyectos.mts`, `scripts/verificar-flujo-buscar.mts`,
   `scripts/verificar-flujo-recibos.mts` (⚠️ solo contra la base de tests, ver pieza 4),
+  `scripts/verificar-flujo-portal.mts` (⚠️ igual: solo contra el clon y la base de tests, ver pieza 5a),
   `scripts/sembrar-nichos.mjs`, `scripts/importar-hoteles.mts`, `scripts/generar-iconos.mts`.
 - **Pieza 3 (Proyectos y cobros) en producción:** `/proyectos`, `/proyectos/nuevo`, `/proyectos/[id]` (pestañas
   cobros · pendientes · horas · versiones · cliente), `/clientes`, `/clientes/[id]`, `/clientes/nuevo`; Ajustes
@@ -125,17 +127,61 @@ Estado al 17-sep: **piezas 1, 3, 2 y 4 construidas y en producción.**
     etiquetado). `pdf.ts` y `recibos.ts` usan `node:`: fuera de la cadena de `src/instrumentation.ts`.
     Las fuentes del recibo son locales (`plantillas/fuentes/`, OFL) y se incrustan como `data:`: el recibo
     no depende de Google Fonts.
+- **Pieza 5a (Portal del cliente) en producción:** el cliente entra por `/c/<código>` (`Cliente.codigo`, 22
+  caracteres) con un **PIN de 6 dígitos que genera el servidor**; ve `/c/<código>/inicio`, `/proyecto/<id>`
+  (hitos, versiones, cobros, recibos vigentes) y `/contacto`; `/salir` borra la cookie. En `/clientes/[id]` Neri
+  tiene **Enviar acceso** (enlace y PIN salen en **dos mensajes separados**; el PIN en claro solo existe en la
+  respuesta de esa acción), **Regenerar PIN** y **Desactivar acceso** (los dos suben `Usuario.sesionVersion`:
+  tumban las sesiones abiertas; ninguno borra nada). Sobre un cliente que ya tiene acceso, «Enviar acceso»
+  reenvía solo el enlace: el PIN está hasheado, si lo perdió se regenera. Los mensajes de cobro, de versión y
+  de recibo aceptan `{enlace}`: sale vacío si el cliente no puede entrar, y la frase del portal se arma en
+  código **solo si hay enlace** (no poner una frase fija con `{enlace}` en una plantilla: queda colgando).
+  Recorrido real: `scripts/verificar-flujo-portal.mts`, **solo** contra el clon (`next dev -p 3014`, base de
+  tests, `PROSPECTOS_DIR_ARCHIVOS` temporal compartido entre el servidor y el script).
+  - ⚠️ **Toda página o ruta nueva bajo `src/app/c/` empieza por `exigirCliente(codigo)`** (o `sesionCliente()`
+    en un `route.ts`), y **toda consulta del portal vive en `src/lib/portal.ts`**: `select` campo por campo,
+    nunca `include`, siempre con el `clienteId` de la sesión (`where: { id, clienteId }`: el id de la URL jamás
+    va solo). Lo ajeno responde **404, nunca 403**. El cliente no ve horas, tarifa, notas, pendientes no
+    visibles, cobros anulados ni sus recibos (decisión del plan: la nota de anulación la manda Neri por
+    WhatsApp). `tests/portal.test.ts` («nada interno») serializa todo y falla si aparece un campo prohibido:
+    al agregar un campo sensible al esquema, sembrarle `SECRETO` ahí.
+  - **El portal solo lee.** La única server action con sesión de cliente es `entrarPortal`; salir es un GET.
+    El `tieneSesion()` de `/p/[codigo]` acepta el token del portal **sin mirar la base** (solo sirve para no
+    contar como apertura del embudo la visita de un cliente ya ganado): **no copiarlo como guarda de acceso**.
+  - **Sesiones separadas:** cookie `sesion_cliente` (token con audiencia `portal`, sin `rol`) y `pr_sesion`
+    del panel; ninguna abre lo del otro. La sesión del cliente se revalida contra la base en cada petición
+    (activo, rol, `clienteId`, `sesionVersion`).
+  - **El PIN del cliente no participa de la unicidad de PINs del panel:** `pinEnUso` y los tres scripts de PIN
+    miran solo `dueno` y `prospectador`. En el panel el PIN identifica a la persona; en el portal, el código.
+  - ⚠️ **Bloqueo de intentos: el fallo se registra ANTES del primer `await` y se perdona solo al acertar**
+    (`intentarEntrada` en `src/lib/acceso-cliente.ts` y `entrar` en `src/acciones/entrar.ts`). Con el orden
+    natural (consultar → `await` → registrar) una ráfaga en paralelo pasa entera: se demostró 50 de 50 en la
+    revisión final. No reordenarlo. 5 fallos / 15 min por cuenta y por IP; un código mal formado solo suma a
+    la IP. `/c/*` tiene además 120 peticiones/min por IP (clave `c:<ip>`), páginas **y** `entrarPortal`.
+    El `Map` de `src/lib/rate-limit.ts` lo comparten panel y portal (tope 10.000, desalojo FIFO): pendiente
+    desalojar primero las entradas no bloqueadas. El login del panel no tiene test de la ráfaga (no hay patrón
+    de mock de `next/headers` en el repo).
+  - `X-Robots-Tag: noindex, nofollow` en todo `/c/*` (`next.config.ts`), `manifest: null` en su layout (el portal
+    no ofrece instalar la PWA del panel), tema claro propio con las fuentes locales del recibo
+    (`next/font/local` desde `plantillas/fuentes/`: **solo `next build` lo valida**, por eso antes de desplegar
+    algo del portal se compila primero en el clon) y `src/app/c/not-found.tsx` para el 404 en español.
+  - Pendiente menor: `guardarUsuario` y el restablecer PIN de Ajustes aceptan el id de una cuenta `cliente` si
+    el dueño fabrica el formulario a mano (falta `rol: { in: ROLES_PANEL }` en el `where`).
 - ⚠️ **Procesos: matar solo por PID.** Nunca `pkill`/`killall` ni matar por patrón en este servidor:
   `pkill -f next-server` tumbó los cinco sitios de PM2 el 16-sep (Adastram incluido). Un dev server de
   prueba se lanza desde un clon fuera del docroot con `DATABASE_URL` de prueba, con
-  `node_modules/.bin/next dev -p <puerto>` (sin `npx`, que deja un hijo que sobrevive al kill del padre),
-  guardando `$!`, y al terminar `kill $PID` más `pgrep -af <marca-del-clon>`. Nunca `next dev` ni
+  `node node_modules/next/dist/bin/next dev -p <puerto>` (sin `npx` y **sin subshell con `cd`**: si no, `$!`
+  es el envoltorio y no node), guardando `$!`; `next dev` deja además un hijo `next-server`: al terminar
+  `kill $PID $(pgrep -P $PID)` y comprobar el puerto con `ss -ltnp`, no solo `pgrep`. Nunca `next dev` ni
   `next build` en este directorio salvo el build del despliegue.
-- Siguiente pieza: **5 (Portal del cliente)**. Al construirla: el portal debe filtrar los cobros anulados y
-  decidir si el cliente ve el recibo anulado con su nota; la ruta `/recibos/` ya busca por número para reutilizarla. Plan nuevo por pieza en
+- Siguiente pieza: **5b (documentos del cliente con subida de archivos y plantillas de aviso)**, sin plan.
+  Al construirla: vigía de que toda ruta bajo `src/app/c/` exija la sesión (al estilo de
+  `tests/instrumentation-grafo.test.ts`), y resolver a dónde va el cliente con la sesión vencida (hoy
+  `/recibos/*` sin sesión manda al teclado del **panel**). Plan nuevo por pieza en
   `docs/superpowers/plans/`. Pendiente aparte: la **pasada de UX** del panel
   (`docs/superpowers/specs/2026-09-17-ux-panel-design.md`, propuesta sin aprobar).
-- Pendientes de Neri: rotar la contraseña de la base (spec, decisiones abiertas) y decidir los precios
+- Pendientes de Neri: decidir si los recordatorios de cobro llevan el enlace del portal por defecto (hoy
+  solo si él agrega `{enlace}` al mensaje en Ajustes); rotar la contraseña de la base (spec, decisiones abiertas) y decidir los precios
   de farmacias (bloquea la propuesta de ese nicho; hoy `farmacias` no tiene plantilla y la ficha no
   muestra enlace de propuesta).
 
