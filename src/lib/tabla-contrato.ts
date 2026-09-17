@@ -5,6 +5,33 @@ export const COLUMNAS = ["nicho", "nombre", "ciudad", "estado", "tipo", "tamano"
 export type Columna = (typeof COLUMNAS)[number];
 export const OBLIGATORIAS: Columna[] = ["nicho", "nombre", "ciudad"];
 const MAX_FILAS = 5000;
+// Los textos del Prospecto son VARCHAR(191) en MySQL (el largo por defecto de
+// Prisma); `nota` es @db.Text, o sea 65535 BYTES, y en utf8mb4 el peor caso son
+// 4 bytes por caracter. Cortar aqui es lo que evita el "Data too long" cuando se
+// aprueba la fila: validarFila es el unico paso por donde pasan los cuatro
+// caminos de importacion.
+const MAX_TEXTO = 191;
+const MAX_NOTA = 16000;
+// La fuente no va a un VARCHAR sino a un JSON: el tope es el de una URL usable.
+// Las de Maps pasan de 191 con facilidad, asi que ahi 191 seria un falso error.
+const MAX_FUENTE = 2000;
+const LIMITES: [Columna, string, number][] = [
+  ["nicho", "El nicho", MAX_TEXTO],
+  ["nombre", "El nombre", MAX_TEXTO],
+  ["ciudad", "La ciudad", MAX_TEXTO],
+  ["estado", "El estado", MAX_TEXTO],
+  ["tipo", "El tipo", MAX_TEXTO],
+  ["tamano", "El tamaño", MAX_TEXTO],
+  ["telefono", "El teléfono", MAX_TEXTO],
+  ["whatsapp", "El WhatsApp", MAX_TEXTO],
+  ["email", "El correo", MAX_TEXTO],
+  ["web", "La web", MAX_TEXTO],
+  ["instagram", "El Instagram", MAX_TEXTO],
+  ["facebook", "El Facebook", MAX_TEXTO],
+  ["tiktok", "El TikTok", MAX_TEXTO],
+  ["nota", "La nota", MAX_NOTA],
+  ["fuente", "La fuente", MAX_FUENTE],
+];
 
 function normalizarEncabezado(s: string): string {
   return s.normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z]/g, "");
@@ -70,5 +97,11 @@ export function validarFila(f: Record<Columna, string>): { entrada: EntradaValid
     nota: f.nota.trim(), fuentes: fuente ? [fuente] : [], fuentesPorCampo: {},
   };
   if (fuente) for (const c of ["nombre", "ciudad", "estado", "tipo", "tamano", "telefono", "whatsapp", "email", "web", "instagram", "facebook", "tiktok"] as const) if (entrada[c]) entrada.fuentesPorCampo[c] = fuente;
+  // Se mide el valor ya normalizado, que es el que va a la columna: normalizarRed
+  // convierte "@usuario" en una URL y eso suma caracteres.
+  for (const [campo, etiqueta, max] of LIMITES) {
+    const valor = campo === "fuente" ? fuente : String((entrada as unknown as Record<string, unknown>)[campo] ?? "");
+    if (valor.length > max) errores.push(`${etiqueta} no puede pasar de ${max} caracteres`);
+  }
   return { entrada, errores };
 }

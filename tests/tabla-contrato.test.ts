@@ -33,6 +33,19 @@ describe("validarFila", () => {
     expect(entrada).toMatchObject({ nicho: "hoteles", nombre: "Hotel A", whatsapp: "", telefono: "0212 555 1234", instagram: "https://www.instagram.com/hotela/", fuentes: ["https://hotela.com/contacto"] });
     expect(entrada.fuentesPorCampo).toEqual({ nombre: "https://hotela.com/contacto", ciudad: "https://hotela.com/contacto", telefono: "https://hotela.com/contacto", instagram: "https://hotela.com/contacto" });
   });
+  it("marca los textos que no caben en la columna", () => {
+    // Los VARCHAR del Prospecto son de 191; la nota es TEXT y la fuente va a un JSON.
+    expect(validarFila({ ...base, nombre: "H".repeat(192) }).errores).toContain("El nombre no puede pasar de 191 caracteres");
+    expect(validarFila({ ...base, nombre: "H".repeat(191) }).errores).toEqual([]);
+    expect(validarFila({ ...base, nota: "N".repeat(5000) }).errores).toEqual([]);
+    expect(validarFila({ ...base, nota: "N".repeat(16001) }).errores).toContain("La nota no puede pasar de 16000 caracteres");
+    // Una URL de Maps pasa de 191 sin problema: ahi el tope es otro.
+    expect(validarFila({ ...base, fuente: "https://maps.test/?q=" + "x".repeat(400) }).errores).toEqual([]);
+    expect(validarFila({ ...base, fuente: "https://maps.test/?q=" + "x".repeat(2000) }).errores).toContain("La fuente no puede pasar de 2000 caracteres");
+    // Se mide el valor ya normalizado: normalizarRed convierte @usuario en URL.
+    expect(validarFila({ ...base, instagram: "@" + "u".repeat(180) }).errores).toContain("El Instagram no puede pasar de 191 caracteres");
+  });
+
   it("marca errores: sin ciudad, whatsapp sin formato", () => {
     expect(validarFila({ ...base, ciudad: "" }).errores).toContain("Falta la ciudad");
     expect(validarFila({ ...base, whatsapp: "12345" }).errores).toContain("WhatsApp sin formato");
