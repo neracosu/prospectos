@@ -26,7 +26,7 @@ export function TarjetaCola({ p }: { p: ProspectoTarjeta }) {
   return (
     <article className="tarjeta">
       <Link href={`/prospectos/${p.id}`}><b>{p.nombre}</b></Link>
-      <div className="suave">{p.ciudad} · {p.nichoNombre}{p.tamano ? ` · ${p.tamano}` : ""}</div>
+      <div className="suave">{p.ciudad}, {p.nichoNombre}{p.tamano ? `, ${p.tamano}` : ""}</div>
       {p.nota && <p className="suave" style={{ whiteSpace: "pre-line" }}>{p.nota}</p>}
       {canal ? (
         <div className="pregunta" role="group" aria-label="¿Se envió?">
@@ -37,12 +37,8 @@ export function TarjetaCola({ p }: { p: ProspectoTarjeta }) {
           </div>
         </div>
       ) : (
-        <>
-          <BotonesCanal contacto={p} mensaje={p.mensaje} onAbierto={setCanal} />
-          <div className="fila-botones">
-            <button className="boton" disabled={pendiente} onClick={() => empezar(async () => { const r = await saltar(p.id); if (r.ok) { setOculta(true); router.refresh(); } else setError(r.mensaje); })}>Saltar</button>
-          </div>
-        </>
+        <BotonesCanal contacto={p} mensaje={p.mensaje} onAbierto={setCanal}
+          extra={<button className="boton" disabled={pendiente} onClick={() => empezar(async () => { const r = await saltar(p.id); if (r.ok) { setOculta(true); router.refresh(); } else setError(r.mensaje); })}>Saltar</button>} />
       )}
       {error && <p className="error" role="alert">{error}</p>}
     </article>

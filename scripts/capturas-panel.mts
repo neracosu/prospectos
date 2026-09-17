@@ -90,6 +90,12 @@ try {
     await pg.screenshot({ path: `${SALIDA}/${nombre}.png` });
     await pg.screenshot({ path: `${SALIDA}/${nombre}-completa.png`, fullPage: true });
   }
+  // Las acciones secundarias detras de «···» (si la pantalla ya las tiene): Hoy y los cobros de un proyecto.
+  for (const [nombre, ruta] of [["01b-hoy-mas-acciones", "/hoy"], ["05b-cobros-mas-acciones", `/proyectos/${pms.id}?t=cobros`]] as const) {
+    await pg.goto(`${BASE}${ruta}`, { waitUntil: "networkidle" });
+    const mas = pg.locator("button.boton--mas");
+    if (await mas.count()) { await mas.nth(ruta === "/hoy" ? 2 : 1).click(); await pg.screenshot({ path: `${SALIDA}/${nombre}.png`, fullPage: true }); }
+  }
   // La pregunta «¿Se envio?» de la cola: se abre tocando el primer canal (el enlace externo no se sigue).
   await pg.goto(`${BASE}/hoy`, { waitUntil: "networkidle" });
   await ctx.route(/wa\.me|api\.whatsapp\.com/, (r) => r.abort());

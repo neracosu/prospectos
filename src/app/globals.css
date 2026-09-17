@@ -1,23 +1,31 @@
 /* src/app/globals.css — base movil primero */
+/* Pasada de UX, fase A. La elevacion se marca por luminosidad (fondo < panel < superficie-2), sin sombras.
+   --verde es la marca (el punto de NERACOSU): queda para LA accion principal de cada vista y para el dinero
+   que entra, no para todo. El portal del cliente redefine estos tokens en portal.css. */
 :root {
-  --fondo: #0f1412; --panel: #171e1b; --borde: #26302c; --tinta: #eef3f0; --tinta-suave: #9db0a6;
+  --fondo: #121614; --panel: #1b211e; --superficie-2: #252c28; --borde: #2c3530; --tinta: #eef3f0; --tinta-suave: #a3b3aa;
   --verde: #5ed29c; --rojo: #ef6b6b; --ambar: #f0c35a; --radio: 12px;
   --barra-alto: 64px;
 }
 * { box-sizing: border-box; }
-html, body { margin: 0; background: var(--fondo); color: var(--tinta); font: 16px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+html, body { margin: 0; background: var(--fondo); color: var(--tinta); font: 16px/1.45 var(--fuente-panel), system-ui, -apple-system, "Segoe UI", sans-serif; }
+/* Montos, fechas, horas y versiones con cifras del mismo ancho: las columnas no bailan. */
+.contenedor, .barra { font-variant-numeric: tabular-nums lining-nums; }
+/* Foco visible en el tema oscuro (WCAG 2.4.11): anillo claro, separado del borde del control. */
+:focus-visible { outline: 2px solid var(--tinta); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }
 a { color: inherit; }
 button, input, select, textarea { font: inherit; }
 .contenedor { padding: 16px; padding-bottom: calc(var(--barra-alto) + 24px); max-width: 640px; margin: 0 auto; }
 .tarjeta { background: var(--panel); border: 1px solid var(--borde); border-radius: var(--radio); padding: 14px; margin-bottom: 12px; }
-.boton { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; padding: 0 16px; border-radius: 10px; border: 1px solid var(--borde); background: var(--panel); color: var(--tinta); text-decoration: none; cursor: pointer; }
+.boton { position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; padding: 0 16px; border-radius: 10px; border: 1px solid var(--borde); background: var(--superficie-2); color: var(--tinta); text-decoration: none; cursor: pointer; }
 .boton--primario { background: var(--verde); color: #0b1a12; border-color: var(--verde); font-weight: 600; }
 .boton--peligro { border-color: var(--rojo); color: var(--rojo); }
 .boton:disabled { opacity: .5; cursor: default; }
 .fila-botones { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
 .campo { display: block; margin-bottom: 12px; }
 .campo > span { display: block; font-size: 14px; color: var(--tinta-suave); margin-bottom: 4px; }
-.campo input, .campo select, .campo textarea { width: 100%; min-height: 44px; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--borde); background: #0c100e; color: var(--tinta); }
+.campo input, .campo select, .campo textarea { width: 100%; min-height: 44px; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--borde); background: var(--fondo); color: var(--tinta); }
 .suave { color: var(--tinta-suave); font-size: 14px; }
 .error { color: var(--rojo); font-size: 14px; }
 .titulo { font-size: 20px; margin: 4px 0 12px; }
@@ -33,7 +41,10 @@ button, input, select, textarea { font: inherit; }
 
 .barra { position: fixed; left: 0; right: 0; bottom: 0; height: var(--barra-alto); display: flex; background: var(--panel); border-top: 1px solid var(--borde); padding-bottom: env(safe-area-inset-bottom); z-index: 10; }
 .barra__item { flex: 1; display: flex; align-items: center; justify-content: center; font-size: 13px; text-decoration: none; color: var(--tinta-suave); }
-.barra__item.activo { color: var(--verde); font-weight: 600; }
+/* La seccion activa se marca con peso y una raya de la marca, no pintando el texto de verde: el verde es de la accion. */
+.barra__item { position: relative; }
+.barra__item.activo { color: var(--tinta); font-weight: 600; }
+.barra__item.activo::before { content: ""; position: absolute; top: 0; left: 28%; right: 28%; height: 2px; background: var(--verde); border-radius: 0 0 2px 2px; }
 .progreso { height: 8px; background: var(--borde); border-radius: 4px; overflow: hidden; margin: 6px 0 10px; }
 .progreso > i { display: block; height: 100%; background: var(--verde); }
 .embudo { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; font-size: 12px; text-align: center; }
@@ -58,14 +69,16 @@ button, input, select, textarea { font: inherit; }
 .cifras .vencido b { color: var(--rojo); }
 .pestanas { display: flex; gap: 4px; overflow-x: auto; margin: 0 -16px 12px; padding: 0 16px; scrollbar-width: none; }
 .pestanas__item { flex: 0 0 auto; padding: 10px 14px; border-radius: 999px; border: 1px solid var(--borde); color: var(--tinta-suave); text-decoration: none; font-size: 14px; min-height: 44px; display: inline-flex; align-items: center; }
-.pestanas__item.activa { background: var(--verde); color: #0b1a12; border-color: var(--verde); font-weight: 600; }
+.pestanas__item.activa { background: var(--superficie-2); color: var(--tinta); border-color: var(--tinta-suave); font-weight: 600; }
 .cobro { display: grid; grid-template-columns: 1fr auto; gap: 4px 8px; padding: 10px 0; border-bottom: 1px solid var(--borde); }
 .cobro__monto { font-weight: 600; }
 .etiqueta--vencido { background: #3b2424; color: var(--rojo); } .etiqueta--por_vencer { background: #3b3520; color: var(--ambar); } .etiqueta--pagado { background: #23413a; color: var(--verde); } .etiqueta--anulado { opacity: .6; }
 .pendiente { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--borde); }
 .pendiente input[type=checkbox] { width: 24px; height: 24px; }
 .pendiente .hecho { text-decoration: line-through; color: var(--tinta-suave); }
-.mini { min-height: 36px; padding: 0 10px; font-size: 13px; }
+/* Se ve de 36 px pero se toca en 44: el area sobresale 4 px por arriba y por abajo. */
+.mini { min-height: 36px; padding: 0 10px; font-size: 14px; }
+.mini::after { content: ""; position: absolute; inset: -4px 0; }
 .cambio--nuevo::before { content: "＋ "; color: var(--verde); } .cambio--mejora::before { content: "↑ "; color: var(--ambar); } .cambio--arreglo::before { content: "✓ "; color: var(--tinta-suave); }
 
 /* Pieza 2: buscar e importar. La bandeja muestra datos de negocios que todavia
@@ -117,3 +130,18 @@ button, input, select, textarea { font: inherit; }
 .subida b { overflow-wrap: anywhere; }
 .documento-fila { display: grid; grid-template-columns: 1fr auto; gap: 4px 8px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--borde); }
 .documento-fila b { overflow-wrap: anywhere; }
+
+/* Pasada de UX, fase A. */
+/* El numero del dia es el unico elemento grande de Hoy. */
+.dia { margin: 0 0 8px; color: var(--tinta-suave); }
+.dia__numero { font-size: 26px; line-height: 1; color: var(--tinta); margin-right: 2px; }
+/* Franja de estado en el borde de la tarjeta o de la fila. Dice la urgencia de un vistazo; el texto la repite. */
+.tarjeta--franja { border-left-width: 4px; }
+.tarjeta--rojo { border-left-color: var(--rojo); } .tarjeta--ambar { border-left-color: var(--ambar); } .tarjeta--verde { border-left-color: var(--verde); }
+/* Solo en el panel (.contenedor): el portal del cliente tambien usa .cobro y tiene su propio dibujo. */
+.contenedor .cobro { border-left: 3px solid transparent; padding-left: 10px; margin-left: -13px; }
+.contenedor .cobro--vencido { border-left-color: var(--rojo); } .contenedor .cobro--por_vencer { border-left-color: var(--ambar); } .contenedor .cobro--pagado { border-left-color: var(--verde); }
+/* «···»: el boton que guarda las acciones secundarias. */
+.boton--mas { min-width: 44px; padding: 0 12px; letter-spacing: 2px; font-weight: 700; color: var(--tinta-suave); }
+.boton--mas[aria-expanded="true"] { color: var(--tinta); border-color: var(--tinta-suave); }
+.fila-botones--secundarias { margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--borde); }

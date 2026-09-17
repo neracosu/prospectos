@@ -21,8 +21,8 @@ export default async function Hoy() {
   return (
     <>
       <section className="tarjeta">
-        <b>Hoy: {mio.enviados} de {mio.meta} enviados</b>
-        <div className="progreso" role="progressbar" aria-valuenow={mio.enviados} aria-valuemax={mio.meta}><i style={{ width: `${pct}%` }} /></div>
+        <p className="dia"><b className="dia__numero">{mio.enviados}</b> de {mio.meta} enviados hoy</p>
+        <div className="progreso" role="progressbar" aria-label="Enviados de hoy" aria-valuenow={mio.enviados} aria-valuemin={0} aria-valuemax={mio.meta}><i style={{ width: `${pct}%` }} /></div>
         {otros.map((o) => <div key={o.id} className="suave">{o.nombre}: {o.enviados} de {o.meta}</div>)}
         <div className="embudo">
           <div><b>{resumen.embudo.por_contactar}</b>por contactar</div>
@@ -43,7 +43,7 @@ export default async function Hoy() {
 
       <h2 className="titulo">Seguimientos que tocan ({seguimientos.length})</h2>
       {seguimientos.length === 0 && <p className="suave">Ninguno hoy.</p>}
-      {seguimientos.map((p) => <TarjetaSeguimiento key={p.id} p={p} />)}
+      {seguimientos.map((p) => <TarjetaSeguimiento key={p.id} p={p} hoy={hoy} />)}
 
       <h2 className="titulo">Por contactar</h2>
       {cola.length === 0 && <p className="suave">La cola está vacía. <Link href="/prospectos/nuevo">Agrega un prospecto</Link>.</p>}
