@@ -4,10 +4,12 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { exigirRol } from "@/lib/sesion";
 import { esFechaIso } from "@/lib/fecha-caracas";
-import { esSemver, compararSemver, parsearChangelog, TIPOS_CAMBIO, ETIQUETA_CAMBIO } from "@/lib/semver-contrato";
+import { esSemver, compararSemver, parsearChangelog, TIPOS_CAMBIO } from "@/lib/semver-contrato";
 import { enlaceWhatsappCobro } from "@/lib/mensajes-cobro";
 import { enlaceSiTieneAcceso } from "@/lib/acceso-cliente";
 import { fallo, exito, type Resultado } from "@/acciones/resultado";
+import { leerConfig, CLAVES } from "@/lib/configuracion";
+import { mensajeAvisoVersion, quienRecibe } from "@/lib/avisos-contrato";
 
 // exigirRol("dueno") FUERA del try/catch. Una version avisada al cliente no se edita: se corrige con otra.
 const ERROR = "No se pudo guardar. Intenta de nuevo.";
@@ -98,10 +100,7 @@ export async function marcarAvisada(versionId: number): Promise<Resultado<{ href
       if (r.count === 0) throw new Error(VERSION_YA_AVISADA);
       await tx.evento.create({ data: { proyectoId: v.proyectoId, usuarioId: u.id, tipo: "aviso_cliente", texto: `versión ${v.version}` } });
     });
-    const lineas = v.cambios.map((c) => `• ${ETIQUETA_CAMBIO[c.tipo as keyof typeof ETIQUETA_CAMBIO] ?? c.tipo}: ${c.texto}`).join("\n");
-    const quien = v.proyecto.cliente.contactoNombre || v.proyecto.cliente.nombre;
-    const enlace = await enlaceSiTieneAcceso(v.proyecto.clienteId);
-    const mensaje = `Buenas, ${quien}. Publicamos la versión ${v.version} de ${v.proyecto.nombre}:\n${lineas}\n${enlace ? `Puede verla en su portal: ${enlace}\n` : ""}Cualquier duda me escribe por aquí.`;
+    const mensaje = mensajeAvisoVersion(await leerConfig(CLAVES.avisoVersion), { cliente: quienRecibe(v.proyecto.cliente), proyecto: v.proyecto.nombre, version: v.version, cambios: v.cambios, enlace: await enlaceSiTieneAcceso(v.proyecto.clienteId) });
     // El whatsapp ya se valido arriba, asi que el enlace nunca sale nulo.
     const href = enlaceWhatsappCobro(v.proyecto.cliente.whatsapp, mensaje)!;
     refrescar(v.proyectoId);

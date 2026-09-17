@@ -9,6 +9,7 @@ import { crearUsuario, cambiarPin, PIN_VALIDO } from "@/lib/usuarios";
 import { fallo, exito, type Resultado } from "@/acciones/resultado";
 import { guardarConfig, CLAVES } from "@/lib/configuracion";
 import { normalizarCelular } from "@/lib/celular-contrato";
+import { VARIABLE_OBLIGATORIA } from "@/lib/avisos-contrato";
 
 // exigirSesion()/exigirRol() van FUERA del try/catch (redirigen lanzando).
 // Cada funcion exportada de aqui es un endpoint publico: nada de auxiliares exportados.
@@ -20,6 +21,9 @@ function mensajePin(err: unknown): string | null {
   const clave = err instanceof Error ? err.message : "";
   return clave in MENSAJE_PIN ? MENSAJE_PIN[clave] : null;
 }
+
+// Ajustes solo administra cuentas del panel. Las de rol "cliente" (pieza 5) se manejan desde la ficha del cliente.
+const ROLES_PANEL = ["dueno", "prospectador"];
 
 const NichoZ = z.object({
   id: z.coerce.number().int().positive(),
@@ -74,10 +78,10 @@ export async function guardarUsuario(formData: FormData): Promise<Resultado> {
       // Un dueno no puede desactivarse ni quitarse el rol de dueno a si mismo:
       // dejaria el panel sin nadie que pueda entrar a Ajustes.
       if (d.id === yo.id && (!activo || d.rol !== "dueno")) return fallo("No puedes desactivarte ni quitarte el rol de dueño.");
-      // Reactivar una cuenta desactivada no exige revisar pinEnUso aqui: la
-      // unicidad del PIN ya es global (activa o no, ver src/lib/usuarios.ts),
-      // asi que el PIN que ya tenia sigue siendo unico sin volver a chequearlo.
-      await prisma.usuario.update({ where: { id: d.id }, data: { nombre: d.nombre, rol: d.rol, metaDiaria: d.metaDiaria, activo } });
+      // Reactivar no exige revisar pinEnUso: la unicidad del PIN es entre las cuentas del PANEL, activas o no
+      // (ver src/lib/usuarios.ts). El where por rol impide tocar desde aqui la cuenta del portal de un cliente.
+      const r = await prisma.usuario.updateMany({ where: { id: d.id, rol: { in: ROLES_PANEL } }, data: { nombre: d.nombre, rol: d.rol, metaDiaria: d.metaDiaria, activo } });
+      if (r.count === 0) return fallo("Esa cuenta no existe.");
     }
     revalidatePath("/ajustes");
     revalidatePath("/hoy");
@@ -112,6 +116,8 @@ export async function restablecerPin(usuarioId: number, pinNuevo: string): Promi
   const e = z.object({ id: z.number().int().positive(), pin: z.string().regex(PIN_VALIDO) }).safeParse({ id: usuarioId, pin: pinNuevo });
   if (!e.success) return fallo(MENSAJE_PIN.PIN_INVALIDO);
   try {
+    const cuenta = await prisma.usuario.findFirst({ where: { id: e.data.id, rol: { in: ROLES_PANEL } }, select: { id: true } });
+    if (!cuenta) return fallo("Esa cuenta no existe.");
     await cambiarPin(e.data.id, e.data.pin);
     return exito();
   } catch (err) {
@@ -136,6 +142,21 @@ export async function guardarMensajesCobro(formData: FormData): Promise<Resultad
     revalidatePath("/ajustes");
     return exito();
   } catch (err) { console.error("guardarMensajesCobro", err); return fallo(ERROR); }
+}
+
+const avisoZ = (variable: string) => z.string().trim().min(10).max(1000).refine((s) => s.includes(variable), "variable");
+const AvisosZ = z.object({ hito: avisoZ(VARIABLE_OBLIGATORIA.hito), version: avisoZ(VARIABLE_OBLIGATORIA.version), cobro: avisoZ(VARIABLE_OBLIGATORIA.cobro) });
+export async function guardarMensajesAviso(formData: FormData): Promise<Resultado> {
+  await exigirRol("dueno");
+  const e = AvisosZ.safeParse(Object.fromEntries(formData));
+  if (!e.success) return fallo("Cada aviso lleva su variable: {hito} en el de hitos, {version} en el de versiones y {monto} en el de cobros (entre 10 y 1000 caracteres).");
+  try {
+    await guardarConfig(CLAVES.avisoHito, e.data.hito);
+    await guardarConfig(CLAVES.avisoVersion, e.data.version);
+    await guardarConfig(CLAVES.avisoCobro, e.data.cobro);
+    revalidatePath("/ajustes");
+    return exito();
+  } catch (err) { console.error("guardarMensajesAviso", err); return fallo(ERROR); }
 }
 
 const EmisorZ = z.object({ nombre: z.string().trim().min(2).max(80), rif: z.string().trim().max(20).default(""), whatsapp: z.string().trim().max(40).default(""), email: z.string().trim().max(120).default("") });

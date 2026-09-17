@@ -12,6 +12,7 @@ import { mensajeDeCobro, enlaceWhatsappCobro } from "@/lib/mensajes-cobro";
 import { generarNotaAnulacion } from "@/lib/recibos";
 import { enlaceSiTieneAcceso } from "@/lib/acceso-cliente";
 import { fallo, exito, type Resultado } from "@/acciones/resultado";
+import { mensajeAvisoCobro, quienRecibe } from "@/lib/avisos-contrato";
 
 // exigirRol("dueno") va FUERA del try/catch. Nada se borra: los cobros se anulan con motivo (tambien los pagados).
 const ERROR = "No se pudo guardar. Intenta de nuevo.";
@@ -127,4 +128,32 @@ export async function registrarRecordatorio(cobroId: number): Promise<Resultado<
     refrescar(c.proyectoId);
     return exito({ href, repetido: false });
   } catch (err) { console.error("registrarRecordatorio", err); return fallo(ERROR); }
+}
+
+// Aviso al cliente de un cobro que Neri registro a mano (pieza 5b): cuotas y extras sin pagar. Las mensualidades
+// tienen su "Recordar" y los pagos su recibo por WhatsApp: aqui no entran.
+const COBRO_YA_AVISADO = "COBRO_YA_AVISADO";
+export async function avisarCobro(cobroId: number): Promise<Resultado<{ href: string }>> {
+  const u = await exigirRol("dueno");
+  const e = Id.safeParse(cobroId);
+  if (!e.success) return fallo(ERROR);
+  try {
+    const c = await prisma.cobro.findUnique({ where: { id: e.data }, include: { proyecto: { include: { cliente: true } } } });
+    if (!c) return fallo("Ese cobro no existe.");
+    if (c.pagadoEn || c.anuladoEn) return fallo("Ese cobro ya está pagado o anulado.");
+    if (c.concepto !== "cuota" && c.concepto !== "extra") return fallo("Solo se avisan las cuotas y los extras: las mensualidades tienen su recordatorio.");
+    const cliente = c.proyecto.cliente;
+    if (!cliente.whatsapp) return fallo("El cliente no tiene WhatsApp cargado. Agrégalo en su ficha antes de avisar.");
+    await prisma.$transaction(async (tx) => {
+      const r = await tx.cobro.updateMany({ where: { id: c.id, avisadoEn: null, pagadoEn: null, anuladoEn: null }, data: { avisadoEn: new Date() } });
+      if (r.count === 0) throw new Error(COBRO_YA_AVISADO);
+      await tx.evento.create({ data: { proyectoId: c.proyectoId, cobroId: c.id, usuarioId: u.id, tipo: "aviso_cliente", canal: "whatsapp", texto: `cobro: ${c.detalle}` } });
+    });
+    const mensaje = mensajeAvisoCobro(await leerConfig(CLAVES.avisoCobro), { cliente: quienRecibe(cliente), proyecto: c.proyecto.nombre, concepto: c.concepto as Concepto, detalle: c.detalle, monto: Number(c.monto), vence: c.vence, enlace: await enlaceSiTieneAcceso(c.proyecto.clienteId) });
+    refrescar(c.proyectoId);
+    return exito({ href: enlaceWhatsappCobro(cliente.whatsapp, mensaje)! });
+  } catch (err) {
+    if (err instanceof Error && err.message === COBRO_YA_AVISADO) return fallo("Este cobro ya se avisó.");
+    console.error("avisarCobro", err); return fallo(ERROR);
+  }
 }

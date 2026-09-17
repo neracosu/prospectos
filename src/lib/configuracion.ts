@@ -1,17 +1,25 @@
 // src/lib/configuracion.ts — clave/valor con defectos. Solo el dueno escribe.
 import { prisma } from "@/lib/db";
+import { AVISO_POR_DEFECTO, RENGLON_PORTAL_COBRO } from "@/lib/avisos-contrato";
 
 export const CLAVES = {
   tarifaHora: "tarifa_hora",
   mensajeRecordatorio: "mensaje_cobro_recordatorio",
   mensajeVencido: "mensaje_cobro_vencido",
   emisor: "datos_emisor",
+  avisoHito: "mensaje_aviso_hito",
+  avisoVersion: "mensaje_aviso_version",
+  avisoCobro: "mensaje_aviso_cobro",
 } as const;
 
 export const DEFECTOS: Record<string, string> = {
   [CLAVES.tarifaHora]: "17",
-  [CLAVES.mensajeRecordatorio]: "Buenas, {cliente}. Le recuerdo el cobro de {concepto} de {proyecto} por {monto}, que vence el {vence}. Cualquier duda me escribe por aquí. Gracias.",
-  [CLAVES.mensajeVencido]: "Buenas, {cliente}. Le escribo por el cobro de {concepto} de {proyecto} por {monto}, que venció el {vence}. ¿Me confirma cuándo lo podemos regularizar? Gracias.",
+  // El renglon del portal va solo: mensajeDeCobro lo quita entero si el cliente no tiene acceso (armarMensaje).
+  [CLAVES.mensajeRecordatorio]: `Buenas, {cliente}. Le recuerdo el cobro de {concepto} de {proyecto} por {monto}, que vence el {vence}.\n${RENGLON_PORTAL_COBRO}\nCualquier duda me escribe por aquí. Gracias.`,
+  [CLAVES.mensajeVencido]: `Buenas, {cliente}. Le escribo por el cobro de {concepto} de {proyecto} por {monto}, que venció el {vence}.\n${RENGLON_PORTAL_COBRO}\n¿Me confirma cuándo lo podemos regularizar? Gracias.`,
+  [CLAVES.avisoHito]: AVISO_POR_DEFECTO.hito,
+  [CLAVES.avisoVersion]: AVISO_POR_DEFECTO.version,
+  [CLAVES.avisoCobro]: AVISO_POR_DEFECTO.cobro,
   [CLAVES.emisor]: JSON.stringify({ nombre: "Neri Colón", rif: "", whatsapp: "", email: "" }),
 };
 

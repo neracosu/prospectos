@@ -1,5 +1,5 @@
 // src/lib/mensajes-cobro.ts — arma el mensaje de cobro (puro).
-import { rellenar } from "@/lib/plantilla-mensaje";
+import { armarMensaje } from "@/lib/plantilla-mensaje";
 import { formatoUSD } from "@/lib/dinero";
 import { ETIQUETA_CONCEPTO, type Concepto, type EstadoCobro } from "@/lib/cobros-contrato";
 import { fechaVisible } from "@/lib/fecha-caracas";
@@ -12,15 +12,8 @@ export function mensajeDeCobro(
 ): string {
   const plantilla = c.estado === "vencido" ? plantillas.vencido : plantillas.recordatorio;
   const concepto = c.detalle ? `${ETIQUETA_CONCEPTO[c.concepto]} (${c.detalle})` : ETIQUETA_CONCEPTO[c.concepto];
-  // {enlace} es el portal del cliente (pieza 5); vacio si el cliente no tiene acceso activo.
-  const texto = rellenar(plantilla, { cliente: cliente.contactoNombre || cliente.nombre, proyecto: proyecto.nombre, monto: formatoUSD(c.monto), concepto, vence: fechaVisible(c.vence), enlace });
-  // Solo se colapsa el espacio horizontal (no el salto de linea), asi las plantillas
-  // multilinea sobreviven; el espacio sobrante al final de cada linea tambien se recorta.
-  return texto
-    .split("\n")
-    .map((linea) => linea.replace(/[^\S\n]{2,}/g, " ").replace(/[^\S\n]+$/, ""))
-    .join("\n")
-    .replace(/\s+$/, "");
+  // {enlace} es el portal del cliente (pieza 5); sin acceso activo, armarMensaje quita entero el renglon que lo lleva.
+  return armarMensaje(plantilla, { cliente: cliente.contactoNombre || cliente.nombre, proyecto: proyecto.nombre, monto: formatoUSD(c.monto), concepto, vence: fechaVisible(c.vence), enlace });
 }
 
 export function enlaceWhatsappCobro(whatsapp: string, mensaje: string): string | null {

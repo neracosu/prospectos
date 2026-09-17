@@ -5,6 +5,10 @@ import { prisma } from "@/lib/db";
 import { exigirRol } from "@/lib/sesion";
 import { esFechaIso } from "@/lib/fecha-caracas";
 import { fallo, exito, type Resultado } from "@/acciones/resultado";
+import { leerConfig, CLAVES } from "@/lib/configuracion";
+import { enlaceWhatsappCobro } from "@/lib/mensajes-cobro";
+import { enlaceSiTieneAcceso } from "@/lib/acceso-cliente";
+import { mensajeAvisoHito, quienRecibe } from "@/lib/avisos-contrato";
 
 // exigirRol("dueno") FUERA del try/catch. Un pendiente es un item de lista: es lo unico
 // de la pieza que si se elimina.
@@ -40,7 +44,7 @@ export async function marcarPendiente(id: number, hecho: boolean): Promise<Resul
     if (!p) return fallo("Ese pendiente ya no existe.");
     // Update y evento van juntos: un hito visible nunca queda cumplido sin su rastro.
     await prisma.$transaction(async (tx) => {
-      const r = await tx.pendiente.updateMany({ where: { id: p.id, hecho: !e.data.hecho }, data: { hecho: e.data.hecho, hechoEn: e.data.hecho ? new Date() : null } });
+      const r = await tx.pendiente.updateMany({ where: { id: p.id, hecho: !e.data.hecho }, data: { hecho: e.data.hecho, hechoEn: e.data.hecho ? new Date() : null, ...(e.data.hecho ? {} : { avisadoEn: null }) } });
       if (r.count === 1 && e.data.hecho && p.visibleCliente) await tx.evento.create({ data: { proyectoId: p.proyectoId, usuarioId: u.id, tipo: "hito_cumplido", texto: p.texto } });
     });
     refrescar(p.proyectoId);
@@ -93,4 +97,33 @@ export async function eliminarPendiente(id: number): Promise<Resultado> {
     refrescar(p.proyectoId);
     return exito();
   } catch (err) { console.error("eliminarPendiente", err); return fallo(ERROR); }
+}
+
+// Aviso al cliente de un hito cumplido (pieza 5b). Como marcarAvisada de las versiones: se marca y se deja
+// rastro en la misma transaccion, y un hito no se avisa dos veces (desmarcarlo le borra el aviso).
+const HITO_YA_AVISADO = "HITO_YA_AVISADO";
+export async function avisarHito(id: number): Promise<Resultado<{ href: string }>> {
+  const u = await exigirRol("dueno");
+  const e = Id.safeParse(id);
+  if (!e.success) return fallo(ERROR);
+  try {
+    const p = await prisma.pendiente.findUnique({ where: { id: e.data }, include: { proyecto: { include: { cliente: true } } } });
+    if (!p) return fallo("Ese pendiente ya no existe.");
+    if (!p.hecho || !p.visibleCliente) return fallo("Solo se avisa un hito cumplido y visible al cliente.");
+    const cliente = p.proyecto.cliente;
+    // Sin WhatsApp no hay a quien avisar: se corta antes de marcar nada.
+    if (!cliente.whatsapp) return fallo("El cliente no tiene WhatsApp cargado. Agrégalo en su ficha antes de avisar.");
+    await prisma.$transaction(async (tx) => {
+      const r = await tx.pendiente.updateMany({ where: { id: p.id, hecho: true, avisadoEn: null }, data: { avisadoEn: new Date() } });
+      if (r.count === 0) throw new Error(HITO_YA_AVISADO);
+      await tx.evento.create({ data: { proyectoId: p.proyectoId, usuarioId: u.id, tipo: "aviso_cliente", canal: "whatsapp", texto: `hito: ${p.texto}` } });
+    });
+    const mensaje = mensajeAvisoHito(await leerConfig(CLAVES.avisoHito), { cliente: quienRecibe(cliente), proyecto: p.proyecto.nombre, hito: p.texto, enlace: await enlaceSiTieneAcceso(p.proyecto.clienteId) });
+    refrescar(p.proyectoId);
+    // El whatsapp ya se valido arriba, asi que el enlace nunca sale nulo.
+    return exito({ href: enlaceWhatsappCobro(cliente.whatsapp, mensaje)! });
+  } catch (err) {
+    if (err instanceof Error && err.message === HITO_YA_AVISADO) return fallo("Este hito ya se avisó.");
+    console.error("avisarHito", err); return fallo(ERROR);
+  }
 }
