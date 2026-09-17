@@ -15,6 +15,8 @@ const config: NextConfig = {
       },
       // Las propuestas son publicas por codigo pero no se indexan.
       { source: "/p/:path*", headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }] },
+      // Los recibos son privados: que ningun buscador guarde ni la redireccion.
+      { source: "/recibos/:path*", headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }] },
     ];
   },
 };
