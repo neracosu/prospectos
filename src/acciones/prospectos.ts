@@ -9,6 +9,7 @@ import { ETAPAS, ETIQUETA_ETAPA, puedePasar, type Etapa } from "@/lib/embudo-con
 import { hoyCaracas, sumarDias, esFechaIso } from "@/lib/fecha-caracas";
 import { normalizarCelular, normalizarRed } from "@/lib/celular-contrato";
 import { claveProspecto } from "@/lib/clave-prospecto";
+import { TOPES } from "@/lib/tabla-contrato";
 import { generarCodigo } from "@/lib/codigo";
 import { fallo, exito, type Resultado } from "@/acciones/resultado";
 
@@ -207,9 +208,10 @@ export async function editarSeguimiento(prospectoId: number, fecha: string): Pro
 
 const Nuevo = z.object({
   nichoId: z.coerce.number().int().positive(),
-  nombre: z.string().trim().min(2).max(120),
-  ciudad: z.string().trim().min(2).max(80),
-  estado: z.string().trim().max(60).default(""),
+  // Los tres que comparte con la importacion salen de TOPES (src/lib/tabla-contrato.ts).
+  nombre: z.string().trim().min(2).max(TOPES.nombre),
+  ciudad: z.string().trim().min(2).max(TOPES.ciudad),
+  estado: z.string().trim().max(TOPES.estado).default(""),
   tipo: z.string().trim().max(60).default(""),
   tamano: z.string().trim().max(40).default(""),
   telefono: z.string().trim().max(80).default(""),

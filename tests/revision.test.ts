@@ -18,6 +18,7 @@ import { sesionFalsa } from "./ayuda-sesion";
 import { crearLote, loteConDetalle, lotesRecientes, limpiarLotesViejos } from "@/lib/revision";
 import { aprobarFila, completarExistente, descartarFila, corregirFila, aprobarNuevos } from "@/acciones/revision";
 import { validarFila, COLUMNAS, type Columna } from "@/lib/tabla-contrato";
+import { claveProspecto } from "@/lib/clave-prospecto";
 
 const fila = (o: Partial<Record<Columna, string>>) =>
   validarFila({
@@ -165,12 +166,12 @@ describe.runIf(DB_HABILITADA)("bandeja de revision", () => {
     expect((await loteConDetalle(r.lote))!.filas.map((f) => f.estado)).toEqual(["nuevo", "repetido"]);
   });
 
-  it("un texto de más de 191 caracteres queda en error, al importar y al corregir", async () => {
+  it("un texto más largo que su tope queda en error, al importar y al corregir", async () => {
     const r = await crearLote("importado", [fila({ nombre: "H".repeat(300), ciudad: "Caracas" })], ids.prospectadorId);
     expect(r.errores).toBe(1);
     const f = (await loteConDetalle(r.lote))!.filas[0];
     expect(f.estado).toBe("error");
-    expect(f.errores).toContain("El nombre no puede pasar de 191 caracteres");
+    expect(f.errores).toContain("El nombre no puede pasar de 120 caracteres");
     // Corregida con un nombre normal, vuelve a ser nueva.
     expect((await corregirFila(f.id, fd({ nombre: "Hotel Largo" }))).ok).toBe(true);
     expect((await loteConDetalle(r.lote))!.filas[0].estado).toBe("nuevo");
@@ -178,7 +179,33 @@ describe.runIf(DB_HABILITADA)("bandeja de revision", () => {
     expect((await corregirFila(f.id, fd({ ciudad: "C".repeat(300) }))).ok).toBe(true);
     const f2 = (await loteConDetalle(r.lote))!.filas[0];
     expect(f2.estado).toBe("error");
-    expect(f2.errores).toContain("La ciudad no puede pasar de 191 caracteres");
+    expect(f2.errores).toContain("La ciudad no puede pasar de 80 caracteres");
+  });
+
+  it("el tope exacto entra: nombre de 120 y ciudad de 70 se aprueban", async () => {
+    // 120 + 1 del separador + 70 son los 191 justos de la columna `clave`.
+    const nombre = "N".repeat(120); const ciudad = "C".repeat(70);
+    const r = await crearLote("importado", [fila({ nombre, ciudad })], ids.prospectadorId);
+    expect(r).toMatchObject({ nuevos: 1, errores: 0 });
+    const f = (await loteConDetalle(r.lote))!.filas[0];
+    expect(f.estado).toBe("nuevo");
+    expect(await aprobarFila(f.id)).toMatchObject({ ok: true });
+    // La clave entra completa en su columna: la base no la trunco.
+    const p = await prisma.prospecto.findFirstOrThrow({ where: { nombre } });
+    expect(p.clave).toBe(claveProspecto(nombre, ciudad));
+    expect(p.clave).toHaveLength(191);
+  });
+
+  it("nombre de 120 con ciudad de 80 no cabe en la clave: queda en error y no llega a la base", async () => {
+    // Cada campo cabe en su tope, pero juntos dan 201 y la columna `clave` es de
+    // 191. Sin la guarda del par esto terminaba en un P2000 de MySQL.
+    const nombre = "P".repeat(120); const ciudad = "Q".repeat(80);
+    const r = await crearLote("importado", [fila({ nombre, ciudad })], ids.prospectadorId);
+    expect(r).toMatchObject({ nuevos: 0, errores: 1 });
+    const f = (await loteConDetalle(r.lote))!.filas[0];
+    expect(f.errores).toContain("El nombre y la ciudad juntos no pueden pasar de 191 caracteres");
+    expect(await aprobarFila(f.id)).toMatchObject({ ok: false });
+    expect(await prisma.prospecto.count({ where: { nombre } })).toBe(0);
   });
 
   it("un archivo en un campo de texto cuenta como vacío", async () => {

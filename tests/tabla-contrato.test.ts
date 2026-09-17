@@ -34,9 +34,18 @@ describe("validarFila", () => {
     expect(entrada.fuentesPorCampo).toEqual({ nombre: "https://hotela.com/contacto", ciudad: "https://hotela.com/contacto", telefono: "https://hotela.com/contacto", instagram: "https://hotela.com/contacto" });
   });
   it("marca los textos que no caben en la columna", () => {
-    // Los VARCHAR del Prospecto son de 191; la nota es TEXT y la fuente va a un JSON.
-    expect(validarFila({ ...base, nombre: "H".repeat(192) }).errores).toContain("El nombre no puede pasar de 191 caracteres");
-    expect(validarFila({ ...base, nombre: "H".repeat(191) }).errores).toEqual([]);
+    // nombre, ciudad y estado van a los topes del formulario manual (TOPES); los
+    // demas textos al VARCHAR(191); la nota es TEXT y la fuente va a un JSON.
+    expect(validarFila({ ...base, nombre: "H".repeat(121) }).errores).toContain("El nombre no puede pasar de 120 caracteres");
+    expect(validarFila({ ...base, nombre: "H".repeat(120) }).errores).toEqual([]);
+    expect(validarFila({ ...base, ciudad: "C".repeat(81) }).errores).toContain("La ciudad no puede pasar de 80 caracteres");
+    expect(validarFila({ ...base, ciudad: "C".repeat(80) }).errores).toEqual([]);
+    expect(validarFila({ ...base, estado: "E".repeat(61) }).errores).toContain("El estado no puede pasar de 60 caracteres");
+    expect(validarFila({ ...base, email: "e".repeat(192) }).errores).toContain("El correo no puede pasar de 191 caracteres");
+    // El par tambien: nombre y ciudad forman `clave`, que es VARCHAR(191).
+    expect(validarFila({ ...base, nombre: "N".repeat(120), ciudad: "C".repeat(70) }).errores).toEqual([]);
+    expect(validarFila({ ...base, nombre: "N".repeat(120), ciudad: "C".repeat(71) }).errores)
+      .toContain("El nombre y la ciudad juntos no pueden pasar de 191 caracteres");
     expect(validarFila({ ...base, nota: "N".repeat(5000) }).errores).toEqual([]);
     expect(validarFila({ ...base, nota: "N".repeat(16001) }).errores).toContain("La nota no puede pasar de 16000 caracteres");
     // Una URL de Maps pasa de 191 sin problema: ahi el tope es otro.

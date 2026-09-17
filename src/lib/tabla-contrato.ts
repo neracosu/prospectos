@@ -1,36 +1,46 @@
 import { normalizarCelular, normalizarRed } from "@/lib/celular-contrato";
+import { claveProspecto } from "@/lib/clave-prospecto";
 import type { ProspectoEntrada } from "@/lib/importar";
 
 export const COLUMNAS = ["nicho", "nombre", "ciudad", "estado", "tipo", "tamano", "telefono", "whatsapp", "email", "web", "instagram", "facebook", "tiktok", "nota", "fuente"] as const;
 export type Columna = (typeof COLUMNAS)[number];
 export const OBLIGATORIAS: Columna[] = ["nicho", "nombre", "ciudad"];
 const MAX_FILAS = 5000;
-// Los textos del Prospecto son VARCHAR(191) en MySQL (el largo por defecto de
-// Prisma); `nota` es @db.Text, o sea 65535 BYTES, y en utf8mb4 el peor caso son
-// 4 bytes por caracter. Cortar aqui es lo que evita el "Data too long" cuando se
-// aprueba la fila: validarFila es el unico paso por donde pasan los cuatro
-// caminos de importacion.
-const MAX_TEXTO = 191;
-const MAX_NOTA = 16000;
-// La fuente no va a un VARCHAR sino a un JSON: el tope es el de una URL usable.
-// Las de Maps pasan de 191 con facilidad, asi que ahi 191 seria un falso error.
-const MAX_FUENTE = 2000;
+// Topes de largo por campo, y la unica copia de los que se comparten con el
+// formulario manual (`Nuevo`, en src/acciones/prospectos.ts, que los importa de
+// aqui): nombre 120, ciudad 80 y estado 60. La razon de que sean esos y no el
+// largo de la columna es que un prospecto no puede entrar por importacion con un
+// largo que escrito a mano se rechaza.
+// nombre y ciudad, ademas, son lo que alimenta a `clave`, que tambien es
+// VARCHAR(191). Ojo que 120 + 1 del separador + 80 son 201: acortar los campos NO
+// alcanza para que la clave quepa (y NFKD puede incluso expandir un caracter en
+// varios), asi que lo que la protege es medir el par ya armado. Sin eso, un
+// nombre de 120 con una ciudad de 80 llega a la base y MySQL responde P2000
+// "value too long for column clave", que en la bandeja se ve como error generico.
+// El resto de los textos del Prospecto son VARCHAR(191) (el largo por defecto de
+// Prisma). `nota` es @db.Text, o sea 65535 BYTES, y en utf8mb4 el peor caso son 4
+// bytes por caracter. `fuente` no va a un VARCHAR sino a un JSON: ahi el tope es
+// el de una URL usable, porque las de Maps pasan de 191 con facilidad y 191 seria
+// un falso error.
+// validarFila es el unico paso por donde pasan los cuatro caminos de importacion:
+// cortar aqui es lo que evita el "Data too long" al aprobar la fila.
+export const TOPES = { nombre: 120, ciudad: 80, estado: 60, texto: 191, nota: 16000, fuente: 2000, clave: 191 } as const;
 const LIMITES: [Columna, string, number][] = [
-  ["nicho", "El nicho", MAX_TEXTO],
-  ["nombre", "El nombre", MAX_TEXTO],
-  ["ciudad", "La ciudad", MAX_TEXTO],
-  ["estado", "El estado", MAX_TEXTO],
-  ["tipo", "El tipo", MAX_TEXTO],
-  ["tamano", "El tamaño", MAX_TEXTO],
-  ["telefono", "El teléfono", MAX_TEXTO],
-  ["whatsapp", "El WhatsApp", MAX_TEXTO],
-  ["email", "El correo", MAX_TEXTO],
-  ["web", "La web", MAX_TEXTO],
-  ["instagram", "El Instagram", MAX_TEXTO],
-  ["facebook", "El Facebook", MAX_TEXTO],
-  ["tiktok", "El TikTok", MAX_TEXTO],
-  ["nota", "La nota", MAX_NOTA],
-  ["fuente", "La fuente", MAX_FUENTE],
+  ["nicho", "El nicho", TOPES.texto],
+  ["nombre", "El nombre", TOPES.nombre],
+  ["ciudad", "La ciudad", TOPES.ciudad],
+  ["estado", "El estado", TOPES.estado],
+  ["tipo", "El tipo", TOPES.texto],
+  ["tamano", "El tamaño", TOPES.texto],
+  ["telefono", "El teléfono", TOPES.texto],
+  ["whatsapp", "El WhatsApp", TOPES.texto],
+  ["email", "El correo", TOPES.texto],
+  ["web", "La web", TOPES.texto],
+  ["instagram", "El Instagram", TOPES.texto],
+  ["facebook", "El Facebook", TOPES.texto],
+  ["tiktok", "El TikTok", TOPES.texto],
+  ["nota", "La nota", TOPES.nota],
+  ["fuente", "La fuente", TOPES.fuente],
 ];
 
 function normalizarEncabezado(s: string): string {
@@ -102,6 +112,10 @@ export function validarFila(f: Record<Columna, string>): { entrada: EntradaValid
   for (const [campo, etiqueta, max] of LIMITES) {
     const valor = campo === "fuente" ? fuente : String((entrada as unknown as Record<string, unknown>)[campo] ?? "");
     if (valor.length > max) errores.push(`${etiqueta} no puede pasar de ${max} caracteres`);
+  }
+  // El par, no cada campo: `clave` es VARCHAR(191) y se arma con los dos.
+  if (claveProspecto(entrada.nombre, entrada.ciudad).length > TOPES.clave) {
+    errores.push(`El nombre y la ciudad juntos no pueden pasar de ${TOPES.clave} caracteres`);
   }
   return { entrada, errores };
 }
