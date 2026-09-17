@@ -1,0 +1,38 @@
+{
+  "version": 0.6,
+  "generator": "Overpass API",
+  "elements": [
+    {
+      "type": "node",
+      "id": 1,
+      "lat": 10.5,
+      "lon": -66.9,
+      "tags": {
+        "name": "Hotel A",
+        "phone": "+58 412 1234567",
+        "website": "https://hotel-a.com",
+        "addr:street": "Av. Principal",
+        "contact:instagram": "hotela",
+        "tourism": "hotel"
+      }
+    },
+    {
+      "type": "way",
+      "id": 2,
+      "center": { "lat": 10.51, "lon": -66.91 },
+      "tags": {
+        "name": "Posada B",
+        "tourism": "hotel"
+      }
+    },
+    {
+      "type": "node",
+      "id": 3,
+      "lat": 10.52,
+      "lon": -66.92,
+      "tags": {
+        "tourism": "hotel"
+      }
+    }
+  ]
+}
