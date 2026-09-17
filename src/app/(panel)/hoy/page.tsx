@@ -5,6 +5,8 @@ import { resumenHoy, seguimientosQueTocan, colaDelDia } from "@/lib/prospectos";
 import { ganadosSinProyecto as listarGanadosSinProyecto } from "@/lib/proyectos";
 import { TarjetaCola } from "@/componentes/TarjetaCola";
 import { TarjetaSeguimiento } from "@/componentes/TarjetaSeguimiento";
+import { ProveedorHoy, ResumenHoy } from "@/componentes/ResumenHoy";
+import type { CifrasHoy } from "@/lib/hoy-contrato";
 
 export const dynamic = "force-dynamic";
 
@@ -16,20 +18,12 @@ export default async function Hoy() {
   ]);
   const mio = resumen.porUsuario.find((x) => x.id === u.id) ?? { enviados: 0, meta: 0, nombre: u.nombre, id: u.id };
   const otros = resumen.porUsuario.filter((x) => x.id !== u.id);
-  const pct = mio.meta ? Math.min(100, Math.round((mio.enviados / mio.meta) * 100)) : 0;
+  const cifras: CifrasHoy = { enviados: mio.enviados, meta: mio.meta, por_contactar: resumen.embudo.por_contactar, enviado: resumen.embudo.enviado, respondio: resumen.embudo.respondio, reunion: resumen.embudo.reunion };
 
   return (
-    <>
-      <section className="tarjeta">
-        <p className="dia"><b className="dia__numero">{mio.enviados}</b> de {mio.meta} enviados hoy</p>
-        <div className="progreso" role="progressbar" aria-label="Enviados de hoy" aria-valuenow={mio.enviados} aria-valuemin={0} aria-valuemax={mio.meta}><i style={{ width: `${pct}%` }} /></div>
-        {otros.map((o) => <div key={o.id} className="suave">{o.nombre}: {o.enviados} de {o.meta}</div>)}
-        <div className="embudo">
-          <div><b>{resumen.embudo.por_contactar}</b>por contactar</div>
-          <div><b>{resumen.embudo.enviado}</b>enviados</div>
-          <div><b>{resumen.embudo.respondio}</b>respondieron</div>
-          <div><b>{resumen.embudo.reunion}</b>reuniones</div>
-        </div>
+    // Las tarjetas ajustan las cifras al tocar (fase B de la pasada de UX); el proveedor los junta con el resumen.
+    <ProveedorHoy cifras={cifras}>
+      <ResumenHoy cifras={cifras} otros={otros}>
         {ganados.length > 0 && u.rol === "dueno" && (
           <div className="suave">
             {ganados.map((g) => (
@@ -39,7 +33,7 @@ export default async function Hoy() {
             ))}
           </div>
         )}
-      </section>
+      </ResumenHoy>
 
       <h2 className="titulo">Seguimientos que tocan ({seguimientos.length})</h2>
       {seguimientos.length === 0 && <p className="suave">Ninguno hoy.</p>}
@@ -48,6 +42,6 @@ export default async function Hoy() {
       <h2 className="titulo">Por contactar</h2>
       {cola.length === 0 && <p className="suave">La cola está vacía. <Link href="/prospectos/nuevo">Agrega un prospecto</Link>.</p>}
       {cola.map((p) => <TarjetaCola key={p.id} p={p} />)}
-    </>
+    </ProveedorHoy>
   );
 }
