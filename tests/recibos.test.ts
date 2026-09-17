@@ -1,12 +1,13 @@
 import { vi } from "vitest";
-const pdfFalso = vi.hoisted(() => ({ fallarProxima: false, llamadas: 0 }));
+const pdfFalso = vi.hoisted(() => ({ fallarProxima: false, llamadas: 0, ultimoHtml: "" }));
 vi.mock("@/lib/pdf", async (original) => {
   const real = await original<typeof import("@/lib/pdf")>();
   return {
     ...real,
     conTurnoGlobal: <T,>(tarea: () => Promise<T>) => tarea(),
-    imprimirPdf: async () => {
+    imprimirPdf: async (html: string) => {
       pdfFalso.llamadas += 1;
+      pdfFalso.ultimoHtml = html;
       if (pdfFalso.fallarProxima) { pdfFalso.fallarProxima = false; throw new Error("CHROMIUM_ROTO"); }
       await new Promise((r) => setTimeout(r, 150)); // lo bastante lento para que dos generaciones se pisen
       return Buffer.from("%PDF-1.4 falso");
@@ -20,7 +21,7 @@ import path from "node:path";
 import { prisma } from "@/lib/db";
 import { DB_HABILITADA, limpiarBase, sembrarBasico, sembrarCliente, sembrarProyecto } from "./ayuda-db";
 import { guardarConfig, CLAVES } from "@/lib/configuracion";
-import { hoyCaracas } from "@/lib/fecha-caracas";
+import { hoyCaracas, fechaVisible } from "@/lib/fecha-caracas";
 import { generarRecibo, generarNotaAnulacion, rutaDocumento } from "@/lib/recibos";
 
 const ANIO = Number(hoyCaracas().slice(0, 4));
@@ -71,6 +72,19 @@ describe.runIf(DB_HABILITADA)("generarRecibo y generarNotaAnulacion", () => {
     const ruta = rutaDocumento(r.numero);
     expect(readFileSync(ruta, "utf8")).toBe("%PDF-1.4 falso");
     expect(statSync(ruta).mode & 0o777).toBe(0o600);
+    const html = pdfFalso.ultimoHtml;
+    expect(html).toContain("<h1>Recibo de pago</h1>");
+    expect(html).toContain(`<p class="numero">${r.numero}</p>`);
+    expect(html).toContain(`Emitido el ${fechaVisible(hoyCaracas())}`);
+    expect(html).toContain("<b>Neri Colón</b><br>RIF V-12345678-9<br>WhatsApp +58 412-1234567<br>neri@ejemplo.test");
+    expect(html).toContain("Hotel Recibos<small>RIF J-12345678-9</small>");
+    expect(html).toContain("$350,00");
+    expect(html).toContain("PMS Hotel: Extra — Primero");
+    expect(html).toContain("<dd>16/09/2026</dd>"); // fecha de PAGO (dia de Caracas), no la de emision
+    expect(html).toContain("<dd>Zelle</dd>");
+    expect(html).toContain("<dd>Z-1</dd>");
+    expect(html).toContain('url("data:font/woff2;base64,'); // fuentes incrustadas, sin red
+    expect(html).not.toContain('url("fuentes/');
     const d = await prisma.cobro.findUniqueOrThrow({ where: { id: c.id } });
     expect(d.reciboNumero).toBe(r.numero);
     expect(d.reciboGeneradoEn).not.toBeNull();
@@ -119,6 +133,12 @@ describe.runIf(DB_HABILITADA)("generarRecibo y generarNotaAnulacion", () => {
     expect(n).toEqual({ numero: `${r.numero}-A`, nueva: true, proyectoId });
     expect(existsSync(rutaDocumento(n.numero))).toBe(true);
     expect(existsSync(rutaDocumento(r.numero))).toBe(true);
+    const htmlNota = pdfFalso.ultimoHtml;
+    expect(htmlNota).toContain("<h1>Nota de anulación</h1>");
+    expect(htmlNota).toContain(`<p class="numero">${r.numero}-A</p>`);
+    expect(htmlNota).toContain("Pago duplicado");
+    expect(htmlNota).toContain(`emitido el ${fechaVisible(hoyCaracas())}`);
+    expect(htmlNota).not.toContain("Recibí de");
     expect((await prisma.cobro.findUniqueOrThrow({ where: { id: c.id } })).notaAnulacionEn).not.toBeNull();
     expect((await generarNotaAnulacion(c.id, usuarioId)).nueva).toBe(false);
     expect(await prisma.evento.count({ where: { cobroId: c.id, tipo: "nota_anulacion", texto: n.numero } })).toBe(1);
@@ -128,5 +148,22 @@ describe.runIf(DB_HABILITADA)("generarRecibo y generarNotaAnulacion", () => {
   it("un cobro anulado que nunca tuvo recibo no lleva nota", async () => {
     const c = await prisma.cobro.create({ data: { proyectoId, concepto: "extra", detalle: "Anulado sin recibo", monto: "10.00", vence: "2026-12-01", anuladoEn: new Date(), anuladoMotivo: "x" } });
     await expect(generarNotaAnulacion(c.id, usuarioId)).rejects.toThrow("NOTA_NO_APLICA");
+  });
+
+  it("si anulan el cobro mientras se genera, no se emite recibo ni se gasta numero", async () => {
+    const c = await cobroPagado("Anulado en pleno vuelo");
+    const antes = await ultimo();
+    const llamadasAntes = pdfFalso.llamadas;
+    const p = generarRecibo(c.id, usuarioId);
+    const resultado = expect(p).rejects.toThrow("RECIBO_NO_APLICA"); // se engancha ya, para que el rechazo no quede sin manejar
+    await new Promise((r) => setTimeout(r, 60)); // el simulacro tarda 150 ms: aqui la transaccion ya leyo el cobro
+    await prisma.cobro.update({ where: { id: c.id }, data: { anuladoEn: new Date(), anuladoMotivo: "x" } });
+    await resultado;
+    expect(await ultimo()).toBe(antes);
+    expect((await prisma.cobro.findUniqueOrThrow({ where: { id: c.id } })).reciboNumero).toBe("");
+    expect(await prisma.evento.count({ where: { cobroId: c.id, tipo: "recibo_generado" } })).toBe(0);
+    // Chromium simulado si fue llamado: la anulacion llego DESPUES de que la transaccion leyera
+    // el cobro (rama del r.count === 0), que es la rama que interesa ejercitar aqui.
+    expect(pdfFalso.llamadas).toBe(llamadasAntes + 1);
   });
 });

@@ -50,16 +50,24 @@ function datosDe(c: CobroCompleto, numero: string, emitidoEl: string, emisor: Da
 // el PDF, y recien al final se confirma. Si Chromium falla, la excepcion deshace la
 // transaccion y el numero sigue libre. El bloqueo ademas serializa las generaciones.
 export async function generarRecibo(cobroId: number, usuarioId: number): Promise<{ numero: string; nuevo: boolean; proyectoId: number }> {
+  // Un recibo emitido no cambia: si ya tiene numero no se toca el contador, ni el emisor, ni Chromium.
+  const previo = await prisma.cobro.findUnique({ where: { id: cobroId }, select: { reciboNumero: true, proyectoId: true } });
+  if (!previo) throw new Error("COBRO_NO_EXISTE");
+  if (previo.reciboNumero) return { numero: previo.reciboNumero, nuevo: false, proyectoId: previo.proyectoId };
   const emisor = await leerEmisor();
   if (faltantesEmisor(emisor).length > 0) throw new Error("EMISOR_INCOMPLETO");
   const plantilla = await plantillaConFuentes();
   const hoy = hoyCaracas();
   const anio = Number(hoy.slice(0, 4));
-  // La fila del contador tiene que existir para poder bloquearla. Va FUERA de la transaccion:
-  // dos INSERT IGNORE simultaneos dentro de transacciones largas se pueden interbloquear.
-  await prisma.$executeRaw`INSERT IGNORE INTO Correlativo (serie, anio, ultimo) VALUES (${SERIE_RECIBO}, ${anio}, 0)`;
+  // La fila del contador tiene que existir para poder bloquearla. Solo se inserta la primera vez del
+  // anio: un INSERT que choca con la clave espera el bloqueo de quien este generando (toma un lock
+  // compartido sobre el registro duplicado), y la lectura simple no. Va FUERA de la transaccion: dos
+  // INSERT IGNORE simultaneos dentro de transacciones largas se pueden interbloquear.
+  const contador = await prisma.correlativo.findUnique({ where: { serie_anio: { serie: SERIE_RECIBO, anio } } });
+  if (!contador) await prisma.$executeRaw`INSERT IGNORE INTO Correlativo (serie, anio, ultimo) VALUES (${SERIE_RECIBO}, ${anio}, 0)`;
   return prisma.$transaction(async (tx) => {
     const filas = await tx.$queryRaw<{ ultimo: number | bigint }[]>`SELECT ultimo FROM Correlativo WHERE serie = ${SERIE_RECIBO} AND anio = ${anio} FOR UPDATE`;
+    if (!filas[0]) throw new Error("CORRELATIVO_NO_EXISTE");
     // Con el contador bloqueado nadie mas esta generando: lo que se lea ahora del cobro es definitivo.
     const c = await leerCobro(tx, cobroId);
     if (!c) throw new Error("COBRO_NO_EXISTE");
