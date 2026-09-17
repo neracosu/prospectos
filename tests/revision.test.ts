@@ -220,6 +220,21 @@ describe.runIf(DB_HABILITADA)("bandeja de revision", () => {
     expect(f2.datos.nombre).toBe("");
   });
 
+  it("un nicho guardado con mayúsculas se encuentra igual, con cache y sin cache", async () => {
+    // MySQL compara los slugs sin distinguir mayúsculas ni acentos: la precarga de
+    // crearLote tiene que coincidir con la consulta de a una de corregirFila.
+    await prisma.nicho.create({
+      data: { slug: "Posadas", nombre: "Posadas", mensajeInicial: "Hola {nombre} {enlace}", mensajeSeguimiento: "¿Viste? {enlace}" },
+    });
+    const r = await crearLote("importado", [fila({ nicho: "posadas", nombre: "Posada Uno", ciudad: "Mérida" })], ids.prospectadorId);
+    expect(r).toMatchObject({ nuevos: 1, errores: 0 }); // con cache
+    const f = (await loteConDetalle(r.lote))!.filas[0];
+    expect(f.estado).toBe("nuevo");
+    expect((await corregirFila(f.id, fd({ nota: "revisada" }))).ok).toBe(true);
+    expect((await loteConDetalle(r.lote))!.filas[0].estado).toBe("nuevo"); // sin cache, lo mismo
+    expect((await aprobarFila(f.id)).ok).toBe(true);
+  });
+
   it("lotesRecientes ordena del más nuevo al más viejo con sus pendientes", async () => {
     const a = await crearLote("importado", [
       fila({ nombre: "Hotel Orden Uno", ciudad: "Caracas" }),

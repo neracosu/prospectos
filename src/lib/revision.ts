@@ -37,7 +37,12 @@ const SELECT_EXISTENTE = {
 const TROZO_CLAVES = 1000;
 // Tope de filas que aprueba una sola llamada a aprobarNuevos.
 export const TOPE_APROBACION = 500;
-const ENTRADA_VACIA: EntradaValidada = { nicho: "", nombre: "", ciudad: "", fuentes: [], fuentesPorCampo: {} };
+// Funcion, no constante: devuelve un objeto nuevo cada vez. Un singleton con
+// `fuentes: []` y `fuentesPorCampo: {}` lo comparten todas las filas ilegibles y
+// quien le empuje algo a uno se lo empuja a todas.
+function entradaVacia(): EntradaValidada {
+  return { nicho: "", nombre: "", ciudad: "", fuentes: [], fuentesPorCampo: {} };
+}
 
 // --- Lectura defensiva del JSON de la base -------------------------------
 // Las tres columnas Json se leen con guardas: un `as` a secas se cree cualquier
@@ -104,7 +109,16 @@ async function precargar(entradas: { entrada: EntradaValidada; errores: string[]
   const nichos = slugs.length
     ? await prisma.nicho.findMany({ where: { slug: { in: slugs } }, select: { id: true, slug: true } })
     : [];
-  const nichoPorSlug = new Map(nichos.map((n) => [n.slug, n.id]));
+  // La llave es el slug PEDIDO, no el que devolvio la base. MySQL compara con una
+  // colacion insensible a mayusculas y acentos, asi que un nicho guardado como
+  // "Posadas" entra en el findMany de "posadas": indexar por n.slug dejaba a
+  // clasificar sin encontrarlo y la misma fila daba "Nicho desconocido" con cache
+  // y "nuevo" sin cache.
+  const nichoPorSlug = new Map<string, number>();
+  for (const pedido of slugs) {
+    const hallado = nichos.find((n) => n.slug.localeCompare(pedido, undefined, { sensitivity: "base" }) === 0);
+    if (hallado) nichoPorSlug.set(pedido, hallado.id);
+  }
   const existentePorClave = new Map<string, number>();
   for (const [slug, nichoId] of nichoPorSlug) {
     // Solo las filas que van a llegar a la busqueda: las que ya traen error no
@@ -164,7 +178,7 @@ export async function loteConDetalle(
       // como error para que se descarte.
       if (!datos) {
         return {
-          id: f.id, lote: f.lote, origen: f.origen, fila: f.fila, datos: ENTRADA_VACIA,
+          id: f.id, lote: f.lote, origen: f.origen, fila: f.fila, datos: entradaVacia(),
           estado: "error" as Estado, errores: ["Datos inválidos"], existenteId: f.existenteId,
           existente: f.existente, decision: f.decision as Decision,
         };
