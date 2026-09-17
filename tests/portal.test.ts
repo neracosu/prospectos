@@ -32,7 +32,7 @@ describe.runIf(DB_HABILITADA)("consultas del portal", () => {
       { proyectoId: pms, concepto: "mensualidad", detalle: "Mensualidad de septiembre 2026", mes: "2026-09", monto: "100.00", vence: "2026-09-05", nota: "SECRETO nota interna" },
       { proyectoId: pms, concepto: "mensualidad", detalle: "Mensualidad de octubre 2026", mes: "2026-10", monto: "100.00", vence: "2026-10-05" },
       { proyectoId: pms, concepto: "cuota", detalle: "Cuota 3 de 3", monto: "933.34", vence: "2026-07-15", pagadoEn: new Date("2026-07-15T16:00:00Z"), canal: "pago_movil", reciboNumero: "R-2026-0004", reciboGeneradoEn: new Date() },
-      { proyectoId: pms, concepto: "extra", detalle: "SECRETO cobro anulado", monto: "50.00", vence: "2026-08-01", pagadoEn: new Date("2026-08-01T16:00:00Z"), canal: "zelle", anuladoEn: new Date(), anuladoMotivo: "error", reciboNumero: "R-2026-0005", reciboGeneradoEn: new Date() },
+      { proyectoId: pms, concepto: "extra", detalle: "SECRETO cobro anulado", monto: "50.00", vence: "2026-08-01", pagadoEn: new Date("2026-08-01T16:00:00Z"), canal: "zelle", referencia: "SECRETO referencia interna", anuladoEn: new Date(), anuladoMotivo: "SECRETO error interno", reciboNumero: "R-2026-0005", reciboGeneradoEn: new Date() },
       { proyectoId: deB, concepto: "extra", detalle: "SECRETO cobro de B", monto: "10.00", vence: "2026-09-01" },
     ] });
   });
