@@ -1,6 +1,6 @@
 "use client";
 import { useState, useTransition } from "react";
-import { guardarMensajesCobro, guardarDatosEmisor, guardarTarifa } from "@/acciones/ajustes";
+import { guardarMensajesCobro, guardarDatosEmisor, guardarTarifa, guardarMensajesAviso } from "@/acciones/ajustes";
 import type { DatosEmisor } from "@/lib/configuracion";
 
 function useEnvio() {
@@ -15,9 +15,24 @@ export function FormularioMensajesCobro({ recordatorio, vencido }: { recordatori
   return (
     <form className="tarjeta" action={(fd) => enviar(() => guardarMensajesCobro(fd))}>
       <b>Mensajes de cobro</b>
-      <p className="suave">Variables: {"{cliente} {proyecto} {monto} {concepto} {vence} {enlace}"}. {"{enlace}"} es el portal del cliente; queda vacío si ese cliente no tiene acceso activo.</p>
+      <p className="suave">Variables: {"{cliente} {proyecto} {monto} {concepto} {vence} {enlace}"}. {"{enlace}"} es el portal del cliente: ponlo en su propio renglón, porque si ese cliente no tiene acceso activo ese renglón no se envía.</p>
       <label className="campo"><span>Recordatorio (antes de vencer)</span><textarea name="recordatorio" rows={4} defaultValue={recordatorio} /></label>
       <label className="campo"><span>Vencido</span><textarea name="vencido" rows={4} defaultValue={vencido} /></label>
+      <button className="boton boton--primario" disabled={pendiente}>Guardar</button>
+      {msj && <p className={msj.ok ? "suave" : "error"} role="status">{msj.texto}</p>}
+    </form>
+  );
+}
+
+export function FormularioMensajesAviso({ hito, version, cobro }: { hito: string; version: string; cobro: string }) {
+  const { msj, pendiente, enviar } = useEnvio();
+  return (
+    <form className="tarjeta" action={(fd) => enviar(() => guardarMensajesAviso(fd))}>
+      <b>Avisos al cliente</b>
+      <p className="suave">Lo que se abre en WhatsApp con «Avisar al cliente». Variables de todos: {"{cliente} {proyecto} {enlace}"}. {"{enlace}"} va en su propio renglón: si el cliente no tiene acceso al portal, ese renglón no se envía.</p>
+      <label className="campo"><span>Hito cumplido (lleva {"{hito}"})</span><textarea name="hito" rows={4} defaultValue={hito} /></label>
+      <label className="campo"><span>Versión publicada (lleva {"{version}"}; {"{cambios}"} es la lista de cambios)</span><textarea name="version" rows={5} defaultValue={version} /></label>
+      <label className="campo"><span>Cobro registrado (lleva {"{monto}"}; también {"{concepto}"} y {"{vence}"})</span><textarea name="cobro" rows={4} defaultValue={cobro} /></label>
       <button className="boton boton--primario" disabled={pendiente}>Guardar</button>
       {msj && <p className={msj.ok ? "suave" : "error"} role="status">{msj.texto}</p>}
     </form>

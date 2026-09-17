@@ -107,3 +107,13 @@ button, input, select, textarea { font: inherit; }
 .estado-fila { margin: 8px 0 0; font-size: 14px; color: var(--verde); min-height: 0; }
 .estado-fila:empty { margin: 0; }
 .estado-fila--error { color: var(--rojo); }
+
+/* Pieza 5b: subir documentos. El selector nativo se tapa con un blanco grande para el dedo. */
+.subida { position: relative; display: flex; flex-direction: column; gap: 2px; justify-content: center; min-height: 72px; padding: 12px 14px; border: 1px dashed var(--tinta-suave); border-radius: 10px; margin-bottom: 12px; }
+.subida input[type=file] { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+.subida:focus-within { outline: 2px solid var(--verde); outline-offset: 2px; }
+.subida--elegido { border-style: solid; border-color: var(--verde); }
+.subida--error { border-style: solid; border-color: var(--rojo); }
+.subida b { overflow-wrap: anywhere; }
+.documento-fila { display: grid; grid-template-columns: 1fr auto; gap: 4px 8px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--borde); }
+.documento-fila b { overflow-wrap: anywhere; }

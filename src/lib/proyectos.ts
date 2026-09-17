@@ -7,8 +7,8 @@ import { redondear2 } from "@/lib/dinero";
 import type { ClienteFila } from "@/lib/clientes";
 
 export type ProyectoResumen = { id: number; nombre: string; clienteId: number; clienteNombre: string; estado: EstadoProyecto; versionActual: string; semaforo: Semaforo; avance: number | null };
-export type CobroFila = { id: number; concepto: Concepto; detalle: string; monto: number; vence: string; estado: EstadoCobro; pagadoEn: Date | null; canal: string; referencia: string; nota: string; anuladoMotivo: string; recordadoHoy: boolean; reciboNumero: string; notaAnulacion: boolean };
-export type PendienteFila = { id: number; texto: string; hecho: boolean; visibleCliente: boolean; orden: number; fechaEstimada: string | null };
+export type CobroFila = { id: number; concepto: Concepto; detalle: string; monto: number; vence: string; estado: EstadoCobro; pagadoEn: Date | null; canal: string; referencia: string; nota: string; anuladoMotivo: string; recordadoHoy: boolean; reciboNumero: string; notaAnulacion: boolean; avisado: boolean };
+export type PendienteFila = { id: number; texto: string; hecho: boolean; visibleCliente: boolean; orden: number; fechaEstimada: string | null; avisado: boolean };
 export type HorasFila = { id: number; fecha: string; horas: number; descripcion: string; usuarioNombre: string };
 export type VersionFila = { id: number; version: string; fecha: string; avisadoEn: Date | null; cambios: { id: number; tipo: TipoCambio; texto: string }[] };
 export type EventoProyecto = { id: number; tipo: string; texto: string; creadoEn: Date; usuarioNombre: string };
@@ -68,7 +68,7 @@ export async function fichaProyecto(id: number, hoy: string): Promise<ProyectoFi
   const cobros: CobroFila[] = p.cobros.map((c) => ({
     id: c.id, concepto: c.concepto as Concepto, detalle: c.detalle, monto: Number(c.monto), vence: c.vence, estado: estadoCobro(c, hoy), pagadoEn: c.pagadoEn,
     canal: c.canal, referencia: c.referencia, nota: c.nota, anuladoMotivo: c.anuladoMotivo, recordadoHoy: recordadosHoy.has(c.id),
-    reciboNumero: c.reciboNumero, notaAnulacion: c.notaAnulacionEn !== null,
+    reciboNumero: c.reciboNumero, notaAnulacion: c.notaAnulacionEn !== null, avisado: c.avisadoEn !== null,
   }));
   const versiones: VersionFila[] = [...p.versiones].sort((a, b) => compararSemver(b.version, a.version)).map((v) => ({ id: v.id, version: v.version, fecha: v.fecha, avisadoEn: v.avisadoEn, cambios: v.cambios.map((c) => ({ id: c.id, tipo: c.tipo as TipoCambio, texto: c.texto })) }));
   const { _count, ...cl } = p.cliente;
@@ -78,7 +78,7 @@ export async function fichaProyecto(id: number, hoy: string): Promise<ProyectoFi
     pagoUnico: Number(p.pagoUnico), mensualidad: Number(p.mensualidad), horasCotizadas: Number(p.horasCotizadas), fechaInicio: p.fechaInicio,
     fechaEntregaEstimada: p.fechaEntregaEstimada, fechaEntregaReal: p.fechaEntregaReal, diaCobroMensual: p.diaCobroMensual, propuestaCodigo: p.propuestaCodigo,
     cliente: { ...cl, proyectos: _count.proyectos }, cobros,
-    pendientes: p.pendientes.map((x) => ({ id: x.id, texto: x.texto, hecho: x.hecho, visibleCliente: x.visibleCliente, orden: x.orden, fechaEstimada: x.fechaEstimada })),
+    pendientes: p.pendientes.map((x) => ({ id: x.id, texto: x.texto, hecho: x.hecho, visibleCliente: x.visibleCliente, orden: x.orden, fechaEstimada: x.fechaEstimada, avisado: x.avisadoEn !== null })),
     horas: p.horas.map((h) => ({ id: h.id, fecha: h.fecha, horas: Number(h.horas), descripcion: h.descripcion, usuarioNombre: h.usuario?.nombre ?? "" })),
     horasReales: redondear2(p.horas.reduce((s, h) => s + Number(h.horas), 0)), versiones,
     historial: p.eventos.map((e) => ({ id: e.id, tipo: e.tipo, texto: e.texto, creadoEn: e.creadoEn, usuarioNombre: e.usuario?.nombre ?? "" })),

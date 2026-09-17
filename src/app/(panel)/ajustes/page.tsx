@@ -3,20 +3,23 @@ import { prisma } from "@/lib/db";
 import { listarUsuarios } from "@/lib/usuarios";
 import { leerConfig, leerEmisor, leerTarifaHora, CLAVES } from "@/lib/configuracion";
 import { FormularioNicho, FormularioUsuario } from "@/componentes/FormularioAjustes";
-import { FormularioMensajesCobro, FormularioEmisor, FormularioTarifa } from "@/componentes/FormularioAjustesCobros";
+import { FormularioMensajesCobro, FormularioEmisor, FormularioTarifa, FormularioMensajesAviso } from "@/componentes/FormularioAjustesCobros";
 import { FormularioPin } from "@/componentes/FormularioPin";
 
 export const dynamic = "force-dynamic";
 
 export default async function Ajustes() {
   await exigirRol("dueno");
-  const [nichos, usuarios, mensajeRecordatorio, mensajeVencido, emisor, tarifaHora] = await Promise.all([
+  const [nichos, usuarios, mensajeRecordatorio, mensajeVencido, emisor, tarifaHora, avisoHito, avisoVersion, avisoCobro] = await Promise.all([
     prisma.nicho.findMany({ orderBy: { nombre: "asc" } }),
     listarUsuarios(),
     leerConfig(CLAVES.mensajeRecordatorio),
     leerConfig(CLAVES.mensajeVencido),
     leerEmisor(),
     leerTarifaHora(),
+    leerConfig(CLAVES.avisoHito),
+    leerConfig(CLAVES.avisoVersion),
+    leerConfig(CLAVES.avisoCobro),
   ]);
   return (
     <>
@@ -32,6 +35,7 @@ export default async function Ajustes() {
       ))}
       <h2 className="titulo">Cobros</h2>
       <FormularioMensajesCobro recordatorio={mensajeRecordatorio} vencido={mensajeVencido} />
+      <FormularioMensajesAviso hito={avisoHito} version={avisoVersion} cobro={avisoCobro} />
       <FormularioEmisor emisor={emisor} />
       <FormularioTarifa tarifa={tarifaHora} />
       <h2 className="titulo">Mi PIN</h2>

@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import type { CobroFila } from "@/lib/proyectos";
 import { CANALES_COBRO, ETIQUETA_CANAL_COBRO, ETIQUETA_CONCEPTO, ETIQUETA_COBRO } from "@/lib/cobros-contrato";
 import { formatoUSD } from "@/lib/dinero";
-import { marcarPagado, anularCobro, agregarCobro, registrarRecordatorio } from "@/acciones/cobros";
+import { marcarPagado, anularCobro, agregarCobro, registrarRecordatorio, avisarCobro } from "@/acciones/cobros";
 import { AccionesRecibo } from "@/componentes/AccionesRecibo";
 
 export function TabCobros({ proyectoId, cobros, hoy, emisorListo }: { proyectoId: number; cobros: CobroFila[]; hoy: string; emisorListo: boolean }) {
@@ -28,17 +28,28 @@ export function TabCobros({ proyectoId, cobros, hoy, emisorListo }: { proyectoId
       router.refresh();
     } else setError(r.mensaje);
   });
+  const avisar = (id: number) => empezar(async () => {
+    const r = await avisarCobro(id);
+    if (r.ok) {
+      const ventana = window.open(r.datos.href, "_blank");
+      if (ventana) ventana.opener = null;
+      setEnlaceManual(ventana ? null : { id, href: r.datos.href });
+      setError("");
+      router.refresh();
+    } else setError(r.mensaje);
+  });
   return (
     <section className="tarjeta">
       {cobros.length === 0 && <p className="suave">Sin cobros.</p>}
       {cobros.map((c) => (
         <div key={c.id} className="cobro">
-          <span><b>{ETIQUETA_CONCEPTO[c.concepto]}</b>{c.detalle ? ` · ${c.detalle}` : ""}<br /><span className="suave">vence {c.vence}{c.pagadoEn ? ` · pagado ${c.pagadoEn.toLocaleDateString("es-VE", { timeZone: "America/Caracas" })} por ${c.canal}${c.referencia ? ` (${c.referencia})` : ""}` : ""}{c.anuladoMotivo ? ` · anulado: ${c.anuladoMotivo}` : ""}</span></span>
+          <span><b>{ETIQUETA_CONCEPTO[c.concepto]}</b>{c.detalle ? ` · ${c.detalle}` : ""}<br /><span className="suave">vence {c.vence}{c.pagadoEn ? ` · pagado ${c.pagadoEn.toLocaleDateString("es-VE", { timeZone: "America/Caracas" })} por ${c.canal}${c.referencia ? ` (${c.referencia})` : ""}` : ""}{c.anuladoMotivo ? ` · anulado: ${c.anuladoMotivo}` : ""}{c.avisado ? " · avisado al cliente" : ""}</span></span>
           <span style={{ textAlign: "right" }}><span className="cobro__monto">{formatoUSD(c.monto)}</span><br /><span className={`etiqueta etiqueta--${c.estado}`}>{ETIQUETA_COBRO[c.estado]}</span></span>
           {(c.estado === "vencido" || c.estado === "por_vencer" || c.estado === "pendiente") && (
             <div className="fila-botones" style={{ gridColumn: "1 / -1" }}>
               <button className="boton mini boton--primario" onClick={() => setAbierto({ id: c.id, modo: "pagar" })}>Marcar pagado</button>
               <button className="boton mini" disabled={pendiente} onClick={() => recordar(c.id)}>{c.recordadoHoy ? "Recordado hoy · reabrir" : "Recordar"}</button>
+              {(c.concepto === "cuota" || c.concepto === "extra") && !c.avisado && <button className="boton mini" disabled={pendiente} onClick={() => avisar(c.id)}>Avisar al cliente</button>}
               <button className="boton mini boton--peligro" onClick={() => { setMotivo(""); setAbierto({ id: c.id, modo: "anular" }); }}>Anular</button>
             </div>
           )}

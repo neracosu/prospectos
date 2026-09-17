@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { exigirRol } from "@/lib/sesion";
 import { hoyCaracas } from "@/lib/fecha-caracas";
 import { fichaProyecto } from "@/lib/proyectos";
+import { documentosDeProyecto } from "@/lib/documentos";
 import { leerTarifaHora, leerEmisor } from "@/lib/configuracion";
 import { faltantesEmisor } from "@/lib/recibos-contrato";
 import { formatoUSD } from "@/lib/dinero";
@@ -14,17 +15,18 @@ import { TabCobros } from "@/componentes/TabCobros";
 import { TabPendientes } from "@/componentes/TabPendientes";
 import { TabHoras } from "@/componentes/TabHoras";
 import { TabVersiones } from "@/componentes/TabVersiones";
+import { TabDocumentos } from "@/componentes/TabDocumentos";
 import { canalesDisponibles } from "@/lib/canales-contrato";
 
 export const dynamic = "force-dynamic";
-const PESTANAS = [{ clave: "cobros", texto: "Cobros" }, { clave: "pendientes", texto: "Pendientes" }, { clave: "horas", texto: "Horas" }, { clave: "versiones", texto: "Versiones" }, { clave: "cliente", texto: "Cliente" }];
-const TEXTO_EVENTO: Record<string, string> = { proyecto_creado: "Proyecto creado", proyecto_estado: "Estado", proyecto_editado: "Proyecto editado", cobro_pagado: "Cobro pagado", cobro_anulado: "Cobro anulado", cobro_agregado: "Cobro agregado", recordatorio: "Recordatorio enviado", hito_cumplido: "Hito cumplido", version_publicada: "Versión publicada", aviso_cliente: "Aviso al cliente", horas: "Horas", recibo_generado: "Recibo generado", nota_anulacion: "Nota de anulación" };
+const PESTANAS = [{ clave: "cobros", texto: "Cobros" }, { clave: "pendientes", texto: "Pendientes" }, { clave: "horas", texto: "Horas" }, { clave: "versiones", texto: "Versiones" }, { clave: "documentos", texto: "Documentos" }, { clave: "cliente", texto: "Cliente" }];
+const TEXTO_EVENTO: Record<string, string> = { proyecto_creado: "Proyecto creado", proyecto_estado: "Estado", proyecto_editado: "Proyecto editado", cobro_pagado: "Cobro pagado", cobro_anulado: "Cobro anulado", cobro_agregado: "Cobro agregado", recordatorio: "Recordatorio enviado", hito_cumplido: "Hito cumplido", version_publicada: "Versión publicada", aviso_cliente: "Aviso al cliente", horas: "Horas", recibo_generado: "Recibo generado", nota_anulacion: "Nota de anulación", documento_subido: "Documento subido", documento_quitado: "Documento quitado" };
 
 export default async function Proyecto({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<Record<string, string | undefined>> }) {
   await exigirRol("dueno");
   const id = Number((await params).id);
   const hoy = hoyCaracas();
-  const [p, tarifa, emisor] = await Promise.all([Number.isInteger(id) ? fichaProyecto(id, hoy) : null, leerTarifaHora(), leerEmisor()]);
+  const [p, tarifa, emisor, documentos] = await Promise.all([Number.isInteger(id) ? fichaProyecto(id, hoy) : null, leerTarifaHora(), leerEmisor(), Number.isInteger(id) && id > 0 ? documentosDeProyecto(id) : []]);
   if (!p) notFound();
   const tParam = (await searchParams).t;
   const t = tParam && PESTANAS.some((pestana) => pestana.clave === tParam) ? tParam : "cobros";
@@ -39,6 +41,7 @@ export default async function Proyecto({ params, searchParams }: { params: Promi
       {t === "pendientes" && <TabPendientes proyectoId={p.id} pendientes={p.pendientes} avance={p.avance} />}
       {t === "horas" && <TabHoras proyectoId={p.id} horas={p.horas} cotizadas={p.horasCotizadas} reales={p.horasReales} tarifa={tarifa} hoy={hoy} />}
       {t === "versiones" && <TabVersiones proyectoId={p.id} versiones={p.versiones} hoy={hoy} />}
+      {t === "documentos" && <TabDocumentos proyectoId={p.id} documentos={documentos} />}
       {t === "cliente" && (
         <section className="tarjeta">
           <b>{p.cliente.nombre}</b> <span className="suave">{p.cliente.contactoNombre}</span>
@@ -48,7 +51,7 @@ export default async function Proyecto({ params, searchParams }: { params: Promi
             <Link className="boton" href={`/clientes/${p.clienteId}`}>Editar cliente</Link>
           </div>
           {p.propuestaCodigo && <p className="suave">Propuesta aceptada: <a href={`/p/${p.propuestaCodigo}`} target="_blank" rel="noopener">ver</a></p>}
-          <p className="suave">El acceso al portal del cliente llega en la pieza 5.</p>
+          <p className="suave">El acceso al portal se envía desde la <Link href={`/clientes/${p.clienteId}`}>ficha del cliente</Link>.</p>
         </section>
       )}
       <section className="tarjeta">
