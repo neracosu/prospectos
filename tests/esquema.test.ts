@@ -37,4 +37,17 @@ describe.runIf(DB_HABILITADA)("esquema", () => {
     expect(r).toMatchObject({ estado: "nuevo", decision: "pendiente", fila: 1 });
     expect((r.datos as { nombre: string }).nombre).toBe("X");
   });
+
+  it("el correlativo es unico por serie y anio, y el cobro guarda cuando se genero su nota de anulacion", async () => {
+    const { nichoId } = await sembrarBasico();
+    await prisma.correlativo.create({ data: { serie: "R", anio: 2026 } });
+    await expect(prisma.correlativo.create({ data: { serie: "R", anio: 2026 } })).rejects.toThrow(/Unique/);
+    await prisma.correlativo.create({ data: { serie: "R", anio: 2027 } }); // otro anio, otra fila
+    expect((await prisma.correlativo.findUniqueOrThrow({ where: { serie_anio: { serie: "R", anio: 2026 } } })).ultimo).toBe(0);
+    const c = await sembrarCliente();
+    const p = await sembrarProyecto(c.id, nichoId);
+    const cobro = await prisma.cobro.create({ data: { proyectoId: p.id, concepto: "extra", monto: "10.00", vence: "2026-10-05" } });
+    expect(cobro.notaAnulacionEn).toBeNull();
+    expect(cobro.reciboNumero).toBe("");
+  });
 });

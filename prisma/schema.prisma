@@ -209,12 +209,15 @@ model Cobro {
   mes              String?
   reciboNumero     String    @default("")
   reciboGeneradoEn DateTime?
+  // Nota de anulacion R-AAAA-NNNN-A: cuando se genero su PDF. Nulo = todavia no existe.
+  notaAnulacionEn  DateTime?
   creadoEn         DateTime  @default(now())
   eventos          Evento[]
 
   @@unique([proyectoId, mes])
   @@index([proyectoId, vence])
   @@index([vence, pagadoEn])
+  @@index([reciboNumero])
 }
 
 model Pendiente {
@@ -267,4 +270,14 @@ model Cambio {
   tipo      String
   texto     String
   orden     Int     @default(0)
+}
+
+// Contador por serie y anio (pieza 4: serie "R" de los recibos). Se incrementa con la
+// fila bloqueada (SELECT ... FOR UPDATE), nunca con un UPDATE suelto.
+model Correlativo {
+  serie  String
+  anio   Int
+  ultimo Int    @default(0)
+
+  @@id([serie, anio])
 }
