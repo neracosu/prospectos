@@ -106,6 +106,17 @@ beforeAll(async () => {
       res.writeHead(200, { "content-type": "text/plain; charset=utf-8" });
       return res.end("a".repeat(999) + "é" + "b".repeat(50));
     }
+    if (req.url === "/incompleta-utf8") {
+      // Respuesta COMPLETA (no truncada por maxBytes) cuyo ultimo byte es el inicio
+      // invalido/incompleto de un caracter multibyte: a diferencia de /multibyte, aqui
+      // SI debe verse el caracter de reemplazo, porque el cuerpo real termina asi.
+      res.writeHead(200, { "content-type": "text/plain; charset=utf-8" });
+      return res.end(Buffer.concat([Buffer.from("hola "), Buffer.from([0xc3])]));
+    }
+    if (req.url === "/exacto100") {
+      res.writeHead(200, { "content-type": "text/plain" });
+      return res.end("x".repeat(100));
+    }
     if (req.url === "/cortada") {
       res.writeHead(200, { "content-length": "1000" });
       res.write("x".repeat(100));
@@ -163,16 +174,19 @@ describe("esUrlPermitida", () => {
   });
 
   it("rechaza nombres bloqueados por forma aunque el DNS pudiera decir otra cosa", async () => {
-    for (const u of [
-      "http://algo.localhost/",
-      "http://algo.localhost./", // punto final: mismo nombre, no un escape
-      "http://impresora.local/",
-      "http://svc.internal/",
-      "http://0.0.0.0/",
-    ]) {
+    for (const u of ["http://algo.localhost/", "http://impresora.local/", "http://svc.internal/", "http://0.0.0.0/"]) {
       const r = await esUrlPermitida(u);
       expect(r.ok, u).toBe(false);
     }
+  });
+
+  it("un punto final en el nombre no evita el bloqueo por forma, aunque el DNS diga que es publica", async () => {
+    // Sin inyectar un resolvedor "publico" de por medio, este caso pasaria igual por
+    // simple falla de DNS real (ENOTFOUND en ".localhost."), lo que no probaria nada:
+    // por eso se fuerza una IP publica (8.8.8.8) y confianza total en ella, para que
+    // el unico motivo posible de rechazo sea el bloqueo por FORMA del nombre.
+    const r = await esUrlPermitida("http://algo.localhost./", async () => "8.8.8.8", true);
+    expect(r).toEqual({ ok: false, motivo: "Dirección privada o local no permitida" });
   });
 
   it("rechaza IPv4 disfrazadas (decimal, hex, octal, forma corta) y rangos reservados/benchmarking", async () => {
@@ -236,6 +250,11 @@ describe("esUrlPermitida", () => {
         const r = await esUrlPermitida("http://ejemplo.test/x", async () => "127.0.0.1", true);
         expect(r.ok, String(valor)).toBe(false);
       }
+      // Produccion "protegida": ni siquiera PROSPECTOS_TEST_DB=1 puesto por error alcanza.
+      entorno.NODE_ENV = "production";
+      entorno.PROSPECTOS_TEST_DB = "1";
+      const rProdConFlag = await esUrlPermitida("http://ejemplo.test/x", async () => "127.0.0.1", true);
+      expect(rProdConFlag.ok).toBe(false);
     } finally {
       if (previoNodeEnv === undefined) delete entorno.NODE_ENV;
       else entorno.NODE_ENV = previoNodeEnv;
@@ -289,6 +308,27 @@ describe("descargar", () => {
     }
   });
 
+  it("una respuesta COMPLETA que termina en un byte UTF-8 invalido SI muestra el caracter de reemplazo", async () => {
+    // A diferencia del corte por maxBytes (arriba), aqui no hay ningun limite de por
+    // medio: el cuerpo real llega entero y termina en un byte invalido, asi que debe
+    // decodificarse como lo haria cualquier lector de UTF-8 (con U+FFFD al final).
+    const r = await descargar(url("/incompleta-utf8"), { ...publica });
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.truncado).toBeUndefined();
+      expect(r.texto.endsWith("�")).toBe(true);
+    }
+  });
+
+  it("un cuerpo de exactamente maxBytes bytes, completo, no se marca truncado", async () => {
+    const r = await descargar(url("/exacto100"), { ...publica, maxBytes: 100 });
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.texto.length).toBe(100);
+      expect(r.truncado).toBeUndefined();
+    }
+  });
+
   it("una conexion cortada a medio cuerpo no se reporta como exitosa", async () => {
     const r = await descargar(url("/cortada"), { ...publica });
     expect(r).toEqual({ ok: false, motivo: "La descarga se cortó" });
@@ -334,18 +374,13 @@ describe("descargar", () => {
   });
 
   it("una redireccion hacia una IP privada se rechaza aunque el origen sea publico", async () => {
-    // El primer salto "resuelve" (via el inyector de pruebas) a una IP publica de verdad
-    // (93.184.216.34, ejemplo.com historico) que no existe como servidor en este entorno,
-    // asi que la conexion real al primer host puede fallar antes de llegar al segundo
-    // salto. Lo que importa aqui es que el resultado final sea de rechazo: si viene de no
-    // poder conectar o de la guardia del segundo salto da igual, porque _esSaltoPermitido
-    // ya esta probado por separado (y descargar lo ejecuta en cada iteracion del bucle).
-    const r = await descargar(url("/privado"), {
-      ...publica,
-      timeoutMs: 1500,
-      _lookupParaTests: async (h: string) => (h === "ejemplo.test" ? "93.184.216.34" : h),
-    });
-    expect(r.ok).toBe(false);
+    // El primer salto pasa la guardia gracias al resolvedor de pruebas de siempre
+    // (publica, sin pisarlo), pero /privado redirige a un literal "http://127.0.0.1:.../final":
+    // ese segundo salto es una IP literal, asi que la guardia lo revisa directo, sin
+    // pasar nunca por el resolvedor inyectado (los literales de IP nunca lo usan).
+    // Determinista: no depende de si el entorno tiene salida real a internet.
+    const r = await descargar(url("/privado"), { ...publica });
+    expect(r).toEqual({ ok: false, motivo: "Dirección privada o local no permitida" });
   });
 
   it("sin resolvedor inyectado, un host que resuelve a 127.0.0.1 se rechaza", async () => {

@@ -17,9 +17,14 @@ import { StringDecoder } from "node:string_decoder";
 export const USER_AGENT = "prospectos.neracosu.com (contacto: neracosu@gmail.com)";
 
 // Lista blanca para las opciones que solo existen para pruebas: fuera de esto se
-// ignoran siempre, sin excepcion (ni "esta corriendo en mi maquina", ni nada).
+// ignoran siempre, sin excepcion (ni "esta corriendo en mi maquina", ni nada). El
+// "!== production" es a proposito: si por error queda PROSPECTOS_TEST_DB=1 puesto
+// en un entorno de produccion, igual no alcanza para activar el resolvedor de pruebas.
 function enListaBlancaDePruebas(): boolean {
-  return process.env.NODE_ENV === "test" || process.env.PROSPECTOS_TEST_DB === "1";
+  return (
+    process.env.NODE_ENV !== "production" &&
+    (process.env.NODE_ENV === "test" || process.env.PROSPECTOS_TEST_DB === "1")
+  );
 }
 
 type Opciones = {
@@ -295,17 +300,24 @@ function conectarFijo(
         const partes: Buffer[] = [];
         let total = 0;
         res.on("data", (chunk: Buffer) => {
-          if (total >= opts.maxBytes) return;
-          const restante = opts.maxBytes - total;
-          // Solo se cuenta (y se guarda) lo que realmente se conserva: si el chunk
-          // se recorta, el sobrante ni se suma ni se acumula en "partes".
-          const trozo = restante < chunk.length ? chunk.subarray(0, restante) : chunk;
-          partes.push(trozo);
-          total += trozo.length;
           if (total >= opts.maxBytes) {
+            // Ya se habia llegado exacto al limite (sin recortar nada todavia) y
+            // sigue llegando mas: recien ahora hay algo que de verdad se descarta.
             truncado = true;
             res.destroy();
+            return;
           }
+          const restante = opts.maxBytes - total;
+          if (chunk.length > restante) {
+            // Este chunk por si solo se pasa del limite: se guarda solo lo que entra.
+            partes.push(chunk.subarray(0, restante));
+            total += restante;
+            truncado = true;
+            res.destroy();
+            return;
+          }
+          partes.push(chunk);
+          total += chunk.length;
         });
         // Sin este listener, un error del lado del stream de respuesta (el servidor
         // corta la conexion a medio cuerpo) se relanza y tumba el proceso: la
@@ -315,10 +327,14 @@ function conectarFijo(
           if (agotado) return terminar(new ErrorTiempoAgotado());
           const ubicacion = (res.headers.location as string | undefined) ?? null;
           if (truncado || res.complete) {
-            // StringDecoder.write() (sin end()) deja afuera cualquier caracter
-            // multibyte incompleto al final en vez de convertirlo en U+FFFD: es
-            // exactamente lo que hace falta cuando maxBytes corta a media secuencia.
-            const texto = new StringDecoder("utf8").write(Buffer.concat(partes));
+            // write() sin end() deja afuera cualquier caracter multibyte incompleto
+            // al final en vez de convertirlo en U+FFFD: es lo que hace falta cuando
+            // maxBytes corta a media secuencia. Pero si la respuesta llego COMPLETA
+            // (no truncada), se cierra con end(): un cuerpo real que termine en un
+            // byte UTF-8 invalido/incompleto debe verse como tal (U+FFFD), no perderse.
+            const d = new StringDecoder("utf8");
+            let texto = d.write(Buffer.concat(partes));
+            if (!truncado) texto += d.end();
             return terminar(truncado ? { estado: res.statusCode ?? 0, ubicacion, texto, truncado: true } : { estado: res.statusCode ?? 0, ubicacion, texto });
           }
           terminar(new ErrorDescargaCortada());
