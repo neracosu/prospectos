@@ -2,10 +2,12 @@
 import { Fragment, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { PendienteFila } from "@/lib/proyectos";
+import { fechaVisible } from "@/lib/fecha-caracas";
 import { agregarPendiente, marcarPendiente, alternarVisible, moverPendiente, eliminarPendiente, avisarHito } from "@/acciones/pendientes";
 
 export function TabPendientes({ proyectoId, pendientes, avance }: { proyectoId: number; pendientes: PendienteFila[]; avance: number | null }) {
   const [error, setError] = useState("");
+  const [abierta, setAbierta] = useState<number | null>(null); // la fila con sus acciones secundarias a la vista
   const [pendiente, empezar] = useTransition();
   const router = useRouter();
   const correr = (fn: () => Promise<{ ok: boolean; mensaje?: string }>) => empezar(async () => { const r = await fn(); if (r.ok) { setError(""); router.refresh(); } else setError(r.mensaje ?? "Error"); });
@@ -30,12 +32,21 @@ export function TabPendientes({ proyectoId, pendientes, avance }: { proyectoId: 
         <Fragment key={p.id}>
           <div className="pendiente">
             <input type="checkbox" checked={p.hecho} disabled={pendiente} onChange={(e) => correr(() => marcarPendiente(p.id, e.target.checked))} aria-label={p.texto} />
-            <span style={{ flex: 1 }}><span className={p.hecho ? "hecho" : ""}>{p.texto}</span>{p.fechaEstimada ? <span className="suave"> · {p.fechaEstimada}</span> : null}{p.avisado ? <span className="suave"> · avisado</span> : null}</span>
-            <button className="boton mini" title={p.visibleCliente ? "Visible al cliente" : "Interno"} disabled={pendiente} onClick={() => correr(() => alternarVisible(p.id))}>{p.visibleCliente ? "👁" : "—"}</button>
-            <button className="boton mini" disabled={pendiente || i === 0} aria-label="Subir" onClick={() => correr(() => moverPendiente(p.id, "arriba"))}>↑</button>
-            <button className="boton mini" disabled={pendiente || i === pendientes.length - 1} aria-label="Bajar" onClick={() => correr(() => moverPendiente(p.id, "abajo"))}>↓</button>
-            <button className="boton mini boton--peligro" disabled={pendiente} aria-label="Eliminar" onClick={() => { if (confirm("¿Eliminar este pendiente?")) correr(() => eliminarPendiente(p.id)); }}>×</button>
+            <span style={{ flex: 1 }}>
+              <span className={p.hecho ? "hecho" : ""}>{p.texto}</span>
+              {/* Lo que antes decia un icono de ojo ahora lo dice el texto: si lo ve el cliente, para cuando, y si ya se aviso. */}
+              <small className="pendiente__dato">{[p.visibleCliente ? "Lo ve el cliente" : "Interno", p.fechaEstimada ? `para el ${fechaVisible(p.fechaEstimada)}` : null, p.avisado ? "avisado" : null].filter(Boolean).join(", ")}</small>
+            </span>
+            <button type="button" className="boton mini boton--mas" aria-label={`Más acciones de: ${p.texto}`} aria-expanded={abierta === p.id} onClick={() => setAbierta((a) => (a === p.id ? null : p.id))}><span aria-hidden="true">···</span></button>
           </div>
+          {abierta === p.id && (
+            <div className="fila-botones fila-botones--secundarias" style={{ margin: "0 0 8px" }}>
+              <button className="boton mini" disabled={pendiente} onClick={() => correr(() => alternarVisible(p.id))}>{p.visibleCliente ? "Pasar a interno" : "Mostrar al cliente"}</button>
+              <button className="boton mini" disabled={pendiente || i === 0} onClick={() => correr(() => moverPendiente(p.id, "arriba"))}>Subir</button>
+              <button className="boton mini" disabled={pendiente || i === pendientes.length - 1} onClick={() => correr(() => moverPendiente(p.id, "abajo"))}>Bajar</button>
+              <button className="boton mini boton--peligro" disabled={pendiente} onClick={() => { if (confirm("¿Eliminar este pendiente?")) correr(() => eliminarPendiente(p.id)); }}>Eliminar</button>
+            </div>
+          )}
           {p.hecho && p.visibleCliente && !p.avisado && (
             <div className="fila-botones" style={{ margin: "0 0 8px" }}><button className="boton mini" disabled={pendiente} onClick={() => avisar(p.id)}>Avisar al cliente</button></div>
           )}

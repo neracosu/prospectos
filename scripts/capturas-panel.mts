@@ -91,7 +91,7 @@ try {
     await pg.screenshot({ path: `${SALIDA}/${nombre}-completa.png`, fullPage: true });
   }
   // Las acciones secundarias detras de «···» (si la pantalla ya las tiene): Hoy y los cobros de un proyecto.
-  for (const [nombre, ruta] of [["01b-hoy-mas-acciones", "/hoy"], ["05b-cobros-mas-acciones", `/proyectos/${pms.id}?t=cobros`]] as const) {
+  for (const [nombre, ruta] of [["01b-hoy-mas-acciones", "/hoy"], ["05b-cobros-mas-acciones", `/proyectos/${pms.id}?t=cobros`], ["06b-pendientes-mas-acciones", `/proyectos/${pms.id}?t=pendientes`]] as const) {
     await pg.goto(`${BASE}${ruta}`, { waitUntil: "networkidle" });
     const mas = pg.locator("button.boton--mas");
     if (await mas.count()) { await mas.nth(ruta === "/hoy" ? 2 : 1).click(); await pg.screenshot({ path: `${SALIDA}/${nombre}.png`, fullPage: true }); }
