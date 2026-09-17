@@ -6,6 +6,7 @@ import { exigirRol } from "@/lib/sesion";
 import { esFechaIso } from "@/lib/fecha-caracas";
 import { esSemver, compararSemver, parsearChangelog, TIPOS_CAMBIO, ETIQUETA_CAMBIO } from "@/lib/semver-contrato";
 import { enlaceWhatsappCobro } from "@/lib/mensajes-cobro";
+import { enlaceSiTieneAcceso } from "@/lib/acceso-cliente";
 import { fallo, exito, type Resultado } from "@/acciones/resultado";
 
 // exigirRol("dueno") FUERA del try/catch. Una version avisada al cliente no se edita: se corrige con otra.
@@ -99,7 +100,8 @@ export async function marcarAvisada(versionId: number): Promise<Resultado<{ href
     });
     const lineas = v.cambios.map((c) => `• ${ETIQUETA_CAMBIO[c.tipo as keyof typeof ETIQUETA_CAMBIO] ?? c.tipo}: ${c.texto}`).join("\n");
     const quien = v.proyecto.cliente.contactoNombre || v.proyecto.cliente.nombre;
-    const mensaje = `Buenas, ${quien}. Publicamos la versión ${v.version} de ${v.proyecto.nombre}:\n${lineas}\nCualquier duda me escribe por aquí.`;
+    const enlace = await enlaceSiTieneAcceso(v.proyecto.clienteId);
+    const mensaje = `Buenas, ${quien}. Publicamos la versión ${v.version} de ${v.proyecto.nombre}:\n${lineas}\n${enlace ? `Puede verla en su portal: ${enlace}\n` : ""}Cualquier duda me escribe por aquí.`;
     // El whatsapp ya se valido arriba, asi que el enlace nunca sale nulo.
     const href = enlaceWhatsappCobro(v.proyecto.cliente.whatsapp, mensaje)!;
     refrescar(v.proyectoId);

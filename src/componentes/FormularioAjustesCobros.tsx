@@ -15,7 +15,7 @@ export function FormularioMensajesCobro({ recordatorio, vencido }: { recordatori
   return (
     <form className="tarjeta" action={(fd) => enviar(() => guardarMensajesCobro(fd))}>
       <b>Mensajes de cobro</b>
-      <p className="suave">Variables: {"{cliente} {proyecto} {monto} {concepto} {vence} {enlace}"}. {"{enlace}"} queda vacío hasta que exista el portal del cliente.</p>
+      <p className="suave">Variables: {"{cliente} {proyecto} {monto} {concepto} {vence} {enlace}"}. {"{enlace}"} es el portal del cliente; queda vacío si ese cliente no tiene acceso activo.</p>
       <label className="campo"><span>Recordatorio (antes de vencer)</span><textarea name="recordatorio" rows={4} defaultValue={recordatorio} /></label>
       <label className="campo"><span>Vencido</span><textarea name="vencido" rows={4} defaultValue={vencido} /></label>
       <button className="boton boton--primario" disabled={pendiente}>Guardar</button>

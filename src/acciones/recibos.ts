@@ -8,6 +8,7 @@ import type { Concepto } from "@/lib/cobros-contrato";
 import { conceptoRecibo, mensajeRecibo } from "@/lib/recibos-contrato";
 import { generarRecibo, generarNotaAnulacion } from "@/lib/recibos";
 import { enlaceWhatsappCobro } from "@/lib/mensajes-cobro";
+import { enlaceSiTieneAcceso } from "@/lib/acceso-cliente";
 import { fallo, exito, type Resultado } from "@/acciones/resultado";
 
 // exigirRol("dueno") va FUERA del try/catch. Solo el dueno genera, avisa y anula recibos.
@@ -52,6 +53,7 @@ export async function avisarRecibo(cobroId: number): Promise<Resultado<{ href: s
     const mensaje = mensajeRecibo({
       cliente: cliente.contactoNombre || cliente.nombre, numero: c.reciboNumero, monto: Number(c.monto),
       concepto: conceptoRecibo({ concepto: c.concepto as Concepto, detalle: c.detalle, mes: c.mes }, c.proyecto.nombre),
+      enlace: await enlaceSiTieneAcceso(c.proyecto.clienteId),
     });
     const href = enlaceWhatsappCobro(cliente.whatsapp, mensaje);
     const texto = `recibo ${c.reciboNumero}`;

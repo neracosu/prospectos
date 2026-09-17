@@ -137,4 +137,8 @@ describe("mensajeRecibo", () => {
     expect(mensajeRecibo({ cliente: "Ana", numero: "R-2026-0001", concepto: "PMS: Extra — Reportes", monto: 350 }))
       .toBe("Buenas, Ana. Le envío el recibo de pago R-2026-0001 por $350,00, correspondiente a PMS: Extra — Reportes. Gracias por su pago.");
   });
+  it("con enlace del portal dice donde bajarlo", () => {
+    expect(mensajeRecibo({ cliente: "Ana", numero: "R-2026-0001", concepto: "PMS: Extra — Reportes", monto: 350, enlace: "https://x.test/c/abc" }))
+      .toBe("Buenas, Ana. Le envío el recibo de pago R-2026-0001 por $350,00, correspondiente a PMS: Extra — Reportes. También puede descargarlo en su portal: https://x.test/c/abc Gracias por su pago.");
+  });
 });

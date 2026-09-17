@@ -131,7 +131,9 @@ export function incrustarFuentes(plantilla: string, fuentes: Record<string, stri
   });
 }
 
-// El PDF no viaja en el enlace de WhatsApp: lo adjunta Neri desde el telefono.
-export function mensajeRecibo(d: { cliente: string; numero: string; concepto: string; monto: number }): string {
-  return `Buenas, ${d.cliente}. Le envío el recibo de pago ${d.numero} por ${formatoUSD(d.monto)}, correspondiente a ${d.concepto}. Gracias por su pago.`;
+// El PDF no viaja en el enlace de WhatsApp: lo adjunta Neri desde el telefono. Si el cliente tiene
+// portal, el mensaje dice ademas donde bajarlo.
+export function mensajeRecibo(d: { cliente: string; numero: string; concepto: string; monto: number; enlace?: string }): string {
+  const portal = d.enlace ? ` También puede descargarlo en su portal: ${d.enlace}` : "";
+  return `Buenas, ${d.cliente}. Le envío el recibo de pago ${d.numero} por ${formatoUSD(d.monto)}, correspondiente a ${d.concepto}.${portal} Gracias por su pago.`;
 }

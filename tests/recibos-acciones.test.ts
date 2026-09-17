@@ -29,6 +29,7 @@ import { guardarConfig, CLAVES } from "@/lib/configuracion";
 import { rutaDocumento } from "@/lib/recibos";
 import { generarReciboDeCobro, avisarRecibo, generarNotaDeAnulacion } from "@/acciones/recibos";
 import { anularCobro } from "@/acciones/cobros";
+import { darAcceso } from "@/lib/acceso-cliente";
 
 const EMISOR = JSON.stringify({ nombre: "Neri Colón", rif: "V-12345678-9", whatsapp: "584121234567", email: "neri@ejemplo.test" });
 
@@ -140,5 +141,17 @@ describe.runIf(DB_HABILITADA)("acciones de recibos", () => {
       await guardarConfig(CLAVES.emisor, EMISOR);
     }
     expect((await generarNotaDeAnulacion(c.id)).ok).toBe(true);
+  });
+
+  it("si el cliente tiene acceso al portal, el aviso del recibo lleva su enlace", async () => {
+    const cl = await sembrarCliente({ nombre: "Hotel Con Portal", whatsapp: "584127777777" });
+    const p = await sembrarProyecto(cl.id, ids.nichoId, { estado: "activo" });
+    const cobro = await cobroPagado("Con portal", p.id);
+    await generarReciboDeCobro(cobro.id);
+    const antes = await avisarRecibo(cobro.id);
+    expect(antes.ok && antes.datos.mensaje).not.toContain("/c/");
+    await darAcceso(cl.id);
+    const despues = await avisarRecibo(cobro.id);
+    expect(despues.ok && despues.datos.mensaje).toContain(`/c/${cl.codigo}`);
   });
 });

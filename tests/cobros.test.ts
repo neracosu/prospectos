@@ -36,6 +36,11 @@ describe("mensajeDeCobro", () => {
     const multilinea = { recordatorio: "línea 1\n\nlínea 2  con  espacios", vencido: "" };
     expect(mensajeDeCobro(c, { nombre: "P" }, { nombre: "C", contactoNombre: "" }, multilinea)).toBe("línea 1\n\nlínea 2 con espacios");
   });
+  it("pone el enlace del portal cuando se lo pasan, y sin el queda como antes", () => {
+    const c = { concepto: "mensualidad" as const, detalle: "octubre 2026", monto: 100, vence: "2026-10-05", estado: "por_vencer" as const };
+    expect(mensajeDeCobro(c, { nombre: "PMS" }, { nombre: "Hotel X", contactoNombre: "Ana" }, plantillas, "https://x.test/c/abc")).toBe("Hola Ana: Mensualidad (octubre 2026) de PMS por $100,00 vence el 05/10/2026. https://x.test/c/abc");
+    expect(mensajeDeCobro(c, { nombre: "PMS" }, { nombre: "Hotel X", contactoNombre: "Ana" }, plantillas)).toBe("Hola Ana: Mensualidad (octubre 2026) de PMS por $100,00 vence el 05/10/2026.");
+  });
 });
 
 describe.runIf(DB_HABILITADA)("acciones de cobros", () => {

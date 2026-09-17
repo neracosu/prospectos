@@ -8,11 +8,12 @@ export function mensajeDeCobro(
   c: { concepto: Concepto; detalle: string; monto: number; vence: string; estado: EstadoCobro },
   proyecto: { nombre: string }, cliente: { nombre: string; contactoNombre: string },
   plantillas: { recordatorio: string; vencido: string },
+  enlace = "",
 ): string {
   const plantilla = c.estado === "vencido" ? plantillas.vencido : plantillas.recordatorio;
   const concepto = c.detalle ? `${ETIQUETA_CONCEPTO[c.concepto]} (${c.detalle})` : ETIQUETA_CONCEPTO[c.concepto];
-  // {enlace} es el portal del cliente (pieza 5); hasta entonces va vacio.
-  const texto = rellenar(plantilla, { cliente: cliente.contactoNombre || cliente.nombre, proyecto: proyecto.nombre, monto: formatoUSD(c.monto), concepto, vence: fechaVisible(c.vence), enlace: "" });
+  // {enlace} es el portal del cliente (pieza 5); vacio si el cliente no tiene acceso activo.
+  const texto = rellenar(plantilla, { cliente: cliente.contactoNombre || cliente.nombre, proyecto: proyecto.nombre, monto: formatoUSD(c.monto), concepto, vence: fechaVisible(c.vence), enlace });
   // Solo se colapsa el espacio horizontal (no el salto de linea), asi las plantillas
   // multilinea sobreviven; el espacio sobrante al final de cada linea tambien se recorta.
   return texto

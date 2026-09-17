@@ -10,6 +10,7 @@ import { CANALES_COBRO, ETIQUETA_CANAL_COBRO, estadoCobro, type Concepto } from 
 import { leerConfig, CLAVES } from "@/lib/configuracion";
 import { mensajeDeCobro, enlaceWhatsappCobro } from "@/lib/mensajes-cobro";
 import { generarNotaAnulacion } from "@/lib/recibos";
+import { enlaceSiTieneAcceso } from "@/lib/acceso-cliente";
 import { fallo, exito, type Resultado } from "@/acciones/resultado";
 
 // exigirRol("dueno") va FUERA del try/catch. Nada se borra: los cobros se anulan con motivo (tambien los pagados).
@@ -116,7 +117,7 @@ export async function registrarRecordatorio(cobroId: number): Promise<Resultado<
     if (c.pagadoEn || c.anuladoEn) return fallo("Ese cobro ya está pagado o anulado.");
     const hoy = hoyCaracas();
     const mensaje = mensajeDeCobro({ concepto: c.concepto as Concepto, detalle: c.detalle, monto: Number(c.monto), vence: c.vence, estado: estadoCobro(c, hoy) }, c.proyecto, c.proyecto.cliente,
-      { recordatorio: await leerConfig(CLAVES.mensajeRecordatorio), vencido: await leerConfig(CLAVES.mensajeVencido) });
+      { recordatorio: await leerConfig(CLAVES.mensajeRecordatorio), vencido: await leerConfig(CLAVES.mensajeVencido) }, await enlaceSiTieneAcceso(c.proyecto.clienteId));
     const href = enlaceWhatsappCobro(c.proyecto.cliente.whatsapp, mensaje);
     if (!href) return fallo("El cliente no tiene WhatsApp cargado. Agrégalo en su ficha o copia el mensaje.");
     const desde = new Date(`${hoy}T00:00:00-04:00`);
