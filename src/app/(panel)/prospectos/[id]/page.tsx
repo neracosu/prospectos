@@ -5,6 +5,7 @@ import { ETIQUETA_CANAL, type Canal } from "@/lib/canales-contrato";
 import { Etapa } from "@/componentes/Etapa";
 import { FichaAcciones } from "@/componentes/FichaAcciones";
 import { BotonCopiar } from "@/componentes/BotonCopiar";
+import { SugerenciasWeb } from "@/componentes/SugerenciasWeb";
 
 export const dynamic = "force-dynamic";
 
@@ -15,9 +16,13 @@ export default async function Ficha({ params }: { params: Promise<{ id: string }
   const id = Number((await params).id);
   const p = Number.isInteger(id) ? await fichaProspecto(id) : null;
   if (!p) notFound();
-  const contacto: [string, string][] = [
-    ["WhatsApp", p.whatsapp ? `https://wa.me/${p.whatsapp}` : ""], ["Teléfono", p.telefono ? `tel:${p.telefono.replace(/[^\d+]/g, "")}` : ""],
-    ["Correo", p.email ? `mailto:${p.email}` : ""], ["Web", p.web], ["Instagram", p.instagram], ["Facebook", p.facebook], ["TikTok", p.tiktok],
+  // [etiqueta, enlace, campo]: el campo es el que guarda fuentesPorCampo, para
+  // poder mostrar al lado de cada dato donde lo publica el negocio.
+  const contacto: [string, string, string][] = [
+    ["WhatsApp", p.whatsapp ? `https://wa.me/${p.whatsapp}` : "", "whatsapp"],
+    ["Teléfono", p.telefono ? `tel:${p.telefono.replace(/[^\d+]/g, "")}` : "", "telefono"],
+    ["Correo", p.email ? `mailto:${p.email}` : "", "email"],
+    ["Web", p.web, "web"], ["Instagram", p.instagram, "instagram"], ["Facebook", p.facebook, "facebook"], ["TikTok", p.tiktok, "tiktok"],
   ];
   return (
     <>
@@ -25,9 +30,23 @@ export default async function Ficha({ params }: { params: Promise<{ id: string }
       <p className="suave">{p.ciudad} · {p.nichoNombre}{p.tipo ? ` · ${p.tipo}` : ""}{p.tamano ? ` · ${p.tamano}` : ""}</p>
       <section className="tarjeta">
         <b>Contacto</b>
-        {contacto.filter(([, h]) => h).map(([t, h]) => <div key={t} className="fila"><span>{t}</span><a href={h} target="_blank" rel="noopener">{h.replace(/^(https?:\/\/|mailto:|tel:)/, "")}</a></div>)}
+        {contacto.filter(([, h]) => h).map(([t, h, campo]) => {
+          const fuente = p.fuentesPorCampo[campo] ?? "";
+          return (
+            <div key={t} className="fila">
+              <span>{t}</span>
+              <span className="fila__valor">
+                <a href={h} target="_blank" rel="noopener">{h.replace(/^(https?:\/\/|mailto:|tel:)/, "")}</a>
+                {/^https?:\/\//i.test(fuente) && (
+                  <a className="fuente-dato" href={fuente} target="_blank" rel="noopener" title={fuente} aria-label={`Dónde publican el dato: ${t}`}>↗</a>
+                )}
+              </span>
+            </div>
+          );
+        })}
         {p.fuentes.length > 0 && <p className="suave">Fuentes: {p.fuentes.map((f, i) => <a key={i} href={f} target="_blank" rel="noopener">[{i + 1}] </a>)}</p>}
       </section>
+      <SugerenciasWeb prospectoId={p.id} tieneWeb={!!p.web} />
       {p.tienePropuesta && (
         <section className="tarjeta">
           <b>Propuesta</b>

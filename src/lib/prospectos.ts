@@ -5,6 +5,7 @@ import { ordenarCola } from "@/lib/cola-contrato";
 import { ETAPAS, type Etapa } from "@/lib/embudo-contrato";
 import { rellenar } from "@/lib/plantilla-mensaje";
 import { enlacePropuesta, type ProspectoTarjeta } from "@/lib/prospectos-contrato";
+import { mapaDeTextos } from "@/lib/revision";
 
 const SELECT = {
   id: true, nombre: true, ciudad: true, nota: true, web: true, tipo: true, tamano: true, etapa: true, proximoSeguimiento: true, codigo: true,
@@ -77,14 +78,19 @@ export async function buscarProspectos(f: { q?: string; nichoId?: number; etapa?
 
 export type EventoFila = { id: number; tipo: string; de: string; a: string; canal: string; texto: string; creadoEn: Date; usuarioNombre: string };
 
-export async function fichaProspecto(id: number): Promise<(ProspectoTarjeta & { fuentes: string[]; historial: EventoFila[] }) | null> {
-  const f = await prisma.prospecto.findUnique({ where: { id }, select: { ...SELECT, fuentes: true } });
+export async function fichaProspecto(
+  id: number,
+): Promise<(ProspectoTarjeta & { fuentes: string[]; fuentesPorCampo: Record<string, string>; historial: EventoFila[] }) | null> {
+  const f = await prisma.prospecto.findUnique({ where: { id }, select: { ...SELECT, fuentes: true, fuentesPorCampo: true } });
   if (!f) return null;
   const eventos = await prisma.evento.findMany({ where: { prospectoId: id }, orderBy: { creadoEn: "desc" }, take: 200, include: { usuario: { select: { nombre: true } } } });
   const ab = await abrieron([id]);
   const t = aTarjeta(f, ab.has(id), f.etapa === "por_contactar" ? "inicial" : "seguimiento");
   return {
     ...t, fuentes: Array.isArray(f.fuentes) ? (f.fuentes as string[]) : [],
+    // Se lee con guarda: la columna es Json y puede traer cualquier cosa de una
+    // carga vieja. Sin fuente, el dato se muestra sin enlace, no con uno roto.
+    fuentesPorCampo: mapaDeTextos(f.fuentesPorCampo),
     historial: eventos.map((e) => ({ id: e.id, tipo: e.tipo, de: e.de, a: e.a, canal: e.canal, texto: e.texto, creadoEn: e.creadoEn, usuarioNombre: e.usuario?.nombre ?? "" })),
   };
 }

@@ -1,7 +1,6 @@
 // Lotes de la bandeja de revision. Nada entra a Prospecto sin pasar por aqui:
 // primero se clasifica (nuevo / repetido / error) y despues alguien decide.
 // Nada se borra: descartar es una decision, no un delete.
-import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
@@ -145,7 +144,10 @@ export async function crearLote(
   // Lanza a proposito: crearLote no devuelve Resultado y un origen inventado es
   // un error de programacion, no algo que el usuario pueda escribir.
   if (!o.success) throw new Error(`Origen desconocido: ${String(origen)}`);
-  const lote = randomUUID();
+  // randomUUID del crypto global (Web Crypto), no de "node:crypto": este modulo
+  // lo importa el cron de src/instrumentation.ts, que Next tambien compila para
+  // el runtime edge, y ahi un import con esquema "node:" no compila.
+  const lote = crypto.randomUUID();
   const cache = await precargar(entradas);
   const vistas = new Set<string>();
   const cuenta = { nuevos: 0, repetidos: 0, errores: 0 };
