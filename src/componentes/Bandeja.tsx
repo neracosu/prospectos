@@ -2,9 +2,9 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import type { FilaRevision } from "@/lib/revision";
+import type { LoteDetalle } from "@/lib/revision";
 import { COLUMNAS, type Columna } from "@/lib/tabla-contrato";
-import { etiquetaOrigen } from "@/lib/revision-contrato";
+import { etiquetaOrigen, siguientePasada, APROBACION_INICIAL } from "@/lib/revision-contrato";
 import { aprobarFila, completarExistente, descartarFila, corregirFila, aprobarNuevos } from "@/acciones/revision";
 
 // La bandeja es el filtro: nada llega al panel sin que alguien lo mire aca. Cada
@@ -37,16 +37,17 @@ const ERROR_GENERICO = "No se pudo completar. Intenta de nuevo.";
 type Accion = number | "lote";
 type Aviso = { donde: Accion; mensaje: string };
 
-export function Bandeja({ lote }: { lote: { lote: string; origen: string; creadoEn: Date; filas: FilaRevision[] } }) {
+function esUrl(v: string): boolean {
+  return /^https?:\/\//i.test(v);
+}
+
+export function Bandeja({ lote }: { lote: LoteDetalle }) {
   const [editando, setEditando] = useState<number | null>(null);
   const [error, setError] = useState<Aviso | null>(null);
   const [corriendo, setCorriendo] = useState<Accion | null>(null);
   const [avance, setAvance] = useState<{ hechas: number; de: number } | null>(null);
   const [pendiente, empezar] = useTransition();
   const router = useRouter();
-
-  const pendientes = lote.filas.filter((f) => f.decision === "pendiente");
-  const nuevas = pendientes.filter((f) => f.estado === "nuevo").length;
 
   const correr = (donde: Accion, fn: () => Promise<{ ok: true; datos: unknown } | { ok: false; mensaje: string }>) =>
     empezar(async () => {
@@ -60,36 +61,32 @@ export function Bandeja({ lote }: { lote: { lote: string; origen: string; creado
       } else setError({ donde, mensaje: r.mensaje });
     });
 
-  // Aprueba de a 500 (TOPE_APROBACION) hasta que no queden nuevas. Para cuando
-  // una pasada no aprueba ninguna: si no, con una fila que siempre falla la
-  // pantalla gira sin fin.
+  // Aprueba de a 500 (TOPE_APROBACION) hasta que no queden nuevas. Cuando parar
+  // lo decide siguientePasada, que esta en revision-contrato con su test: una
+  // fila que siempre falla no puede dejar la pantalla girando sin fin.
   const aprobarTodas = () =>
     empezar(async () => {
       setError(null);
       setCorriendo("lote");
-      let hechas = 0;
-      let fallidas = 0;
-      let primerError = "";
-      setAvance({ hechas: 0, de: nuevas });
+      let estado = APROBACION_INICIAL;
+      setAvance({ hechas: 0, de: lote.aprobables });
       for (;;) {
         const r = await aprobarNuevos(lote.lote);
         if (!r.ok) {
           setError({ donde: "lote", mensaje: r.mensaje });
           break;
         }
-        hechas += r.datos.aprobadas;
-        fallidas += r.datos.fallidas;
-        if (!primerError && r.datos.primerError) primerError = r.datos.primerError;
-        setAvance({ hechas, de: Math.max(nuevas, hechas) });
-        if (r.datos.aprobadas === 0) {
-          if (r.datos.fallidas > 0) {
-            setError({ donde: "lote", mensaje: `${fallidas} no se pudieron aprobar. La primera dice: ${primerError || ERROR_GENERICO}` });
-          }
-          break;
-        }
-        if (r.datos.quedan === 0) {
-          if (fallidas > 0) {
-            setError({ donde: "lote", mensaje: `${fallidas} no se pudieron aprobar. La primera dice: ${primerError || ERROR_GENERICO}` });
+        const paso = siguientePasada(estado, r.datos);
+        estado = paso.estado;
+        setAvance({ hechas: estado.aprobadas, de: Math.max(lote.aprobables, estado.aprobadas) });
+        if (!paso.seguir) {
+          // Los numeros que se muestran son los de la ultima pasada: las mismas
+          // filas vuelven a fallar en cada vuelta y sumarlas no dice nada.
+          if (estado.fallidas > 0) {
+            setError({
+              donde: "lote",
+              mensaje: `Se aprobaron ${estado.aprobadas}. En la última pasada fallaron ${estado.fallidas} y quedan ${estado.quedan} sin aprobar. La primera falla dice: ${estado.primerError || ERROR_GENERICO}`,
+            });
           }
           break;
         }
@@ -106,13 +103,13 @@ export function Bandeja({ lote }: { lote: { lote: string; origen: string; creado
           <span>
             <b>{etiquetaOrigen(lote.origen)}</b>
             <br />
-            <span className="suave">{lote.creadoEn.toLocaleString("es-VE", { timeZone: "America/Caracas" })}</span>
+            <span className="suave">{lote.creadoEn.toLocaleString("es-VE", { timeZone: "America/Caracas", dateStyle: "short", timeStyle: "short" })}</span>
           </span>
-          <span className="etiqueta">{pendientes.length} por decidir</span>
+          <span className="etiqueta">{lote.pendientes} por decidir</span>
         </div>
         <p className="suave">
-          {lote.filas.length} {lote.filas.length === 1 ? "ficha" : "fichas"} en este lote.
-          {pendientes.length === 0 ? " Ya las decidiste todas." : " Aprueba, completa o descarta cada una."}
+          {lote.total} {lote.total === 1 ? "ficha" : "fichas"} en este lote.
+          {lote.pendientes === 0 ? " Ya las decidiste todas." : " Aprueba, completa o descarta cada una."}
         </p>
         {avance && (
           <>
@@ -130,9 +127,13 @@ export function Bandeja({ lote }: { lote: { lote: string; origen: string; creado
           </p>
         )}
         <div className="fila-botones">
-          {nuevas > 0 && (
+          {lote.aprobables > 0 && (
             <button className="boton boton--primario" disabled={pendiente} onClick={aprobarTodas}>
-              {corriendo === "lote" ? "Aprobando…" : nuevas === 1 ? "Aprobar la nueva" : `Aprobar las ${nuevas} nuevas`}
+              {corriendo === "lote"
+                ? "Aprobando…"
+                : lote.aprobables === 1
+                  ? "Aprobar la nueva"
+                  : `Aprobar las ${lote.aprobables} nuevas`}
             </button>
           )}
           <Link className="boton" href="/buscar?t=bandeja">
@@ -146,8 +147,9 @@ export function Bandeja({ lote }: { lote: { lote: string; origen: string; creado
         const decidida = f.decision !== "pendiente";
         const existente = f.existente;
         const faltantes = existente ? CONTACTO.filter((c) => !existente[c.campo] && f.datos[c.campo]) : [];
+        const fuente = f.datos.fuentes?.[0] ?? "";
         return (
-          <article key={f.id} className="tarjeta" style={decidida ? { opacity: 0.6 } : undefined}>
+          <article key={f.id} className={"tarjeta" + (decidida ? " tarjeta--decidida" : "")}>
             <div className="cabecera">
               <span>
                 <b>{f.datos.nombre || "(sin nombre)"}</b>
@@ -169,19 +171,21 @@ export function Bandeja({ lote }: { lote: { lote: string; origen: string; creado
               {CONTACTO.filter((c) => f.datos[c.campo]).map((c) => (
                 <span key={c.campo} style={{ display: "contents" }}>
                   <dt>{c.texto}</dt>
-                  <dd>{String(f.datos[c.campo])}</dd>
+                  <dd className={c.campo === "web" ? "recorte" : undefined} title={c.campo === "web" ? String(f.datos[c.campo]) : undefined}>
+                    {String(f.datos[c.campo])}
+                  </dd>
                 </span>
               ))}
-              {f.datos.fuentes?.[0] && (
+              {fuente && (
                 <span style={{ display: "contents" }}>
                   <dt>Fuente</dt>
                   <dd>
-                    {/^https?:\/\//i.test(f.datos.fuentes[0]) ? (
-                      <a href={f.datos.fuentes[0]} target="_blank" rel="noopener">
-                        {f.datos.fuentes[0]}
+                    {esUrl(fuente) ? (
+                      <a className="recorte recorte--tocable" href={fuente} target="_blank" rel="noopener" title={fuente}>
+                        {fuente}
                       </a>
                     ) : (
-                      f.datos.fuentes[0]
+                      fuente
                     )}
                   </dd>
                 </span>
@@ -234,7 +238,7 @@ export function Bandeja({ lote }: { lote: { lote: string; origen: string; creado
                     <span>{ETIQUETA_COLUMNA[c]}</span>
                     <input
                       name={c}
-                      defaultValue={c === "fuente" ? f.datos.fuentes?.[0] ?? "" : String(f.datos[c as keyof typeof f.datos] ?? "")}
+                      defaultValue={c === "fuente" ? fuente : String(f.datos[c as keyof typeof f.datos] ?? "")}
                     />
                   </label>
                 ))}

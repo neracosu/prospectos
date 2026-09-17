@@ -5,6 +5,7 @@ import { z } from "zod";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { claveProspecto } from "@/lib/clave-prospecto";
+import { POR_PAGINA } from "@/lib/revision-contrato";
 import type { EntradaValidada } from "@/lib/tabla-contrato";
 
 export const ORIGENES = ["overpass", "web", "maps", "importado"] as const;
@@ -36,6 +37,9 @@ const SELECT_EXISTENTE = {
 const TROZO_CLAVES = 1000;
 // Tope de filas que aprueba una sola llamada a aprobarNuevos.
 export const TOPE_APROBACION = 500;
+// Texto de la fila cuyo JSON no se puede leer. Lo mira la pantalla para ofrecer
+// solo "Descartar": esa fila no se aprueba ni se corrige.
+export const DATOS_ILEGIBLES = "Datos inválidos";
 // Funcion, no constante: devuelve un objeto nuevo cada vez. Un singleton con
 // `fuentes: []` y `fuentesPorCampo: {}` lo comparten todas las filas ilegibles y
 // quien le empuje algo a uno se lo empuja a todas.
@@ -165,32 +169,95 @@ export async function crearLote(
   return { lote, ...cuenta };
 }
 
+export type LoteDetalle = {
+  lote: string; origen: string; creadoEn: Date;
+  // Del lote ENTERO, no de la pagina: el resumen de arriba no puede cambiar
+  // segun en que pagina estes parado.
+  total: number; pendientes: number; aprobables: number;
+  pagina: number; porPagina: number; desde: number; hasta: number;
+  filas: FilaRevision[];
+};
+
+function aFilaRevision(f: Prisma.RevisionGetPayload<{ include: { existente: { select: typeof SELECT_EXISTENTE } } }>): FilaRevision {
+  const datos = leerDatos(f.datos);
+  // Sin datos legibles la fila no se puede aprobar ni corregir: se muestra
+  // como error para que se descarte.
+  if (!datos) {
+    return {
+      id: f.id, lote: f.lote, origen: f.origen, fila: f.fila, datos: entradaVacia(),
+      estado: "error" as Estado, errores: [DATOS_ILEGIBLES], existenteId: f.existenteId,
+      existente: f.existente, decision: f.decision as Decision,
+    };
+  }
+  return {
+    id: f.id, lote: f.lote, origen: f.origen, fila: f.fila, datos,
+    estado: f.estado as Estado, errores: listaDeTextos(f.errores),
+    existenteId: f.existenteId, existente: f.existente, decision: f.decision as Decision,
+  };
+}
+
+// Cuantas filas del lote puede aprobar de verdad aprobarNuevos: las que estan
+// en "nuevo" y sin decidir, menos las que tienen el JSON roto (esas no se
+// pueden aprobar nunca, solo descartar). El JSON se mira en la base con
+// JSON_TYPE para no traerse el contenido de miles de filas; si el motor no lo
+// soporta, se cae al conteo simple, que a lo sumo cuenta de mas.
+async function contarAprobables(lote: string, nuevas: number): Promise<number> {
+  if (nuevas === 0) return 0;
+  try {
+    const r = await prisma.$queryRaw<{ n: bigint }[]>`
+      SELECT COUNT(*) AS n FROM Revision
+      WHERE lote = ${lote} AND estado = 'nuevo' AND decision = 'pendiente' AND JSON_TYPE(datos) = 'OBJECT'`;
+    return Number(r[0]?.n ?? nuevas);
+  } catch {
+    return nuevas;
+  }
+}
+
+// Una pagina del lote: primero lo que falta decidir (que es a lo que se vino),
+// despues lo ya decidido. Dentro de cada grupo, por numero de fila, que es el
+// orden del archivo y no cambia entre recargas.
 export async function loteConDetalle(
   lote: string,
-): Promise<{ lote: string; origen: string; creadoEn: Date; filas: FilaRevision[] } | null> {
-  const filas = await prisma.revision.findMany({
-    where: { lote }, orderBy: { fila: "asc" }, include: { existente: { select: SELECT_EXISTENTE } },
-  });
-  if (!filas.length) return null;
+  opciones: { pagina?: number; porPagina?: number } = {},
+): Promise<LoteDetalle | null> {
+  const porPagina = Math.min(Math.max(1, Math.trunc(opciones.porPagina ?? POR_PAGINA)), 200);
+  const pagina = Math.max(1, Math.trunc(opciones.pagina ?? 1));
+  const saltar = (pagina - 1) * porPagina;
+
+  const [total, pendientes, nuevas, primera] = await Promise.all([
+    prisma.revision.count({ where: { lote } }),
+    prisma.revision.count({ where: { lote, decision: "pendiente" } }),
+    prisma.revision.count({ where: { lote, estado: "nuevo", decision: "pendiente" } }),
+    prisma.revision.findFirst({ where: { lote }, orderBy: { fila: "asc" }, select: { origen: true, creadoEn: true } }),
+  ]);
+  if (!primera) return null;
+
+  const incluir = { existente: { select: SELECT_EXISTENTE } } as const;
+  const crudas = [];
+  // Los pendientes y los decididos salen en dos consultas y no en un ORDER BY
+  // con CASE: asi el orden es el mismo en MySQL y en cualquier otro motor, y
+  // cada consulta usa el indice por (lote, fila).
+  if (saltar < pendientes) {
+    crudas.push(...await prisma.revision.findMany({
+      where: { lote, decision: "pendiente" }, orderBy: { fila: "asc" },
+      skip: saltar, take: porPagina, include: incluir,
+    }));
+  }
+  if (crudas.length < porPagina) {
+    const saltarDecididas = Math.max(0, saltar - pendientes);
+    crudas.push(...await prisma.revision.findMany({
+      where: { lote, decision: { not: "pendiente" } }, orderBy: { fila: "asc" },
+      skip: saltarDecididas, take: porPagina - crudas.length, include: incluir,
+    }));
+  }
+
   return {
-    lote, origen: filas[0].origen, creadoEn: filas[0].creadoEn,
-    filas: filas.map((f) => {
-      const datos = leerDatos(f.datos);
-      // Sin datos legibles la fila no se puede aprobar ni corregir: se muestra
-      // como error para que se descarte.
-      if (!datos) {
-        return {
-          id: f.id, lote: f.lote, origen: f.origen, fila: f.fila, datos: entradaVacia(),
-          estado: "error" as Estado, errores: ["Datos inválidos"], existenteId: f.existenteId,
-          existente: f.existente, decision: f.decision as Decision,
-        };
-      }
-      return {
-        id: f.id, lote: f.lote, origen: f.origen, fila: f.fila, datos,
-        estado: f.estado as Estado, errores: listaDeTextos(f.errores),
-        existenteId: f.existenteId, existente: f.existente, decision: f.decision as Decision,
-      };
-    }),
+    lote, origen: primera.origen, creadoEn: primera.creadoEn,
+    total, pendientes, aprobables: await contarAprobables(lote, nuevas),
+    pagina, porPagina,
+    desde: total === 0 ? 0 : saltar + 1,
+    hasta: saltar + crudas.length,
+    filas: crudas.map(aFilaRevision),
   };
 }
 

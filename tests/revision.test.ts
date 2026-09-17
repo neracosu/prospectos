@@ -65,32 +65,83 @@ describe.runIf(DB_HABILITADA)("bandeja de revision", () => {
     const ev = await prisma.evento.findMany({ where: { prospectoId: p.id, tipo: "importado", usuarioId: ids.prospectadorId } });
     expect(ev).toHaveLength(1);
     expect(ev[0].texto).toBe(`importado · lote ${lote}`);
-    expect((await loteConDetalle(lote))!.filas[0].decision).toBe("aprobado");
-    expect((await aprobarFila(d.filas[1].id)).ok).toBe(false); // repetido no se aprueba
+    const tras = (await loteConDetalle(lote))!.filas.find((x) => x.id === d.filas[0].id)!;
+    expect(tras.decision).toBe("aprobado");
+    expect((await aprobarFila(d.filas.find((x) => x.fila === 2)!.id)).ok).toBe(false); // repetido no se aprueba
   });
 
   it("completarExistente rellena solo huecos y suma la fuente", async () => {
     const d = (await loteConDetalle(lote))!;
-    expect((await completarExistente(d.filas[1].id)).ok).toBe(true);
+    // Por numero de fila del archivo: la lista pone lo pendiente primero, asi
+    // que el indice ya no es la fila.
+    const repetida = d.filas.find((f) => f.fila === 2)!;
+    expect((await completarExistente(repetida.id)).ok).toBe(true);
     const e = await prisma.prospecto.findFirstOrThrow({ where: { nombre: "Hotel Existente" } });
     expect(e.email).toBe("info@existente.com");
     expect(e.nombre).toBe("Hotel Existente"); // no se piso el nombre
     expect(e.fuentes).toContain("https://f.test/");
     expect(await prisma.evento.count({ where: { prospectoId: e.id, tipo: "nota" } })).toBe(1);
-    expect((await completarExistente(d.filas[1].id)).ok).toBe(false); // ya decidido
+    expect((await completarExistente(repetida.id)).ok).toBe(false); // ya decidido
   });
 
   it("corregirFila revalida y cambia el estado; descartar y aprobarNuevos", async () => {
     const d = (await loteConDetalle(lote))!;
-    expect((await corregirFila(d.filas[2].id, fd({ ciudad: "Mérida" }))).ok).toBe(true);
+    const sinCiudad = d.filas.find((f) => f.fila === 3)!;
+    expect((await corregirFila(sinCiudad.id, fd({ ciudad: "Mérida" }))).ok).toBe(true);
     let d2 = (await loteConDetalle(lote))!;
-    expect(d2.filas[2].estado).toBe("nuevo");
-    expect((await descartarFila(d.filas[3].id)).ok).toBe(true);
+    expect(d2.filas.find((f) => f.id === sinCiudad.id)!.estado).toBe("nuevo");
+    expect((await descartarFila(d.filas.find((f) => f.fila === 4)!.id)).ok).toBe(true);
     const r = await aprobarNuevos(lote);
     expect(r.ok).toBe(true);
     if (r.ok) expect(r.datos).toMatchObject({ aprobadas: 1, fallidas: 0, quedan: 0 }); // solo "Sin Ciudad" corregida
     d2 = (await loteConDetalle(lote))!;
-    expect(d2.filas.map((f) => f.decision)).toEqual(["aprobado", "completado", "aprobado", "descartado", "pendiente"]);
+    // La pantalla pone lo pendiente primero: para mirar el orden del archivo se
+    // ordena por numero de fila.
+    const porFila = [...d2.filas].sort((a, b) => a.fila - b.fila);
+    expect(porFila.map((f) => f.decision)).toEqual(["aprobado", "completado", "aprobado", "descartado", "pendiente"]);
+  });
+
+  it("loteConDetalle pagina: pendientes primero y el resumen es del lote entero", async () => {
+    const entradas = Array.from({ length: 7 }, (_, i) => fila({ nombre: `Paginado ${i + 1}`, ciudad: "Valencia" }));
+    const r = await crearLote("importado", entradas, ids.prospectadorId);
+    const todo = (await loteConDetalle(r.lote, { porPagina: 50 }))!;
+    expect(todo).toMatchObject({ total: 7, pendientes: 7, aprobables: 7, pagina: 1, desde: 1, hasta: 7 });
+
+    // Se descarta la primera del archivo: tiene que irse al final de la lista.
+    expect((await descartarFila(todo.filas[0].id)).ok).toBe(true);
+    const tras = (await loteConDetalle(r.lote, { porPagina: 50 }))!;
+    expect(tras.filas.at(-1)!.fila).toBe(1);
+    expect(tras.filas.map((f) => f.fila)).toEqual([2, 3, 4, 5, 6, 7, 1]);
+    expect(tras).toMatchObject({ total: 7, pendientes: 6, aprobables: 6 });
+
+    const p1 = (await loteConDetalle(r.lote, { pagina: 1, porPagina: 3 }))!;
+    const p2 = (await loteConDetalle(r.lote, { pagina: 2, porPagina: 3 }))!;
+    const p3 = (await loteConDetalle(r.lote, { pagina: 3, porPagina: 3 }))!;
+    expect(p1.filas.map((f) => f.fila)).toEqual([2, 3, 4]);
+    expect(p2.filas.map((f) => f.fila)).toEqual([5, 6, 7]);
+    expect(p3.filas.map((f) => f.fila)).toEqual([1]); // la decidida, al final
+    expect(p2).toMatchObject({ desde: 4, hasta: 6, total: 7, pendientes: 6 });
+    expect(p3).toMatchObject({ desde: 7, hasta: 7 });
+    expect(await loteConDetalle("00000000-0000-4000-8000-000000000000")).toBeNull();
+  });
+
+  // El boton "Aprobar las N nuevas" no puede contar filas que la accion nunca
+  // va a poder aprobar: una fila con el JSON roto solo se puede descartar.
+  it("aprobables deja afuera la fila de datos ilegibles", async () => {
+    const r = await crearLote("importado", [fila({ nombre: "Hotel Legible", ciudad: "Cumaná" })], ids.prospectadorId);
+    await prisma.revision.create({
+      data: {
+        lote: r.lote, origen: "importado", fila: 2, datos: "esto no es un objeto",
+        estado: "nuevo", errores: [], usuarioId: ids.prospectadorId,
+      },
+    });
+    const d = (await loteConDetalle(r.lote))!;
+    expect(d.total).toBe(2);
+    expect(d.pendientes).toBe(2);
+    expect(d.aprobables).toBe(1); // la ilegible no cuenta
+    const rota = d.filas.find((f) => f.fila === 2)!;
+    expect(rota.estado).toBe("error");
+    expect(rota.errores).toContain("Datos inválidos");
   });
 
   it("limpiarLotesViejos no toca lo pendiente ni lo reciente", async () => {
@@ -163,7 +214,8 @@ describe.runIf(DB_HABILITADA)("bandeja de revision", () => {
       expect(res.datos).toMatchObject({ aprobadas: 1, fallidas: 1, quedan: 0 });
       expect(res.datos.primerError).toContain("repetido");
     }
-    expect((await loteConDetalle(r.lote))!.filas.map((f) => f.estado)).toEqual(["nuevo", "repetido"]);
+    const quedaron = [...(await loteConDetalle(r.lote))!.filas].sort((a, b) => a.fila - b.fila);
+    expect(quedaron.map((f) => f.estado)).toEqual(["nuevo", "repetido"]);
   });
 
   it("un texto más largo que su tope queda en error, al importar y al corregir", async () => {

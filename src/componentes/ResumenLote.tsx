@@ -1,4 +1,5 @@
 "use client";
+import { useEffect, useRef } from "react";
 import Link from "next/link";
 
 // Lo que dejo una busqueda o una importacion, antes de abrir la bandeja. Se
@@ -19,8 +20,16 @@ export function ResumenLote({
   children?: React.ReactNode;
 }) {
   const total = nuevos + repetidos + errores;
+  const caja = useRef<HTMLElement>(null);
+  // El resumen aparece debajo de un formulario largo: si no se lleva el foco y
+  // la vista, en el telefono nadie se entera de que ya termino. Salta de lote a
+  // lote, no en cada render.
+  useEffect(() => {
+    caja.current?.focus();
+    caja.current?.scrollIntoView({ block: "start" });
+  }, [lote]);
   return (
-    <section className="tarjeta">
+    <section className="tarjeta" ref={caja} tabIndex={-1}>
       <b>
         {total} {total === 1 ? "ficha encontrada" : "fichas encontradas"}
       </b>

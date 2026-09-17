@@ -40,16 +40,21 @@ export default async function Buscar({ searchParams }: { searchParams: Promise<R
   for (const [k, v] of Object.entries(crudo)) sp[k] = Array.isArray(v) ? v[0] : v;
 
   const compartida = urlCompartida(sp);
-  // Sin pestaña elegida se entra por la bandeja (lo que quedo sin decidir), salvo
-  // que llegue un enlace compartido desde el telefono: ese va derecho a Maps.
-  const t = PESTANAS.some((p) => p.clave === sp.t) ? sp.t! : compartida ? "maps" : "bandeja";
   const pedido = sp.lote && UUID.test(sp.lote) ? sp.lote : "";
+  // Sin pestana elegida: si viene un lote se abre ese, si viene un enlace
+  // compartido desde el telefono se va a Maps, y si no, a la bandeja.
+  const t = PESTANAS.some((p) => p.clave === sp.t) ? sp.t! : pedido ? "bandeja" : compartida ? "maps" : "bandeja";
+  const pagina = Math.max(1, Math.trunc(Number(sp.p)) || 1);
 
   const [nichos, lotes, lote] = await Promise.all([
     listarNichos(),
-    t === "bandeja" ? lotesRecientes() : Promise.resolve([]),
-    t === "bandeja" && pedido ? loteConDetalle(pedido) : Promise.resolve(null),
+    t === "bandeja" && !pedido ? lotesRecientes() : Promise.resolve([]),
+    t === "bandeja" && pedido ? loteConDetalle(pedido, { pagina }) : Promise.resolve(null),
   ]);
+  const porRevisar = lotes.filter((l) => l.pendientes > 0);
+  const listos = lotes.filter((l) => l.pendientes === 0);
+  const paginas = lote ? Math.max(1, Math.ceil(lote.total / lote.porPagina)) : 1;
+  const enlacePagina = (n: number) => `/buscar?t=bandeja&lote=${lote!.lote}&p=${n}`;
 
   return (
     <>
@@ -66,7 +71,32 @@ export default async function Buscar({ searchParams }: { searchParams: Promise<R
 
       {t === "bandeja" &&
         (lote ? (
-          <Bandeja lote={lote} />
+          <>
+            <Bandeja lote={lote} />
+            {/* El paginador es del servidor a proposito: son enlaces, no estado
+                del navegador, y asi la pagina se puede compartir y recargar. */}
+            <nav className="paginador" aria-label="Páginas del lote">
+              <span className="suave paginador__cuenta">
+                Filas {lote.desde}–{lote.hasta} de {lote.total}
+              </span>
+              <div className="paginador__botones">
+                {lote.pagina > 1 ? (
+                  <Link className="boton" href={enlacePagina(lote.pagina - 1)} rel="prev">
+                    Anteriores
+                  </Link>
+                ) : (
+                  <span />
+                )}
+                {lote.pagina < paginas ? (
+                  <Link className="boton" href={enlacePagina(lote.pagina + 1)} rel="next">
+                    Siguientes
+                  </Link>
+                ) : (
+                  <span />
+                )}
+              </div>
+            </nav>
+          </>
         ) : (
           <>
             {sp.lote && (
@@ -80,11 +110,12 @@ export default async function Buscar({ searchParams }: { searchParams: Promise<R
             )}
             <section className="tarjeta">
               <b>Lo que está por revisar</b>
-              {lotes.length === 0 ? (
+              {porRevisar.length === 0 ? (
                 <>
                   <p className="suave">
-                    Todavía no hay nada por revisar. Busca negocios en el mapa, lee una ficha de Google
-                    Maps o sube una lista: todo cae acá antes de entrar al panel.
+                    {listos.length > 0
+                      ? "No queda nada por decidir. Busca negocios en el mapa, lee una ficha de Google Maps o sube una lista."
+                      : "Todavía no hay nada por revisar. Busca negocios en el mapa, lee una ficha de Google Maps o sube una lista: todo cae acá antes de entrar al panel."}
                   </p>
                   <div className="fila-botones">
                     <Link className="boton boton--primario" href="/buscar?t=osm">
@@ -96,23 +127,40 @@ export default async function Buscar({ searchParams }: { searchParams: Promise<R
                   </div>
                 </>
               ) : (
-                lotes.map((l) => (
+                porRevisar.map((l) => (
                   <Link key={l.lote} href={`/buscar?t=bandeja&lote=${l.lote}`} className="fila">
                     <span>
                       <b>{etiquetaOrigen(l.origen)}</b>
                       <br />
                       <span className="suave">
-                        {l.creadoEn.toLocaleString("es-VE", { timeZone: "America/Caracas" })} · {l.total}{" "}
+                        {l.creadoEn.toLocaleString("es-VE", { timeZone: "America/Caracas", dateStyle: "short", timeStyle: "short" })} · {l.total}{" "}
                         {l.total === 1 ? "ficha" : "fichas"}
                       </span>
                     </span>
-                    <span className={"etiqueta" + (l.pendientes > 0 ? " etiqueta--repetido" : "")}>
-                      {l.pendientes > 0 ? `${l.pendientes} por decidir` : "Listo"}
-                    </span>
+                    <span className="etiqueta etiqueta--repetido">{l.pendientes} por decidir</span>
                   </Link>
                 ))
               )}
             </section>
+            {listos.length > 0 && (
+              <section className="tarjeta tarjeta--decidida">
+                <b>Listos</b>
+                <p className="suave">Lotes ya decididos. Se borran solos a los 30 días.</p>
+                {listos.map((l) => (
+                  <Link key={l.lote} href={`/buscar?t=bandeja&lote=${l.lote}`} className="fila">
+                    <span>
+                      <b>{etiquetaOrigen(l.origen)}</b>
+                      <br />
+                      <span className="suave">
+                        {l.creadoEn.toLocaleString("es-VE", { timeZone: "America/Caracas", dateStyle: "short", timeStyle: "short" })} · {l.total}{" "}
+                        {l.total === 1 ? "ficha" : "fichas"}
+                      </span>
+                    </span>
+                    <span className="etiqueta">Listo</span>
+                  </Link>
+                ))}
+              </section>
+            )}
           </>
         ))}
     </>

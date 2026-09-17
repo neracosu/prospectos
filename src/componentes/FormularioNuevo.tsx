@@ -13,7 +13,7 @@ const CAMPOS: [string, string, string?][] = [
 // camino de "cargarlo a mano" cuando no se pudo leer una ficha de Google Maps.
 // La fuente prellenada se ve y no se edita (viene del enlace que se leyo), pero
 // va en el formulario: un readOnly si se envia, un disabled no.
-export type ValoresNuevo = { fuente?: string; nombre?: string; web?: string; telefono?: string; nota?: string };
+export type ValoresNuevo = { fuente?: string; nombre?: string; web?: string; telefono?: string; nota?: string; nichoId?: number };
 
 export function FormularioNuevo({ nichos, valores = {} }: { nichos: { id: number; nombre: string }[]; valores?: ValoresNuevo }) {
   const [error, setError] = useState("");
@@ -25,7 +25,7 @@ export function FormularioNuevo({ nichos, valores = {} }: { nichos: { id: number
   };
   return (
     <form className="tarjeta" action={(fd) => empezar(async () => { const r = await crearProspecto(fd); if (r.ok) router.push(`/prospectos/${r.datos.id}`); else setError(r.mensaje); })}>
-      <label className="campo"><span>Nicho</span><select name="nichoId" required>{nichos.map((n) => <option key={n.id} value={n.id}>{n.nombre}</option>)}</select></label>
+      <label className="campo"><span>Nicho</span><select name="nichoId" required defaultValue={valores.nichoId ?? nichos[0]?.id}>{nichos.map((n) => <option key={n.id} value={n.id}>{n.nombre}</option>)}</select></label>
       {CAMPOS.map(([n, t, tipo]) => (
         <label key={n} className="campo">
           <span>{n === "fuente" && fuenteFija ? "Fuente (del enlace que se leyó)" : t}</span>

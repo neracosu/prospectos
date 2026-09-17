@@ -5,7 +5,13 @@ export const metadata: Metadata = {
   title: "Prospectos NERACOSU",
   robots: { index: false, follow: false },
   manifest: "/manifest.webmanifest",
-  icons: { icon: "/icono.svg", apple: "/icono.svg" },
+  icons: {
+    icon: [
+      { url: "/icono.svg", type: "image/svg+xml" },
+      { url: "/icono-192.png", sizes: "192x192", type: "image/png" },
+    ],
+    apple: { url: "/icono-192.png", sizes: "192x192" },
+  },
 };
 export const viewport: Viewport = { width: "device-width", initialScale: 1, viewportFit: "cover" };
 

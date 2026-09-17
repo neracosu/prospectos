@@ -15,7 +15,14 @@ export default function manifest(): MetadataRoute.Manifest {
     background_color: "#0f1412",
     theme_color: "#5ed29c",
     lang: "es-VE",
-    icons: [{ src: "/icono.svg", sizes: "any", type: "image/svg+xml", purpose: "any" }],
+    // Los PNG los arma scripts/generar-iconos.mts desde icono.svg, con el
+    // dibujo al 80 %: "maskable" deja que Android recorte hasta un 10 % por
+    // lado sin comerse la marca.
+    icons: [
+      { src: "/icono.svg", sizes: "any", type: "image/svg+xml", purpose: "any" },
+      { src: "/icono-192.png", sizes: "192x192", type: "image/png", purpose: "any maskable" },
+      { src: "/icono-512.png", sizes: "512x512", type: "image/png", purpose: "any maskable" },
+    ],
     share_target: {
       action: "/buscar",
       method: "GET",

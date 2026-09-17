@@ -8,7 +8,7 @@ import { cargarMaps } from "@/acciones/buscar";
 export function FormMaps({ nichos, urlInicial }: { nichos: { id: number; nombre: string }[]; urlInicial: string }) {
   const [error, setError] = useState("");
   const [lote, setLote] = useState("");
-  const [manual, setManual] = useState("");
+  const [manual, setManual] = useState<{ url: string; nichoId: string } | null>(null);
   const [pendiente, empezar] = useTransition();
 
   return (
@@ -19,10 +19,12 @@ export function FormMaps({ nichos, urlInicial }: { nichos: { id: number; nombre:
           empezar(async () => {
             setError("");
             setLote("");
-            setManual("");
+            setManual(null);
             const r = await cargarMaps(fd);
             if (!r.ok) return setError(r.mensaje);
-            if ("manual" in r.datos) setManual(r.datos.url);
+            // El nicho elegido se lleva al alta manual: ya se contesto esa
+            // pregunta una vez.
+            if ("manual" in r.datos) setManual({ url: r.datos.url, nichoId: String(fd.get("nichoId") ?? "") });
             else setLote(r.datos.lote);
           })
         }
@@ -83,10 +85,13 @@ export function FormMaps({ nichos, urlInicial }: { nichos: { id: number; nombre:
             fuente y solo tienes que copiar lo que ves en la ficha.
           </p>
           <div className="fila-botones">
-            <Link className="boton boton--primario" href={`/prospectos/nuevo?fuente=${encodeURIComponent(manual)}`}>
+            <Link
+              className="boton boton--primario"
+              href={`/prospectos/nuevo?fuente=${encodeURIComponent(manual.url)}&nichoId=${encodeURIComponent(manual.nichoId)}`}
+            >
               Cargarlo a mano
             </Link>
-            <a className="boton" href={manual} target="_blank" rel="noopener">
+            <a className="boton" href={manual.url} target="_blank" rel="noopener">
               Abrir en Maps
             </a>
           </div>

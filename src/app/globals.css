@@ -38,7 +38,7 @@ button, input, select, textarea { font: inherit; }
 .progreso > i { display: block; height: 100%; background: var(--verde); }
 .embudo { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; font-size: 12px; text-align: center; }
 .embudo b { display: block; font-size: 18px; }
-.etiqueta { display: inline-block; font-size: 12px; padding: 2px 8px; border-radius: 999px; background: var(--borde); color: var(--tinta-suave); }
+.etiqueta { display: inline-block; font-size: 12px; padding: 2px 8px; border-radius: 999px; background: var(--borde); color: var(--tinta-suave); white-space: nowrap; }
 .etiqueta--enviado { background: #23413a; color: var(--verde); }
 .etiqueta--respondio, .etiqueta--reunion { background: #3b3520; color: var(--ambar); }
 .etiqueta--ganado { background: var(--verde); color: #0b1a12; }
@@ -75,7 +75,7 @@ button, input, select, textarea { font: inherit; }
 .etiqueta--error { background: #3b2424; color: var(--rojo); }
 .cabecera { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
 .cabecera b, .cabecera .suave { overflow-wrap: anywhere; }
-.datos { display: grid; grid-template-columns: minmax(72px, auto) 1fr; gap: 2px 10px; margin: 10px 0 0; font-size: 14px; }
+.datos { display: grid; grid-template-columns: minmax(72px, auto) minmax(0, 1fr); gap: 2px 10px; margin: 10px 0 0; font-size: 14px; }
 .datos dt { color: var(--tinta-suave); }
 /* Una URL de Maps de 300 caracteres no puede empujar la tarjeta fuera de los 390 px. */
 .datos dd { margin: 0; overflow-wrap: anywhere; }
@@ -84,6 +84,19 @@ button, input, select, textarea { font: inherit; }
 /* Enlace a la fuente de un dato de la ficha: la flecha sola es chiquita, el area
    que se toca no. */
 .fuente-dato { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; margin: -10px 0; color: var(--tinta-suave); text-decoration: none; }
+/* Una fila ya decidida se distingue por el fondo y el borde, nunca bajandole la
+   opacidad a la tarjeta entera: el texto tiene que seguir leyendose igual. */
+.tarjeta--decidida { background: #121815; border-style: dashed; }
+/* URL larga: una sola linea con puntos suspensivos y el title con la completa.
+   Partirla a la mitad de una palabra no la hace mas legible. */
+.recorte { display: block; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* El enlace a la fuente se toca con el dedo: 12 + 21 + 12 = 45 px de alto. */
+.recorte--tocable { padding: 12px 0; margin: -8px 0; }
+/* El conteo va arriba y en una linea: entre los dos botones, a 390 px, se
+   partia en dos. */
+.paginador { display: grid; gap: 8px; margin: 4px 0 16px; }
+.paginador__cuenta { text-align: center; }
+.paginador__botones { display: flex; justify-content: space-between; gap: 8px; }
 /* Un campo que viene puesto y no se edita (la fuente del enlace compartido) se
    tiene que ver distinto de uno vacio, o parece que se olvido de llenarlo. */
 .campo input[readonly] { background: transparent; color: var(--tinta-suave); border-style: dashed; }
