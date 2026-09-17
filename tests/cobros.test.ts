@@ -83,6 +83,7 @@ describe.runIf(DB_HABILITADA)("acciones de cobros", () => {
   it("anularCobro exige motivo, anula tambien uno pagado (pieza 4), y un anulado no se paga ni se anula otra vez", async () => {
     const pagado = await prisma.cobro.findFirstOrThrow({ where: { proyectoId, concepto: "extra" } });
     expect((await anularCobro(pagado.id, " ")).ok).toBe(false);
+    expect((await anularCobro(pagado.id, "x".repeat(192))).ok).toBe(false);
     expect((await anularCobro(pagado.id, "se marcó por error")).ok).toBe(true);
     const d = await prisma.cobro.findUniqueOrThrow({ where: { id: pagado.id } });
     expect(d.anuladoEn).not.toBeNull();
@@ -147,5 +148,14 @@ describe.runIf(DB_HABILITADA)("acciones de cobros", () => {
     const a = await anularCobro(c.id, "ya no aplica");
     expect(a.ok).toBe(true);
     expect(await prisma.evento.count({ where: { cobroId: c.id, tipo: "cobro_anulado" } })).toBe(1);
+  });
+
+  it("anularCobro acepta un motivo de 191 caracteres (el ancho de la columna) y rechaza 192", async () => {
+    const r = await agregarCobro(fd({ proyectoId: String(proyectoId), concepto: "extra", detalle: "Motivo largo", monto: "5", vence: "2026-10-01" }));
+    expect(r.ok).toBe(true);
+    const c = await prisma.cobro.findFirstOrThrow({ where: { proyectoId, detalle: "Motivo largo" } });
+    expect((await anularCobro(c.id, "x".repeat(192))).ok).toBe(false);
+    expect((await anularCobro(c.id, "x".repeat(191))).ok).toBe(true);
+    expect((await prisma.cobro.findUniqueOrThrow({ where: { id: c.id } })).anuladoMotivo).toHaveLength(191);
   });
 });

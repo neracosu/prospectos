@@ -127,4 +127,18 @@ describe.runIf(DB_HABILITADA)("acciones de recibos", () => {
     const c = await cobroPagado("Sin anular");
     expect(await generarNotaDeAnulacion(c.id)).toEqual({ ok: false, mensaje: expect.stringContaining("anulado") });
   });
+
+  it("sin datos del emisor la nota no se genera, el cobro igual queda anulado, y al completarlos se genera", async () => {
+    const c = await cobroPagado("Nota sin emisor");
+    await generarReciboDeCobro(c.id);
+    await guardarConfig(CLAVES.emisor, JSON.stringify({ nombre: "Neri Colón", rif: "", whatsapp: "", email: "" }));
+    try {
+      expect((await anularCobro(c.id, "Emisor vaciado")).ok).toBe(true);
+      expect((await prisma.cobro.findUniqueOrThrow({ where: { id: c.id } })).notaAnulacionEn).toBeNull();
+      expect(await generarNotaDeAnulacion(c.id)).toEqual({ ok: false, mensaje: expect.stringContaining("Ajustes") });
+    } finally {
+      await guardarConfig(CLAVES.emisor, EMISOR);
+    }
+    expect((await generarNotaDeAnulacion(c.id)).ok).toBe(true);
+  });
 });

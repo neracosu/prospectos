@@ -105,5 +105,5 @@ button, input, select, textarea { font: inherit; }
 /* Pieza 4: recibos. El boton en curso usa aria-disabled (no pierde el foco); el clic lo frena el componente. */
 .boton[aria-disabled="true"] { opacity: .6; cursor: progress; }
 .estado-fila { margin: 8px 0 0; font-size: 14px; color: var(--verde); min-height: 0; }
-.estado-fila:empty { display: none; }
+.estado-fila:empty { margin: 0; }
 .estado-fila--error { color: var(--rojo); }

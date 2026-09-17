@@ -13,7 +13,14 @@ import {
 } from "@/lib/recibos-contrato";
 
 const DIR_PLANTILLAS = path.join(process.cwd(), "plantillas");
-const dirArchivos = () => process.env.PROSPECTOS_DIR_ARCHIVOS ?? "/home/neracosu/prospectos-archivos";
+const DIR_PRODUCCION = "/home/neracosu/prospectos-archivos";
+// Los recibos no se regeneran nunca y generarRecibo pisa el archivo del numero que toca. Fuera de produccion
+// (next dev, tests, scripts) el correlativo de la base de pruebas arranca bajo: jamas se escribe en el directorio real.
+function dirArchivos(): string {
+  const dir = process.env.PROSPECTOS_DIR_ARCHIVOS ?? DIR_PRODUCCION;
+  if (process.env.NODE_ENV !== "production" && path.resolve(dir) === DIR_PRODUCCION) throw new Error("DIR_ARCHIVOS_DE_PRODUCCION");
+  return dir;
+}
 
 // nombre = "R-2026-0001" o "R-2026-0001-A" (sin .pdf). Fuera del docroot, una carpeta por anio.
 export function rutaDocumento(nombre: string): string {
@@ -74,6 +81,10 @@ export async function generarRecibo(cobroId: number, usuarioId: number): Promise
     if (c.reciboNumero) return { numero: c.reciboNumero, nuevo: false, proyectoId: c.proyectoId }; // un recibo emitido no cambia
     if (!c.pagadoEn || c.anuladoEn) throw new Error("RECIBO_NO_APLICA");
     const numero = numeroRecibo(anio, Number(filas[0].ultimo) + 1);
+    // El indice por numero no puede ser unico (el valor por defecto es ""): si el contador retrocedio
+    // (respaldo viejo, edicion a mano), se corta aqui antes de pisar un PDF ya emitido.
+    const repetido = await tx.cobro.findFirst({ where: { reciboNumero: numero }, select: { id: true } });
+    if (repetido) throw new Error("CORRELATIVO_DESFASADO");
     const html = renderDocumento(plantilla, camposRecibo(datosDe(c, numero, hoy, emisor)));
     // Pisa el archivo si existiera: solo puede ser el resto de una transaccion que no llego a confirmar.
     await conTurnoGlobal(async () => escribirAtomico(rutaDocumento(numero), await imprimirPdf(html)));
@@ -95,7 +106,9 @@ export async function generarNotaAnulacion(cobroId: number, usuarioId: number): 
   if (!c.anuladoEn || !c.reciboNumero || !c.reciboGeneradoEn) throw new Error("NOTA_NO_APLICA");
   const numero = numeroNota(c.reciboNumero);
   if (c.notaAnulacionEn) return { numero, nueva: false, proyectoId: c.proyectoId };
-  const datos = datosDe(c, c.reciboNumero, hoyCaracas(c.reciboGeneradoEn), await leerEmisor());
+  const emisor = await leerEmisor();
+  if (faltantesEmisor(emisor).length > 0) throw new Error("EMISOR_INCOMPLETO");
+  const datos = datosDe(c, c.reciboNumero, hoyCaracas(c.reciboGeneradoEn), emisor);
   const html = renderDocumento(await plantillaConFuentes(), camposNota(datos, { anuladoEl: hoyCaracas(c.anuladoEn), motivo: c.anuladoMotivo }));
   await conTurnoGlobal(async () => escribirAtomico(rutaDocumento(numero), await imprimirPdf(html)));
   // Marca y evento van juntos; si dos toques llegaron a la vez, solo uno cuenta.

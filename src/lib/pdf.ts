@@ -1,7 +1,7 @@
 // src/lib/pdf.ts — HTML -> PDF con Playwright. Lo comparten las propuestas y los recibos.
 // Usa node: -> NO importarlo desde la cadena de src/instrumentation.ts (ver CLAUDE.md).
 import { randomUUID } from "node:crypto";
-import { mkdir, rename, writeFile } from "node:fs/promises";
+import { mkdir, rename, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 // --- Fila global de generacion -------------------------------------------
@@ -71,6 +71,11 @@ export async function imprimirPdf(html: string): Promise<Buffer> {
 export async function escribirAtomico(salida: string, bytes: Buffer): Promise<void> {
   await mkdir(path.dirname(salida), { recursive: true, mode: 0o700 });
   const temporal = `${salida}.${process.pid}.${randomUUID()}.tmp`;
-  await writeFile(temporal, bytes, { mode: 0o600 });
-  await rename(temporal, salida);
+  try {
+    await writeFile(temporal, bytes, { mode: 0o600 });
+    await rename(temporal, salida);
+  } catch (err) {
+    await rm(temporal, { force: true });
+    throw err;
+  }
 }

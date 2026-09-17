@@ -30,6 +30,7 @@ export async function generarReciboDeCobro(cobroId: number): Promise<Resultado<{
     if (codigo === "COBRO_NO_EXISTE") return fallo("Ese cobro no existe.");
     if (codigo === "RECIBO_NO_APLICA") return fallo("Solo un cobro pagado y sin anular puede tener recibo.");
     if (codigo === "PDF_OCUPADO") return fallo("El servidor está generando otro PDF. Intenta de nuevo en unos segundos.");
+    if (codigo === "CORRELATIVO_DESFASADO") { console.error("generarReciboDeCobro: contador desfasado", e.data); return fallo("El contador de recibos quedó por detrás de los ya emitidos. No se generó nada: hay que revisar la tabla Correlativo."); }
     // El cobro sigue pagado y sin numero: no se gasto ningun correlativo.
     console.error("generarReciboDeCobro", e.data, err);
     return fallo("No se pudo generar el recibo. Intenta de nuevo.");
@@ -76,6 +77,7 @@ export async function generarNotaDeAnulacion(cobroId: number): Promise<Resultado
     const codigo = codigoDe(err);
     if (codigo === "COBRO_NO_EXISTE") return fallo("Ese cobro no existe.");
     if (codigo === "NOTA_NO_APLICA") return fallo("La nota solo aplica a un cobro anulado que ya tenía recibo.");
+    if (codigo === "EMISOR_INCOMPLETO") return fallo("Completa tus datos en Ajustes (nombre, RIF, WhatsApp y correo) antes de generar la nota.");
     if (codigo === "PDF_OCUPADO") return fallo("El servidor está generando otro PDF. Intenta de nuevo en unos segundos.");
     console.error("generarNotaDeAnulacion", e.data, err);
     return fallo("No se pudo generar la nota. Intenta de nuevo.");

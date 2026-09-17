@@ -55,8 +55,8 @@ export async function marcarPagado(formData: FormData): Promise<Resultado> {
 // y si habia recibo se genera la nota de anulacion R-...-A.
 export async function anularCobro(cobroId: number, motivo: string): Promise<Resultado> {
   const u = await exigirRol("dueno");
-  const e = z.object({ id: Id, motivo: z.string().trim().min(2).max(300) }).safeParse({ id: cobroId, motivo });
-  if (!e.success) return fallo("Escribe el motivo.");
+  const e = z.object({ id: Id, motivo: z.string().trim().min(2).max(191) }).safeParse({ id: cobroId, motivo });
+  if (!e.success) return fallo("Escribe el motivo (hasta 191 caracteres).");
   try {
     const c = await prisma.cobro.findUnique({ where: { id: e.data.id }, select: { proyectoId: true } });
     if (!c) return fallo("Ese cobro no existe.");

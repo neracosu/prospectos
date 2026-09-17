@@ -49,6 +49,20 @@ describe.runIf(DB_HABILITADA)("generarRecibo y generarNotaAnulacion", () => {
     expect(() => rutaDocumento("../../etc/passwd")).toThrow("DOCUMENTO_INVALIDO");
   });
 
+  it("fuera de produccion jamas se usa el directorio real de archivos", () => {
+    const antes = process.env.PROSPECTOS_DIR_ARCHIVOS;
+    try {
+      process.env.PROSPECTOS_DIR_ARCHIVOS = "/home/neracosu/prospectos-archivos";
+      expect(() => rutaDocumento("R-2026-0001")).toThrow("DIR_ARCHIVOS_DE_PRODUCCION");
+      process.env.PROSPECTOS_DIR_ARCHIVOS = "/home/neracosu/prospectos-archivos/";
+      expect(() => rutaDocumento("R-2026-0001")).toThrow("DIR_ARCHIVOS_DE_PRODUCCION");
+      delete process.env.PROSPECTOS_DIR_ARCHIVOS; // sin definir cae en el mismo directorio real
+      expect(() => rutaDocumento("R-2026-0001")).toThrow("DIR_ARCHIVOS_DE_PRODUCCION");
+    } finally {
+      process.env.PROSPECTOS_DIR_ARCHIVOS = antes;
+    }
+  });
+
   it("sin datos del emisor no genera ni gasta numero", async () => {
     const c = await cobroPagado("Sin emisor");
     await expect(generarRecibo(c.id, usuarioId)).rejects.toThrow("EMISOR_INCOMPLETO");
@@ -165,5 +179,22 @@ describe.runIf(DB_HABILITADA)("generarRecibo y generarNotaAnulacion", () => {
     // Chromium simulado si fue llamado: la anulacion llego DESPUES de que la transaccion leyera
     // el cobro (rama del r.count === 0), que es la rama que interesa ejercitar aqui.
     expect(pdfFalso.llamadas).toBe(llamadasAntes + 1);
+  });
+
+  it("si el contador quedo por detras de un numero ya emitido, no se genera nada ni se pisa el PDF", async () => {
+    const emitido = await prisma.cobro.findFirstOrThrow({ where: { proyectoId, detalle: "Primero" } }); // R-...-0001
+    const antes = await ultimo();
+    await prisma.correlativo.update({ where: { serie_anio: { serie: "R", anio: ANIO } }, data: { ultimo: 0 } });
+    try {
+      const c = await cobroPagado("Contador desfasado");
+      const llamadas = pdfFalso.llamadas;
+      await expect(generarRecibo(c.id, usuarioId)).rejects.toThrow("CORRELATIVO_DESFASADO");
+      expect(pdfFalso.llamadas).toBe(llamadas); // ni siquiera se llamo a Chromium: el PDF emitido no se toca
+      expect((await prisma.cobro.findUniqueOrThrow({ where: { id: c.id } })).reciboNumero).toBe("");
+      expect(await ultimo()).toBe(0);
+      expect(emitido.reciboNumero).toBe(`R-${ANIO}-0001`);
+    } finally {
+      await prisma.correlativo.update({ where: { serie_anio: { serie: "R", anio: ANIO } }, data: { ultimo: antes } });
+    }
   });
 });

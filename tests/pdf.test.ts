@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { readdirSync, readFileSync, statSync, rmSync } from "node:fs";
+import { mkdirSync, readdirSync, readFileSync, statSync, rmSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { DB_HABILITADA } from "./ayuda-db";
@@ -26,6 +26,15 @@ describe.runIf(DB_HABILITADA)("pdf", () => {
     expect(statSync(path.dirname(salida)).mode & 0o777).toBe(0o700);
     expect(readdirSync(path.dirname(salida))).toEqual(["x.pdf"]);
     rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("escribirAtomico no deja temporales cuando falla", async () => {
+    const base = path.join(os.tmpdir(), `prospectos-pdf-falla-${process.pid}`);
+    rmSync(base, { recursive: true, force: true });
+    mkdirSync(path.join(base, "ocupado", "hijo"), { recursive: true }); // un directorio no vacio donde deberia ir el archivo
+    await expect(escribirAtomico(path.join(base, "ocupado"), Buffer.from("x"))).rejects.toThrow();
+    expect(readdirSync(base)).toEqual(["ocupado"]);
+    rmSync(base, { recursive: true, force: true });
   });
 
   it("conTurnoGlobal corre las tareas de a una", async () => {

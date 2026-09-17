@@ -2,6 +2,7 @@
 // SOLO contra un servidor de desarrollo con la base de tests: generar un recibo gasta un correlativo real.
 // Uso (desde el clon de prueba, con su next dev en 3014):
 //   set -a; . ~/.config/prospectos/env; set +a
+//   El servidor de desarrollo del clon se levanta con PROSPECTOS_DIR_ARCHIVOS apuntando a un directorio temporal (nunca ~/prospectos-archivos).
 //   DATABASE_URL="$TEST_DATABASE_URL" BASE_URL=http://127.0.0.1:3014 npx tsx scripts/verificar-flujo-recibos.mts < archivo-con-el-pin
 import { readFileSync, mkdirSync } from "node:fs";
 import bcrypt from "bcryptjs";
@@ -10,7 +11,7 @@ import { prisma } from "../src/lib/db";
 
 const BASE = process.env.BASE_URL ?? "http://127.0.0.1:3014";
 if (!(process.env.DATABASE_URL ?? "").includes("prospectos_test")) { console.error("ALTO: DATABASE_URL no es la base de tests. Este recorrido genera recibos y gastaria correlativos reales."); process.exit(2); }
-if (/neracosu\.com/.test(BASE)) { console.error("ALTO: BASE_URL apunta al dominio publico. Usa el servidor de desarrollo del clon."); process.exit(2); }
+if (/neracosu\.com|:3013(\/|$)/.test(BASE)) { console.error("ALTO: BASE_URL apunta a produccion (el dominio publico o el puerto 3013). Usa el servidor de desarrollo del clon."); process.exit(2); }
 const pin = readFileSync(0, "utf8").trim();
 mkdirSync("capturas", { recursive: true });
 const errores: string[] = [];

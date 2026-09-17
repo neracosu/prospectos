@@ -27,5 +27,7 @@ if (process.env.PROSPECTOS_TEST_DB === "1") {
   process.env.DATABASE_URL = url;
 }
 process.env.SESION_SECRET ??= "secreto-de-tests-no-usar-en-produccion";
-process.env.PROSPECTOS_DIR_ARCHIVOS ??= path.join(os.tmpdir(), "prospectos-tests-archivos");
+// SIEMPRE un directorio temporal, sin ??=: el env de produccion define esta variable, y los tests de recibos
+// borran <dir>/recibos. Los recibos reales no se regeneran nunca; la suite jamas debe poder verlos.
+process.env.PROSPECTOS_DIR_ARCHIVOS = path.join(os.tmpdir(), "prospectos-tests-archivos");
 process.env.PROSPECTOS_URL_PUBLICA ??= "http://localhost:3013";
