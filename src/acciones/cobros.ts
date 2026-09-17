@@ -52,6 +52,36 @@ export async function marcarPagado(formData: FormData): Promise<Resultado> {
   }
 }
 
+// El «Deshacer» del aviso de pago (pasada de UX, fase B). Es una regla estrecha a proposito: solo dentro del
+// minuto siguiente a marcarlo y solo si todavia no tiene recibo ni esta anulado. Pasado eso, un pago mal
+// marcado se corrige anulando, como desde la pieza 4. Nada se borra: el evento del pago queda y se suma el suyo.
+const VENTANA_DESHACER_MS = 60_000;
+const PAGO_NO_SE_DESHACE = "PAGO_NO_SE_DESHACE";
+export async function deshacerPago(cobroId: number): Promise<Resultado> {
+  const u = await exigirRol("dueno");
+  const e = Id.safeParse(cobroId);
+  if (!e.success) return fallo(ERROR);
+  try {
+    const c = await prisma.cobro.findUnique({ where: { id: e.data }, select: { proyectoId: true, monto: true, pagadoEn: true } });
+    if (!c) return fallo("Ese cobro no existe.");
+    if (!c.pagadoEn) return fallo("Ese cobro no está pagado.");
+    const pago = await prisma.evento.findFirst({ where: { cobroId: e.data, tipo: "cobro_pagado" }, orderBy: { id: "desc" }, select: { creadoEn: true } });
+    if (!pago || Date.now() - pago.creadoEn.getTime() >= VENTANA_DESHACER_MS) return fallo("Ya pasó el minuto para deshacer. Si el pago está mal, anúlalo.");
+    await prisma.$transaction(async (tx) => {
+      // Condicionado a «sin recibo»: generarRecibo condiciona el suyo a «pagado», asi que si los dos llegan a la
+      // vez el candado de fila deja pasar a uno solo y el otro ve count 0.
+      const r = await tx.cobro.updateMany({ where: { id: e.data, pagadoEn: { not: null }, anuladoEn: null, reciboNumero: "" }, data: { pagadoEn: null, canal: "", referencia: "", nota: "" } });
+      if (r.count === 0) throw new Error(PAGO_NO_SE_DESHACE);
+      await tx.evento.create({ data: { proyectoId: c.proyectoId, cobroId: e.data, usuarioId: u.id, tipo: "pago_deshecho", texto: formatoUSD(Number(c.monto)) } });
+    });
+    refrescar(c.proyectoId);
+    return exito();
+  } catch (err) {
+    if (err instanceof Error && err.message === PAGO_NO_SE_DESHACE) return fallo("Ese cobro ya tiene recibo o está anulado: no se puede deshacer.");
+    console.error("deshacerPago", err); return fallo(ERROR);
+  }
+}
+
 // Desde la pieza 4 tambien se anula un cobro pagado: es la unica forma de corregir un pago
 // marcado por error o un recibo mal emitido. Nada se borra: el pago, el recibo y su PDF quedan,
 // y si habia recibo se genera la nota de anulacion R-...-A.

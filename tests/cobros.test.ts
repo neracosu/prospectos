@@ -14,7 +14,7 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
 import { prisma } from "@/lib/db";
 import { DB_HABILITADA, limpiarBase, sembrarBasico, sembrarCliente, sembrarProyecto } from "./ayuda-db";
 import { sesionFalsa } from "./ayuda-sesion";
-import { marcarPagado, anularCobro, agregarCobro, registrarRecordatorio } from "@/acciones/cobros";
+import { marcarPagado, anularCobro, agregarCobro, registrarRecordatorio, deshacerPago } from "@/acciones/cobros";
 import { mensajeDeCobro, enlaceWhatsappCobro } from "@/lib/mensajes-cobro";
 import { hoyCaracas, sumarDias } from "@/lib/fecha-caracas";
 
@@ -162,5 +162,69 @@ describe.runIf(DB_HABILITADA)("acciones de cobros", () => {
     expect((await anularCobro(c.id, "x".repeat(192))).ok).toBe(false);
     expect((await anularCobro(c.id, "x".repeat(191))).ok).toBe(true);
     expect((await prisma.cobro.findUniqueOrThrow({ where: { id: c.id } })).anuladoMotivo).toHaveLength(191);
+  });
+  describe("deshacerPago", () => {
+    const pagar = async (detalle: string) => {
+      expect((await agregarCobro(fd({ proyectoId: String(proyectoId), concepto: "extra", detalle, monto: "80", vence: "2026-10-01" }))).ok).toBe(true);
+      const c = await prisma.cobro.findFirstOrThrow({ where: { proyectoId, detalle } });
+      expect((await marcarPagado(fd({ cobroId: String(c.id), pagadoEn: hoyCaracas(), canal: "zelle", referencia: "Z-9", nota: "se equivoco" }))).ok).toBe(true);
+      return c.id;
+    };
+
+    it("recien pagado vuelve a quedar por cobrar, limpio y con su rastro", async () => {
+      const id = await pagar("Deshacer uno");
+      expect(await deshacerPago(id)).toEqual({ ok: true, datos: undefined });
+      const d = await prisma.cobro.findUniqueOrThrow({ where: { id } });
+      expect(d).toMatchObject({ pagadoEn: null, canal: "", referencia: "", nota: "", anuladoEn: null });
+      const ev = await prisma.evento.findMany({ where: { cobroId: id, tipo: "pago_deshecho" } });
+      expect(ev).toHaveLength(1);
+      expect(ev[0]).toMatchObject({ usuarioId: ids.usuarioId, proyectoId });
+      expect(ev[0].texto).toContain("$80,00");
+      // El pago original conserva su evento: nada se borra.
+      expect(await prisma.evento.count({ where: { cobroId: id, tipo: "cobro_pagado" } })).toBe(1);
+      // Y se puede volver a pagar.
+      expect((await marcarPagado(fd({ cobroId: String(id), pagadoEn: hoyCaracas(), canal: "efectivo", referencia: "", nota: "" }))).ok).toBe(true);
+    });
+
+    it("dos toques deshacen una sola vez", async () => {
+      const id = await pagar("Deshacer doble");
+      const [a, b] = await Promise.all([deshacerPago(id), deshacerPago(id)]);
+      expect([a.ok, b.ok].filter(Boolean)).toHaveLength(1);
+      expect(await prisma.evento.count({ where: { cobroId: id, tipo: "pago_deshecho" } })).toBe(1);
+    });
+
+    it("con recibo emitido no se deshace: el pago sigue", async () => {
+      const id = await pagar("Deshacer con recibo");
+      await prisma.cobro.update({ where: { id }, data: { reciboNumero: "R-2026-9999", reciboGeneradoEn: new Date() } });
+      expect(await deshacerPago(id)).toEqual({ ok: false, mensaje: expect.stringContaining("recibo") });
+      expect((await prisma.cobro.findUniqueOrThrow({ where: { id } })).pagadoEn).not.toBeNull();
+      expect(await prisma.evento.count({ where: { cobroId: id, tipo: "pago_deshecho" } })).toBe(0);
+    });
+
+    it("pasado el minuto ya no se deshace: toca anular", async () => {
+      const id = await pagar("Deshacer tarde");
+      await prisma.evento.updateMany({ where: { cobroId: id, tipo: "cobro_pagado" }, data: { creadoEn: new Date(Date.now() - 2 * 60 * 1000) } });
+      expect(await deshacerPago(id)).toEqual({ ok: false, mensaje: expect.stringContaining("anúlalo") });
+      expect((await prisma.cobro.findUniqueOrThrow({ where: { id } })).pagadoEn).not.toBeNull();
+    });
+
+    it("un cobro que nunca se pago, uno anulado o uno que no existe no se deshacen", async () => {
+      expect((await agregarCobro(fd({ proyectoId: String(proyectoId), concepto: "extra", detalle: "Nunca pagado", monto: "10", vence: "2026-10-01" }))).ok).toBe(true);
+      const sinPagar = await prisma.cobro.findFirstOrThrow({ where: { proyectoId, detalle: "Nunca pagado" } });
+      expect((await deshacerPago(sinPagar.id)).ok).toBe(false);
+      const anulado = await pagar("Deshacer anulado");
+      expect((await anularCobro(anulado, "pago marcado por error")).ok).toBe(true);
+      expect((await deshacerPago(anulado)).ok).toBe(false);
+      expect((await prisma.cobro.findUniqueOrThrow({ where: { id: anulado } })).pagadoEn).not.toBeNull();
+      expect((await deshacerPago(99999999)).ok).toBe(false);
+      expect((await deshacerPago(-1)).ok).toBe(false);
+    });
+
+    it("el prospectador no deshace pagos", async () => {
+      const id = await pagar("Deshacer sin permiso");
+      sesionFalsa.actual = { id: ids.prospectadorId, nombre: "María", rol: "prospectador" };
+      await expect(deshacerPago(id)).rejects.toThrow("REDIRECT:/hoy");
+      expect((await prisma.cobro.findUniqueOrThrow({ where: { id } })).pagadoEn).not.toBeNull();
+    });
   });
 });

@@ -64,12 +64,12 @@ export async function marcarEnviado(prospectoId: number, canal: Canal): Promise<
   }
 }
 
-export async function saltar(prospectoId: number): Promise<Resultado> {
+export async function saltar(prospectoId: number): Promise<Resultado<{ ordenAnterior: number }>> {
   const u = await exigirSesion();
   const e = Id.safeParse(prospectoId);
   if (!e.success) return fallo(ERROR);
   try {
-    const p = await prisma.prospecto.findUnique({ where: { id: e.data }, select: { etapa: true } });
+    const p = await prisma.prospecto.findUnique({ where: { id: e.data }, select: { etapa: true, ordenCola: true } });
     if (!p) return fallo("Ese prospecto ya no existe.");
     const max = await prisma.prospecto.aggregate({ _max: { ordenCola: true } });
     // Condicionado a la etapa leida: no se salta un prospecto que ya no esta en la cola.
@@ -80,9 +80,29 @@ export async function saltar(prospectoId: number): Promise<Resultado> {
     if (r.count === 0) return fallo("Solo se salta a un prospecto por contactar.");
     await prisma.evento.create({ data: { prospectoId: e.data, usuarioId: u.id, tipo: "saltado" } });
     refrescar();
-    return exito();
+    // El orden que tenia viaja al navegador para el «Deshacer» del aviso (pasada de UX, fase B).
+    return exito({ ordenAnterior: p.ordenCola });
   } catch (err) {
     console.error("saltar", err);
+    return fallo(ERROR);
+  }
+}
+
+// El «Deshacer» de un salto: repone el lugar que tenia en la cola. El orden lo manda el navegador, pero lo
+// unico que puede hacer con el es reordenar la cola de alguien que ya tiene sesion en el panel.
+export async function deshacerSalto(prospectoId: number, ordenAnterior: number): Promise<Resultado> {
+  const u = await exigirSesion();
+  const e = z.object({ id: Id, orden: z.number().int().min(0).max(2147483647) }).safeParse({ id: prospectoId, orden: ordenAnterior });
+  if (!e.success) return fallo(ERROR);
+  try {
+    // Condicionado a la etapa: si entre el salto y el deshacer alguien lo envio, ya no vuelve a la cola.
+    const r = await prisma.prospecto.updateMany({ where: { id: e.data.id, etapa: "por_contactar" }, data: { ordenCola: e.data.orden } });
+    if (r.count === 0) return fallo("Ese prospecto ya no está en la cola.");
+    await prisma.evento.create({ data: { prospectoId: e.data.id, usuarioId: u.id, tipo: "salto_deshecho" } });
+    refrescar();
+    return exito();
+  } catch (err) {
+    console.error("deshacerSalto", err);
     return fallo(ERROR);
   }
 }

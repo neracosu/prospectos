@@ -20,7 +20,7 @@ import { canalesDisponibles } from "@/lib/canales-contrato";
 
 export const dynamic = "force-dynamic";
 const PESTANAS = [{ clave: "cobros", texto: "Cobros" }, { clave: "pendientes", texto: "Pendientes" }, { clave: "horas", texto: "Horas" }, { clave: "versiones", texto: "Versiones" }, { clave: "documentos", texto: "Documentos" }, { clave: "cliente", texto: "Cliente" }];
-const TEXTO_EVENTO: Record<string, string> = { proyecto_creado: "Proyecto creado", proyecto_estado: "Estado", proyecto_editado: "Proyecto editado", cobro_pagado: "Cobro pagado", cobro_anulado: "Cobro anulado", cobro_agregado: "Cobro agregado", recordatorio: "Recordatorio enviado", hito_cumplido: "Hito cumplido", version_publicada: "Versión publicada", aviso_cliente: "Aviso al cliente", horas: "Horas", recibo_generado: "Recibo generado", nota_anulacion: "Nota de anulación", documento_subido: "Documento subido", documento_quitado: "Documento quitado" };
+const TEXTO_EVENTO: Record<string, string> = { proyecto_creado: "Proyecto creado", proyecto_estado: "Estado", proyecto_editado: "Proyecto editado", cobro_pagado: "Cobro pagado", pago_deshecho: "Pago deshecho", cobro_anulado: "Cobro anulado", cobro_agregado: "Cobro agregado", recordatorio: "Recordatorio enviado", hito_cumplido: "Hito cumplido", version_publicada: "Versión publicada", aviso_cliente: "Aviso al cliente", horas: "Horas", recibo_generado: "Recibo generado", nota_anulacion: "Nota de anulación", documento_subido: "Documento subido", documento_quitado: "Documento quitado" };
 
 export default async function Proyecto({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<Record<string, string | undefined>> }) {
   await exigirRol("dueno");

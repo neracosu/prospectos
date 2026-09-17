@@ -15,7 +15,7 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
 import { prisma } from "@/lib/db";
 import { DB_HABILITADA, limpiarBase, sembrarBasico, crearProspectoDePrueba } from "./ayuda-db";
 import { sesionFalsa } from "./ayuda-sesion";
-import { marcarEnviado, saltar, marcarRespondio, escribirDeNuevo, descartar, cambiarEtapa, guardarNota, editarSeguimiento, crearProspecto } from "@/acciones/prospectos";
+import { marcarEnviado, saltar, deshacerSalto, marcarRespondio, escribirDeNuevo, descartar, cambiarEtapa, guardarNota, editarSeguimiento, crearProspecto } from "@/acciones/prospectos";
 import { hoyCaracas, sumarDias } from "@/lib/fecha-caracas";
 
 describe.runIf(DB_HABILITADA)("acciones de prospectos", () => {
@@ -59,6 +59,35 @@ describe.runIf(DB_HABILITADA)("acciones de prospectos", () => {
     expect((await saltar(p.id)).ok).toBe(true);
     expect((await prisma.prospecto.findUniqueOrThrow({ where: { id: p.id } })).ordenCola).toBe(51);
     expect(await prisma.evento.count({ where: { prospectoId: p.id, tipo: "saltado" } })).toBe(1);
+  });
+
+  it("saltar devuelve el orden que tenia y deshacerSalto lo repone, con su rastro", async () => {
+    const p = await crearProspectoDePrueba(ids.nichoId, { ordenCola: 7 });
+    const r = await saltar(p.id);
+    expect(r).toEqual({ ok: true, datos: { ordenAnterior: 7 } });
+    expect((await prisma.prospecto.findUniqueOrThrow({ where: { id: p.id } })).ordenCola).not.toBe(7);
+    expect((await deshacerSalto(p.id, 7)).ok).toBe(true);
+    expect((await prisma.prospecto.findUniqueOrThrow({ where: { id: p.id } })).ordenCola).toBe(7);
+    const ev = await prisma.evento.findMany({ where: { prospectoId: p.id, tipo: "salto_deshecho" } });
+    expect(ev).toHaveLength(1);
+    expect(ev[0].usuarioId).toBe(ids.usuarioId);
+  });
+
+  it("deshacerSalto no mueve a uno que ya no esta por contactar, ni acepta un orden invalido", async () => {
+    const enviado = await crearProspectoDePrueba(ids.nichoId, { etapa: "enviado", ordenCola: 9 });
+    expect(await deshacerSalto(enviado.id, 2)).toEqual({ ok: false, mensaje: expect.stringContaining("cola") });
+    expect((await prisma.prospecto.findUniqueOrThrow({ where: { id: enviado.id } })).ordenCola).toBe(9);
+    const p = await crearProspectoDePrueba(ids.nichoId, { ordenCola: 4 });
+    for (const malo of [-1, 1.5, Number.NaN, 2 ** 31]) expect((await deshacerSalto(p.id, malo)).ok).toBe(false);
+    expect((await prisma.prospecto.findUniqueOrThrow({ where: { id: p.id } })).ordenCola).toBe(4);
+    expect(await prisma.evento.count({ where: { prospectoId: { in: [enviado.id, p.id] }, tipo: "salto_deshecho" } })).toBe(0);
+  });
+
+  it("deshacerSalto sin sesion no hace nada", async () => {
+    const p = await crearProspectoDePrueba(ids.nichoId, { ordenCola: 3 });
+    sesionFalsa.actual = null;
+    await expect(deshacerSalto(p.id, 1)).rejects.toThrow("REDIRECT:/entrar");
+    expect((await prisma.prospecto.findUniqueOrThrow({ where: { id: p.id } })).ordenCola).toBe(3);
   });
 
   it("saltar no mueve un prospecto que ya no esta por contactar", async () => {
