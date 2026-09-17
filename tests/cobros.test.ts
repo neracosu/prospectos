@@ -80,13 +80,18 @@ describe.runIf(DB_HABILITADA)("acciones de cobros", () => {
     expect(await prisma.evento.count({ where: { cobroId: c.id, tipo: "cobro_pagado" } })).toBe(1);
   });
 
-  it("anularCobro exige motivo, no anula uno pagado, y un anulado no se paga", async () => {
+  it("anularCobro exige motivo, anula tambien uno pagado (pieza 4), y un anulado no se paga ni se anula otra vez", async () => {
     const pagado = await prisma.cobro.findFirstOrThrow({ where: { proyectoId, concepto: "extra" } });
-    expect((await anularCobro(pagado.id, "error")).ok).toBe(false);
+    expect((await anularCobro(pagado.id, " ")).ok).toBe(false);
+    expect((await anularCobro(pagado.id, "se marcó por error")).ok).toBe(true);
+    const d = await prisma.cobro.findUniqueOrThrow({ where: { id: pagado.id } });
+    expect(d.anuladoEn).not.toBeNull();
+    expect(d.pagadoEn).not.toBeNull(); // el rastro del pago no se borra
+    expect(d.notaAnulacionEn).toBeNull(); // no tenia recibo: no hay nota
+    expect(await anularCobro(pagado.id, "otra vez")).toEqual({ ok: false, mensaje: "Ese cobro ya estaba anulado." });
     const r = await agregarCobro(fd({ proyectoId: String(proyectoId), concepto: "cuota", detalle: "Cuota extra", monto: "100", vence: "2026-12-01" }));
     expect(r.ok).toBe(true);
     const c = await prisma.cobro.findFirstOrThrow({ where: { proyectoId, detalle: "Cuota extra" } });
-    expect((await anularCobro(c.id, " ")).ok).toBe(false);
     expect((await anularCobro(c.id, "se acordó otra cosa")).ok).toBe(true);
     expect((await marcarPagado(fd({ cobroId: String(c.id), pagadoEn: hoyCaracas(), canal: "efectivo", referencia: "", nota: "" }))).ok).toBe(false);
     expect((await prisma.cobro.findUniqueOrThrow({ where: { id: c.id } })).anuladoMotivo).toBe("se acordó otra cosa");

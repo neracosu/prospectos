@@ -9,9 +9,10 @@ import { MONTO_TEXTO, formatoUSD } from "@/lib/dinero";
 import { CANALES_COBRO, ETIQUETA_CANAL_COBRO, estadoCobro, type Concepto } from "@/lib/cobros-contrato";
 import { leerConfig, CLAVES } from "@/lib/configuracion";
 import { mensajeDeCobro, enlaceWhatsappCobro } from "@/lib/mensajes-cobro";
+import { generarNotaAnulacion } from "@/lib/recibos";
 import { fallo, exito, type Resultado } from "@/acciones/resultado";
 
-// exigirRol("dueno") va FUERA del try/catch. Nada se borra: los cobros se anulan con motivo.
+// exigirRol("dueno") va FUERA del try/catch. Nada se borra: los cobros se anulan con motivo (tambien los pagados).
 const ERROR = "No se pudo guardar. Intenta de nuevo.";
 const COBRO_YA_RESUELTO = "COBRO_YA_RESUELTO";
 const Id = z.number().int().positive();
@@ -49,6 +50,9 @@ export async function marcarPagado(formData: FormData): Promise<Resultado> {
   }
 }
 
+// Desde la pieza 4 tambien se anula un cobro pagado: es la unica forma de corregir un pago
+// marcado por error o un recibo mal emitido. Nada se borra: el pago, el recibo y su PDF quedan,
+// y si habia recibo se genera la nota de anulacion R-...-A.
 export async function anularCobro(cobroId: number, motivo: string): Promise<Resultado> {
   const u = await exigirRol("dueno");
   const e = z.object({ id: Id, motivo: z.string().trim().min(2).max(300) }).safeParse({ id: cobroId, motivo });
@@ -57,14 +61,21 @@ export async function anularCobro(cobroId: number, motivo: string): Promise<Resu
     const c = await prisma.cobro.findUnique({ where: { id: e.data.id }, select: { proyectoId: true } });
     if (!c) return fallo("Ese cobro no existe.");
     await prisma.$transaction(async (tx) => {
-      const r = await tx.cobro.updateMany({ where: { id: e.data.id, pagadoEn: null, anuladoEn: null }, data: { anuladoEn: new Date(), anuladoMotivo: e.data.motivo } });
+      const r = await tx.cobro.updateMany({ where: { id: e.data.id, anuladoEn: null }, data: { anuladoEn: new Date(), anuladoMotivo: e.data.motivo } });
       if (r.count === 0) throw new Error(COBRO_YA_RESUELTO);
       await tx.evento.create({ data: { proyectoId: c.proyectoId, cobroId: e.data.id, usuarioId: u.id, tipo: "cobro_anulado", texto: e.data.motivo } });
     });
+    // Se lee DESPUES de anular: si un recibo se estaba generando a la vez, o quedo emitido
+    // antes de la anulacion (y entonces lleva nota) o su transaccion fallo (y no hay recibo).
+    const despues = await prisma.cobro.findUnique({ where: { id: e.data.id }, select: { reciboNumero: true } });
+    if (despues?.reciboNumero) {
+      // Si Chromium falla, el cobro ya quedo anulado: la nota se genera despues desde la fila.
+      try { await generarNotaAnulacion(e.data.id, u.id); } catch (err) { console.error("anularCobro: nota de anulacion", e.data.id, err); }
+    }
     refrescar(c.proyectoId);
     return exito();
   } catch (err) {
-    if (err instanceof Error && err.message === COBRO_YA_RESUELTO) return fallo("Un cobro pagado no se anula (ni uno ya anulado).");
+    if (err instanceof Error && err.message === COBRO_YA_RESUELTO) return fallo("Ese cobro ya estaba anulado.");
     console.error("anularCobro", err); return fallo(ERROR);
   }
 }
