@@ -25,11 +25,12 @@ export async function buscarPorPin(pin: string): Promise<{ id: number; nombre: s
   return null;
 }
 
-// La unicidad del PIN se exige contra TODAS las cuentas, activas o no: si se
+// La unicidad del PIN se exige contra TODAS las cuentas del panel, activas o no: si se
 // reactivara una cuenta desactivada, dos personas terminarian con el mismo
-// PIN y buscarPorPin devolveria siempre la primera que encuentre.
+// PIN y buscarPorPin devolveria siempre la primera que encuentre. Las cuentas de rol
+// "cliente" (portal, pieza 5) no cuentan: alla la cuenta la identifica el codigo, no el PIN.
 export async function pinEnUso(pin: string, salvoId?: number): Promise<boolean> {
-  const usuarios = await prisma.usuario.findMany({ where: { ...(salvoId ? { id: { not: salvoId } } : {}) } });
+  const usuarios = await prisma.usuario.findMany({ where: { rol: { in: ["dueno", "prospectador"] }, ...(salvoId ? { id: { not: salvoId } } : {}) } });
   for (const u of usuarios) if (await bcrypt.compare(pin, u.pinHash)) return true;
   return false;
 }

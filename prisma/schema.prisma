@@ -16,6 +16,11 @@ model Usuario {
   activo     Boolean    @default(true)
   pinHash    String
   metaDiaria Int        @default(10)
+  // Pieza 5: la cuenta del portal de un cliente (rol "cliente"). Una sola por cliente.
+  clienteId     Int?       @unique
+  cliente       Cliente?   @relation(fields: [clienteId], references: [id])
+  // Sube al regenerar el PIN o desactivar el acceso: invalida las sesiones abiertas del portal.
+  sesionVersion Int        @default(0)
   creadoEn   DateTime   @default(now())
   eventos    Evento[]
   horas      Horas[]
@@ -90,17 +95,21 @@ model Evento {
   usuario     Usuario?   @relation(fields: [usuarioId], references: [id])
   // etapa | enviado | abierto | nota | saltado | importado | seguimiento | lectura_web |
   // proyecto_creado | proyecto_estado | proyecto_editado | cobro_pagado | cobro_anulado | cobro_agregado |
-  // recordatorio | hito_cumplido | version_publicada | aviso_cliente | horas | recibo_generado | nota_anulacion
+  // recordatorio | hito_cumplido | version_publicada | aviso_cliente | horas | recibo_generado | nota_anulacion | portal_abierto
   tipo        String
   de          String     @default("")
   a           String     @default("")
   canal       String     @default("")
   texto       String     @default("") @db.Text
+  // Pieza 5: eventos del cliente (portal_abierto, aviso de acceso), sin proyecto.
+  clienteId   Int?
+  cliente     Cliente?   @relation(fields: [clienteId], references: [id])
   creadoEn    DateTime   @default(now())
 
   @@index([prospectoId, creadoEn])
   @@index([tipo, creadoEn])
   @@index([proyectoId, creadoEn])
+  @@index([clienteId, creadoEn])
 }
 
 model BusquedaOsm {
@@ -158,6 +167,8 @@ model Cliente {
   codigo         String     @unique
   creadoEn       DateTime   @default(now())
   proyectos      Proyecto[]
+  usuario        Usuario?
+  eventos        Evento[]
 }
 
 model Proyecto {

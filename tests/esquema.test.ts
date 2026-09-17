@@ -50,4 +50,15 @@ describe.runIf(DB_HABILITADA)("esquema", () => {
     expect(cobro.notaAnulacionEn).toBeNull();
     expect(cobro.reciboNumero).toBe("");
   });
+
+  it("un cliente tiene a lo sumo un usuario de portal, con version de sesion, y un evento puede colgar del cliente", async () => {
+    const c = await sembrarCliente();
+    const u = await prisma.usuario.create({ data: { nombre: c.nombre, rol: "cliente", pinHash: "x", clienteId: c.id } });
+    expect(u.sesionVersion).toBe(0);
+    await expect(prisma.usuario.create({ data: { nombre: "otro", rol: "cliente", pinHash: "x", clienteId: c.id } })).rejects.toThrow(/Unique/);
+    await prisma.evento.create({ data: { clienteId: c.id, usuarioId: u.id, tipo: "portal_abierto" } });
+    expect(await prisma.evento.count({ where: { clienteId: c.id, tipo: "portal_abierto" } })).toBe(1);
+    const conUsuario = await prisma.cliente.findUniqueOrThrow({ where: { id: c.id }, include: { usuario: true } });
+    expect(conUsuario.usuario?.id).toBe(u.id);
+  });
 });

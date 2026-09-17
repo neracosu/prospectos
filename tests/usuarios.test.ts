@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { prisma } from "@/lib/db";
-import { DB_HABILITADA, limpiarBase, sembrarBasico, PIN_DUENO, PIN_PROSPECTADOR } from "./ayuda-db";
-import { buscarPorPin, crearUsuario, cambiarPin, pinEnUso } from "@/lib/usuarios";
+import { DB_HABILITADA, limpiarBase, sembrarBasico, sembrarCliente, PIN_DUENO, PIN_PROSPECTADOR } from "./ayuda-db";
+import { buscarPorPin, crearUsuario, cambiarPin, pinEnUso, hashPin } from "@/lib/usuarios";
 
 describe.runIf(DB_HABILITADA)("usuarios", () => {
   let ids: Awaited<ReturnType<typeof sembrarBasico>>;
@@ -22,5 +22,11 @@ describe.runIf(DB_HABILITADA)("usuarios", () => {
   it("un usuario desactivado no entra", async () => {
     await prisma.usuario.update({ where: { id: ids.prospectadorId }, data: { activo: false } });
     expect(await buscarPorPin(PIN_PROSPECTADOR)).toBeNull();
+  });
+  it("el PIN de un cliente del portal no cuenta para la unicidad de PINs del panel", async () => {
+    const c = await sembrarCliente();
+    await prisma.usuario.create({ data: { nombre: c.nombre, rol: "cliente", clienteId: c.id, pinHash: await hashPin("246810") } });
+    expect(await pinEnUso("246810")).toBe(false);
+    expect(await buscarPorPin("246810")).toBeNull(); // y jamas entra al panel con el
   });
 });
