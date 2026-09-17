@@ -70,10 +70,17 @@ export async function desactivarAcceso(clienteId: number): Promise<void> {
 // PIN errado responden igual ("incorrecto"): desde afuera no se distingue si el codigo existe.
 export async function intentarEntrada(d: { codigo: string; pin: string; ip: string }): Promise<{ ok: true; token: string } | { ok: false; motivo: "bloqueado" | "incorrecto" }> {
   const claveIp = `portal:ip:${d.ip}`;
+  // Un codigo mal formado no es de ninguna cuenta: solo cuenta contra la IP, y jamas acuna una clave de cuenta
+  // (el mapa de intentos es compartido con el panel y tiene tope: no se llena con basura elegida por quien ataca).
+  if (!CODIGO_VALIDO.test(d.codigo)) {
+    if (bloqueado(claveIp)) return { ok: false, motivo: "bloqueado" };
+    registrarFallo(claveIp);
+    return { ok: false, motivo: "incorrecto" };
+  }
   const claveCuenta = `portal:c:${d.codigo}`;
   if (bloqueado(claveIp) || bloqueado(claveCuenta)) return { ok: false, motivo: "bloqueado" };
   const fallar = (): { ok: false; motivo: "incorrecto" } => { registrarFallo(claveIp); registrarFallo(claveCuenta); return { ok: false, motivo: "incorrecto" }; };
-  if (!CODIGO_VALIDO.test(d.codigo) || !PIN_VALIDO.test(d.pin)) return fallar();
+  if (!PIN_VALIDO.test(d.pin)) return fallar();
   const c = await prisma.cliente.findUnique({ where: { codigo: d.codigo }, select: { id: true, usuario: { select: { id: true, activo: true, rol: true, pinHash: true, sesionVersion: true } } } });
   const u = c?.usuario;
   if (!c || !u || !u.activo || u.rol !== "cliente") return fallar();

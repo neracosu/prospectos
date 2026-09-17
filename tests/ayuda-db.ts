@@ -63,7 +63,7 @@ export async function crearProspectoDePrueba(
       nombre,
       ciudad,
       fuentes: ["https://ejemplo.test/"],
-      codigo: Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2),
+      codigo: generarCodigo(),
       clave: (nombre + "|" + ciudad).toLowerCase().replace(/[^a-z0-9|]/g, ""),
       ...extra,
     },

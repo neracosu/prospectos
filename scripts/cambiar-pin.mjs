@@ -21,7 +21,7 @@ const cuenta = await prisma.usuario.findUnique({ where: { id } });
 if (!cuenta) { console.error(`No existe la cuenta #${id}.`); await prisma.$disconnect(); process.exit(1); }
 
 // La unicidad se exige contra TODAS las cuentas, activas o no, salvo la propia.
-for (const u of await prisma.usuario.findMany({ where: { id: { not: id } } })) {
+for (const u of await prisma.usuario.findMany({ where: { id: { not: id }, rol: { in: ["dueno", "prospectador"] } } })) {
   if (await bcrypt.compare(pin, u.pinHash)) {
     console.error(`Ese PIN ya lo usa otra cuenta (#${u.id} ${u.nombre}).`);
     await prisma.$disconnect();

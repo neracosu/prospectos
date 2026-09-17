@@ -107,4 +107,18 @@ describe.runIf(DB_HABILITADA)("acceso del cliente al portal", () => {
     expect(await sesionDesdeToken("basura")).toBeNull();
     expect(await sesionDesdeToken(await crearToken({ id: 1, nombre: "Neri", rol: "dueno" }))).toBeNull();
   });
+
+  it("una IP bloqueada no le suma fallos a las cuentas: no sirve para dejar fuera a otro cliente", async () => {
+    const { pin } = await regenerarPin(otro.id);
+    for (let i = 0; i < 5; i++) await intentarEntrada({ codigo: cliente.codigo, pin: "00000" + i, ip: "9.9.9.9" }); // bloquea 9.9.9.9 (y la cuenta de `cliente`)
+    for (let i = 0; i < 20; i++) expect(await intentarEntrada({ codigo: otro.codigo, pin: "11111" + (i % 10), ip: "9.9.9.9" })).toEqual({ ok: false, motivo: "bloqueado" });
+    expect((await intentarEntrada({ codigo: otro.codigo, pin, ip: "9.9.9.10" })).ok).toBe(true); // `otro` sigue entrando desde su IP
+  });
+
+  it("un codigo mal formado solo cuenta contra la IP", async () => {
+    for (let i = 0; i < 5; i++) expect(await intentarEntrada({ codigo: "../basura" + i, pin: "123456", ip: "9.9.8.8" })).toEqual({ ok: false, motivo: "incorrecto" });
+    expect(await intentarEntrada({ codigo: "../basura-nueva", pin: "123456", ip: "9.9.8.8" })).toEqual({ ok: false, motivo: "bloqueado" });
+    const { pin } = await regenerarPin(cliente.id);
+    expect((await intentarEntrada({ codigo: cliente.codigo, pin, ip: "9.9.8.9" })).ok).toBe(true);
+  });
 });

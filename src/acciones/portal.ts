@@ -28,5 +28,6 @@ export async function entrarPortal(_: unknown, formData: FormData): Promise<Resu
     console.error("entrarPortal", err);
     return fallo("No se pudo entrar. Intenta de nuevo.");
   }
-  redirect(destino);
+  if (destino) redirect(destino);
+  return fallo("No se pudo entrar. Intenta de nuevo.");
 }

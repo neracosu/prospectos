@@ -12,7 +12,7 @@ const pin = readFileSync(0, "utf8").trim();
 if (!/^\d{6}$/.test(pin)) { console.error("El PIN son 6 digitos."); process.exit(1); }
 
 const prisma = new PrismaClient();
-for (const u of await prisma.usuario.findMany()) {
+for (const u of await prisma.usuario.findMany({ where: { rol: { in: ["dueno", "prospectador"] } } })) {
   if (await bcrypt.compare(pin, u.pinHash)) {
     console.log(`EN USO por #${u.id} ${u.nombre}`);
     await prisma.$disconnect();
