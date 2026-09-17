@@ -18,6 +18,11 @@ describe("parsearTabla", () => {
     expect(parsearTabla(grande).error).toMatch(/pártelo/);
     expect(parsearTabla("").error).toBeTruthy();
   });
+  it("descarta la celda vacia de un separador colgante al final del encabezado", () => {
+    const r = parsearTabla("nombre;ciudad;nicho;\nA;B;hoteles;\n");
+    expect(r.desconocidas).toEqual([]);
+    expect(r.filas[0]).toMatchObject({ nombre: "A", ciudad: "B", nicho: "hoteles" });
+  });
 });
 
 describe("validarFila", () => {

@@ -16,4 +16,15 @@ describe("extraerContactos", () => {
   it("con HTML vacio devuelve listas vacias", () => {
     expect(extraerContactos("", "https://x/")).toEqual({ emails: [], celulares: [], instagram: [], facebook: [], tiktok: [] });
   });
+  it("no saca correos de un script; un mailto con ?subject sigue funcionando", () => {
+    const html = `<html><body>
+<script>var t = "tracker@analytics-vendor.com";</script>
+<a href="mailto:reservas@hotelx.com.ve?subject=Consulta">Escribenos</a>
+</body></html>`;
+    expect(extraerContactos(html, "https://hotelx.com.ve/").emails).toEqual(["reservas@hotelx.com.ve"]);
+  });
+  it("las redes con parametros de consulta se limpian a la URL canonica", () => {
+    const html = '<a href="https://www.instagram.com/hotelx/?hl=en">IG</a>';
+    expect(extraerContactos(html, "https://hotelx.com.ve/").instagram).toEqual(["https://www.instagram.com/hotelx/"]);
+  });
 });

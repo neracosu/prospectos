@@ -36,6 +36,9 @@ export function parsearTabla(texto: string): { filas: Record<Columna, string>[];
   if (lineas.length - 1 > MAX_FILAS) return { filas: [], desconocidas: [], error: "Más de 5000 filas: pártelo." };
   const sep = detectarSeparador(lineas[0]);
   const encabezados = partir(lineas[0], sep);
+  // Un separador colgante al final del encabezado (ej. "nombre;ciudad;nicho;") deja una
+  // celda vacia que no es una columna desconocida: se descarta, no se reporta.
+  while (encabezados.length && encabezados[encabezados.length - 1] === "") encabezados.pop();
   const mapa: (Columna | null)[] = []; const desconocidas: string[] = [];
   for (const e of encabezados) {
     const n = normalizarEncabezado(e);
