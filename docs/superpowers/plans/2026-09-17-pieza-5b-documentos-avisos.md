@@ -1556,7 +1556,7 @@ En `tests/portal.test.ts`, al final del `beforeAll` (después del `createMany` d
 ```ts
     await prisma.documento.createMany({ data: [
       { proyectoId: pms, nombre: "Manual de recepción", archivo: `documentos/${a.id}/11111111-1111-4111-8111-111111111111.pdf`, tipoMime: "application/pdf", tamano: 1_258_291, subidoEn: new Date("2026-09-12T16:00:00Z") },
-      { proyectoId: pms, nombre: "Respaldo de tarifas", archivo: `documentos/${a.id}/22222222-2222-4222-8222-222222222222.zip`, tipoMime: "application/zip", tamano: 860_160, subidoEn: new Date("2026-09-14T16:00:00Z") },
+      { proyectoId: pms, nombre: "Respaldo de temporadas", archivo: `documentos/${a.id}/22222222-2222-4222-8222-222222222222.zip`, tipoMime: "application/zip", tamano: 860_160, subidoEn: new Date("2026-09-14T16:00:00Z") },
       { proyectoId: pms, nombre: "SECRETO documento quitado", archivo: `documentos/${a.id}/33333333-3333-4333-8333-333333333333.pdf`, tipoMime: "application/pdf", tamano: 10, quitadoEn: new Date() },
       { proyectoId: deB, nombre: "SECRETO documento de B", archivo: `documentos/${b.id}/44444444-4444-4444-8444-444444444444.pdf`, tipoMime: "application/pdf", tamano: 10 },
     ] });
@@ -1566,7 +1566,7 @@ y un test nuevo antes del de «nada interno»:
   it("documentos: solo los vigentes de ESE proyecto, el mas nuevo primero, sin la ruta del archivo", async () => {
     const p = await proyectoPortal(a.id, pms, HOY);
     expect(p?.documentos).toEqual([
-      { id: expect.any(Number), nombre: "Respaldo de tarifas", sigla: "ZIP", descripcion: "ZIP de 840 KB", subidoEl: "2026-09-14", seDescarga: true },
+      { id: expect.any(Number), nombre: "Respaldo de temporadas", sigla: "ZIP", descripcion: "ZIP de 840 KB", subidoEl: "2026-09-14", seDescarga: true },
       { id: expect.any(Number), nombre: "Manual de recepción", sigla: "PDF", descripcion: "PDF de 1,2 MB", subidoEl: "2026-09-12", seDescarga: false },
     ]);
     expect(JSON.stringify(p)).not.toContain("documentos/");
