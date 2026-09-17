@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import bcrypt from "bcryptjs";
 import type { Prisma } from "@prisma/client";
+import { generarCodigo } from "@/lib/codigo";
 
 // Los tests con base exigen PROSPECTOS_TEST_DB=1 para que un "npm test" casual
 // no toque la base real. Con la bandera, preparar-entorno.ts ya redirigio
@@ -78,7 +79,7 @@ export async function sembrarCliente(
       whatsapp: extra.whatsapp ?? "584120000000",
       rif: extra.rif ?? "J-12345678-9",
       prospectoId: extra.prospectoId,
-      codigo: Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2),
+      codigo: generarCodigo(), // igual que produccion: 22 caracteres base64url (el portal valida el formato)
     },
   });
 }
