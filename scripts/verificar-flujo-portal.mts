@@ -151,7 +151,7 @@ try {
   await panelPg.getByText("Se revisa el contenido, no la extensión.").waitFor();
   await ctxPanel.close();
 
-  await pg.getByRole("link", { name: "Contacto" }).click();
+  await pg.getByRole("navigation", { name: "Portal" }).getByRole("link", { name: "Contacto" }).click();
   await pg.getByRole("link", { name: /por WhatsApp/ }).waitFor();
   await pg.screenshot({ path: "capturas/p5-06-contacto.png", fullPage: true });
 
