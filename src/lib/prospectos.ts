@@ -5,7 +5,7 @@ import { ordenarCola } from "@/lib/cola-contrato";
 import { ETAPAS, type Etapa } from "@/lib/embudo-contrato";
 import { rellenar } from "@/lib/plantilla-mensaje";
 import { enlacePropuesta, type ProspectoTarjeta } from "@/lib/prospectos-contrato";
-import { mapaDeTextos } from "@/lib/revision";
+import { listaDeTextos, mapaDeTextos } from "@/lib/revision";
 
 const SELECT = {
   id: true, nombre: true, ciudad: true, nota: true, web: true, tipo: true, tamano: true, etapa: true, proximoSeguimiento: true, codigo: true,
@@ -87,7 +87,7 @@ export async function fichaProspecto(
   const ab = await abrieron([id]);
   const t = aTarjeta(f, ab.has(id), f.etapa === "por_contactar" ? "inicial" : "seguimiento");
   return {
-    ...t, fuentes: Array.isArray(f.fuentes) ? (f.fuentes as string[]) : [],
+    ...t, fuentes: listaDeTextos(f.fuentes),
     // Se lee con guarda: la columna es Json y puede traer cualquier cosa de una
     // carga vieja. Sin fuente, el dato se muestra sin enlace, no con uno roto.
     fuentesPorCampo: mapaDeTextos(f.fuentesPorCampo),

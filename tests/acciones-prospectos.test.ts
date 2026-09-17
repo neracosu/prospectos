@@ -153,6 +153,35 @@ describe.runIf(DB_HABILITADA)("acciones de prospectos", () => {
     expect((await crearProspecto(fd)).ok).toBe(false);
   });
 
+  // La ficha muestra al lado de cada dato la direccion donde el negocio lo
+  // publica. El alta manual es el camino del "cargarlo a mano" de Google Maps:
+  // si no reparte la fuente, esos datos quedan sin respaldo visible.
+  it("crearProspecto le pone la fuente a cada dato de contacto que entro con ella", async () => {
+    const fd = new FormData();
+    fd.set("nichoId", String(ids.nichoId)); fd.set("nombre", "Hotel Con Fuente"); fd.set("ciudad", "Coro");
+    fd.set("telefono", "0414 222 33 44"); fd.set("web", "https://hotelconfuente.com");
+    fd.set("fuente", "https://maps.app.goo.gl/ejemplo");
+    expect((await crearProspecto(fd)).ok).toBe(true);
+    const d = await prisma.prospecto.findFirstOrThrow({ where: { nombre: "Hotel Con Fuente" } });
+    // telefono y web como se escribieron, y el whatsapp que sale del telefono.
+    expect(d.fuentesPorCampo).toEqual({
+      telefono: "https://maps.app.goo.gl/ejemplo",
+      whatsapp: "https://maps.app.goo.gl/ejemplo",
+      web: "https://maps.app.goo.gl/ejemplo",
+    });
+    expect(d.fuentes).toEqual(["https://maps.app.goo.gl/ejemplo"]);
+  });
+
+  it("crearProspecto sin fuente no inventa ninguna", async () => {
+    const fd = new FormData();
+    fd.set("nichoId", String(ids.nichoId)); fd.set("nombre", "Hotel Sin Fuente"); fd.set("ciudad", "Coro");
+    fd.set("telefono", "0414 555 66 77");
+    expect((await crearProspecto(fd)).ok).toBe(true);
+    const d = await prisma.prospecto.findFirstOrThrow({ where: { nombre: "Hotel Sin Fuente" } });
+    expect(d.fuentesPorCampo).toEqual({});
+    expect(d.fuentes).toEqual([]);
+  });
+
   it("crearProspecto rechaza el par que no cabe en la clave", async () => {
     // Cada campo entra en su tope (120 y 80) pero juntos dan 201 y la columna
     // `clave` es de 191: antes esto llegaba a MySQL y volvia como error generico.

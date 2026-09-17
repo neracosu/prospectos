@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { exigirSesion } from "@/lib/sesion";
 import { CANALES, type Canal } from "@/lib/canales-contrato";
@@ -238,13 +239,30 @@ export async function crearProspecto(formData: FormData): Promise<Resultado<{ id
     return fallo(clave ? ERROR_CLAVE_LARGA : "Revisa nombre, ciudad y nicho.");
   }
   const d = e.data;
+  // Los datos de contacto ya normalizados, que son los que se guardan y los que
+  // la ficha muestra con su flecha a la fuente.
+  const contacto = {
+    telefono: d.telefono,
+    whatsapp: normalizarCelular(d.whatsapp) || normalizarCelular(d.telefono),
+    email: d.email,
+    web: d.web,
+    instagram: normalizarRed(d.instagram, "instagram"),
+    facebook: normalizarRed(d.facebook, "facebook"),
+    tiktok: normalizarRed(d.tiktok, "tiktok"),
+  };
+  // Mismo criterio que validarFila (src/lib/tabla-contrato.ts): la fuente que se
+  // escribio vale para cada dato de contacto que entro con ella. Sin fuente no
+  // se inventa ninguna y el mapa queda vacio. Sin esto, lo cargado a mano era
+  // lo unico que se veia en la ficha sin decir donde lo publican.
+  const fuentesPorCampo: Record<string, string> = {};
+  if (d.fuente) for (const [campo, valor] of Object.entries(contacto)) if (valor) fuentesPorCampo[campo] = d.fuente;
   try {
     const p = await prisma.prospecto.create({
       data: {
-        nichoId: d.nichoId, nombre: d.nombre, ciudad: d.ciudad, estado: d.estado, tipo: d.tipo, tamano: d.tamano, telefono: d.telefono,
-        whatsapp: normalizarCelular(d.whatsapp) || normalizarCelular(d.telefono), email: d.email, web: d.web,
-        instagram: normalizarRed(d.instagram, "instagram"), facebook: normalizarRed(d.facebook, "facebook"), tiktok: normalizarRed(d.tiktok, "tiktok"),
-        nota: d.nota, fuentes: d.fuente ? [d.fuente] : [], origen: "manual", codigo: generarCodigo(), clave: claveProspecto(d.nombre, d.ciudad),
+        nichoId: d.nichoId, nombre: d.nombre, ciudad: d.ciudad, estado: d.estado, tipo: d.tipo, tamano: d.tamano,
+        ...contacto,
+        nota: d.nota, fuentes: d.fuente ? [d.fuente] : [], fuentesPorCampo: fuentesPorCampo as Prisma.InputJsonValue,
+        origen: "manual", codigo: generarCodigo(), clave: claveProspecto(d.nombre, d.ciudad),
         ordenCola: ((await prisma.prospecto.aggregate({ _max: { ordenCola: true } }))._max.ordenCola ?? 0) + 1,
         eventos: { create: { tipo: "importado", usuarioId: u.id, texto: "manual" } },
       },
