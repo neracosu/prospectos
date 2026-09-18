@@ -281,6 +281,13 @@ ramas, **sin fusionar ni desplegar hasta que Neri las vea**.
   de farmacias (bloquea la propuesta de ese nicho; hoy `farmacias` no tiene plantilla y la ficha no
   muestra enlace de propuesta).
 
+**Hoteles son dos nichos desde el 17-sep** (decisión de Neri): `hoteles` (de paso/motel, alta rotación: la propuesta
+original) y `hoteles-estadia` (urbanos, económicos, posadas: venden por noche). Los 132 se repartieron por
+`Prospecto.tipo` con `scripts/dividir-hoteles.mts` (46 y 86; idempotente, deja un evento `nota` en cada movido) y el
+nicho lo siembra `scripts/sembrar-nichos.mjs`. La propuesta de estadía **no lleva tabla de precios**: ponerle una
+exige publicarla antes en `neracosu.com/para/` (regla del sitio). Los dos nichos comparten etiquetas OSM: en la bandeja
+se decide por el tipo. Meliá y Eurobuilding no son prospectos (PMS corporativo).
+
 Decisiones de Neri del 16-sep que no se deducen del código: el buscador **no hace scraping masivo de
 Google** (bloquea la IP compartida con Adastram); el portal del cliente **no muestra horas ni tarifa**;
 los recibos son «recibo de pago», **nunca «factura»**; el acceso del cliente es **por cliente, no por
@@ -311,6 +318,7 @@ proyecto**.
 | `~/propuestas/hoteles/propuesta-hoteles.html` | Propuesta general de hoteles, 9 hojas, personaliza con `data-hotel`. Fuente de la plantilla del nicho hoteles |
 | `~/propuestas/hoteles/pdf.cjs`, `construir.py` | Cómo se genera el PDF con Playwright |
 | `~/propuestas/hoteles/prospectos/fuentes/*.json` | Los 132 hoteles (capital, centro, interior). `armar.py` sin argumentos vacía la lista: se corre con los tres JSON copiados fuera de `fuentes/` |
+| `~/propuestas/hoteles-estadia/` | Propuesta para hoteles de estadía (venden por noche): fuente, PDF de 9 hojas y artefacto `3iFJCpJZ4krL3WVBoyqHTu`. Misma casa que la de hoteles; **sin precio cerrado** (diagnóstico de $250 y precio por escrito tras verlo): el calendario de noches no está construido. Es la fuente de `plantillas/hoteles-estadia.html` |
 | `~/propuestas/archivo/2026-09-08-farmahogar.md` | Propuesta enviada a Farmahogar, base del nicho farmacias |
 | `~/propuestas/PLANTILLA.md` | Plantilla general de propuestas |
 | Artefacto `JNgfD2HQwcZYmhNDNbbUMQ` / `YBFhiJoYHATzV3UnH5HU2z` | Propuesta de hoteles y lista de hoteles publicadas en claude.ai |

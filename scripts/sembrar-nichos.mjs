@@ -12,6 +12,15 @@ const NICHOS = [
     etiquetaOsm: [["tourism", "hotel"], ["tourism", "motel"], ["tourism", "guest_house"]],
   },
   {
+    // Hoteles que venden por noche (urbanos, economicos, posadas): otra propuesta y otro mensaje que los de paso.
+    // Los prospectos se reparten con scripts/dividir-hoteles.mts segun Prospecto.tipo.
+    slug: "hoteles-estadia", nombre: "Hoteles de estadía", plantillaPropuesta: "hoteles-estadia", diasSeguimiento: 3,
+    mensajeInicial: "Buenas, equipo de {nombre}. Soy Neri Colón, desarrollador de sistemas. Mis sistemas funcionan en empresas de Caracas, Valencia y el exterior: para el Hotel VIP La Guaira construí su página de reservas en línea conectada al sistema que ya usaban, y para un hotel de Valencia la caja en bolívares y divisas y los turnos de recepción. Preparé una propuesta de 9 páginas pensada para {nombre}: vender sus noches por su propia página, sin comisión y con el anticipo validado antes de bloquear la habitación: {enlace} ¿Le parece si en 30 minutos se la muestro funcionando?",
+    mensajeSeguimiento: "Buenas de nuevo, equipo de {nombre}. Le escribí hace unos días con una propuesta para vender sus noches por su propia página, sin comisión: {enlace} Si prefiere, se la muestro funcionando en una llamada de 30 minutos. Quedo atento.",
+    // Mismas etiquetas OSM que hoteles: el buscador no distingue el segmento; se decide en la bandeja por el tipo.
+    etiquetaOsm: [["tourism", "hotel"], ["tourism", "guest_house"]],
+  },
+  {
     slug: "farmacias", nombre: "Farmacias", plantillaPropuesta: "", diasSeguimiento: 3,
     mensajeInicial: "Buenas, equipo de {nombre}. Soy Neri Colón, desarrollador de sistemas. Preparé una propuesta para que sus clientes compren desde el teléfono y ustedes despachen desde el mostrador. ¿Se la puedo enviar por aquí?",
     mensajeSeguimiento: "Buenas de nuevo, equipo de {nombre}. Le escribí hace unos días con una propuesta para la farmacia. ¿Tuvo chance de verla? Quedo atento.",
