@@ -44,6 +44,46 @@ const NICHOS = [
     etiquetaOsm: [["shop", "alcohol"], ["shop", "wine"], ["shop", "beverages"]],
   },
   {
+    // Arquetipo de citas por profesional (neracosu.com/para/citas-y-servicios.html): la agenda NO esta construida y la
+    // pagina lo dice; el mensaje ofrece el diagnostico, no un sistema listo. Sin plantilla de propuesta en el panel.
+    slug: "odontologias", nombre: "Odontologías", plantillaPropuesta: "", diasSeguimiento: 3,
+    mensajeInicial: "Buenas, equipo de {nombre}. Soy Neri Colón, desarrollador de sistemas. Mis sistemas funcionan en empresas de Caracas, Valencia y el exterior. Para consultorios odontológicos estoy armando un sistema propio de citas con agenda por profesional, recordatorio al cliente y cobro validado, que se paga una sola vez y queda a su nombre. Antes de construirlo quiero verlo con negocios reales: https://neracosu.com/para/citas-y-servicios.html ¿Le parece si en 30 minutos le cuento cómo funcionaría en {nombre}?",
+    mensajeSeguimiento: "Buenas de nuevo, equipo de {nombre}. Le escribí hace unos días por el sistema de citas para consultorios odontológicos: https://neracosu.com/para/citas-y-servicios.html Si prefiere, lo conversamos en una llamada de 30 minutos. Quedo atento.",
+    etiquetaOsm: [["amenity", "dentist"], ["healthcare", "dentist"]],
+  },
+  {
+    // Arquetipo de citas por profesional (neracosu.com/para/citas-y-servicios.html): la agenda NO esta construida y la
+    // pagina lo dice; el mensaje ofrece el diagnostico, no un sistema listo. Sin plantilla de propuesta en el panel.
+    slug: "peluquerias-y-barberias", nombre: "Peluquerías y barberías", plantillaPropuesta: "", diasSeguimiento: 3,
+    mensajeInicial: "Buenas, equipo de {nombre}. Soy Neri Colón, desarrollador de sistemas. Mis sistemas funcionan en empresas de Caracas, Valencia y el exterior. Para peluquerías y barberías estoy armando un sistema propio de citas con agenda por profesional, recordatorio al cliente y cobro validado, que se paga una sola vez y queda a su nombre. Antes de construirlo quiero verlo con negocios reales: https://neracosu.com/para/citas-y-servicios.html ¿Le parece si en 30 minutos le cuento cómo funcionaría en {nombre}?",
+    mensajeSeguimiento: "Buenas de nuevo, equipo de {nombre}. Le escribí hace unos días por el sistema de citas para peluquerías y barberías: https://neracosu.com/para/citas-y-servicios.html Si prefiere, lo conversamos en una llamada de 30 minutos. Quedo atento.",
+    etiquetaOsm: [["shop", "hairdresser"], ["shop", "barber"]],
+  },
+  {
+    // Arquetipo de citas por profesional (neracosu.com/para/citas-y-servicios.html): la agenda NO esta construida y la
+    // pagina lo dice; el mensaje ofrece el diagnostico, no un sistema listo. Sin plantilla de propuesta en el panel.
+    slug: "spas-y-estetica", nombre: "Spas y estética", plantillaPropuesta: "", diasSeguimiento: 3,
+    mensajeInicial: "Buenas, equipo de {nombre}. Soy Neri Colón, desarrollador de sistemas. Mis sistemas funcionan en empresas de Caracas, Valencia y el exterior. Para spas y centros de estética estoy armando un sistema propio de citas con agenda por profesional, recordatorio al cliente y cobro validado, que se paga una sola vez y queda a su nombre. Antes de construirlo quiero verlo con negocios reales: https://neracosu.com/para/citas-y-servicios.html ¿Le parece si en 30 minutos le cuento cómo funcionaría en {nombre}?",
+    mensajeSeguimiento: "Buenas de nuevo, equipo de {nombre}. Le escribí hace unos días por el sistema de citas para spas y centros de estética: https://neracosu.com/para/citas-y-servicios.html Si prefiere, lo conversamos en una llamada de 30 minutos. Quedo atento.",
+    etiquetaOsm: [["shop", "beauty"], ["shop", "massage"], ["leisure", "spa"], ["shop", "cosmetics"]],
+  },
+  {
+    // Arquetipo de citas por profesional (neracosu.com/para/citas-y-servicios.html): la agenda NO esta construida y la
+    // pagina lo dice; el mensaje ofrece el diagnostico, no un sistema listo. Sin plantilla de propuesta en el panel.
+    slug: "clinicas-y-consultorios", nombre: "Clínicas y consultorios", plantillaPropuesta: "", diasSeguimiento: 3,
+    mensajeInicial: "Buenas, equipo de {nombre}. Soy Neri Colón, desarrollador de sistemas. Mis sistemas funcionan en empresas de Caracas, Valencia y el exterior. Para clínicas y consultorios médicos estoy armando un sistema propio de citas con agenda por profesional, recordatorio al cliente y cobro validado, que se paga una sola vez y queda a su nombre. Antes de construirlo quiero verlo con negocios reales: https://neracosu.com/para/citas-y-servicios.html ¿Le parece si en 30 minutos le cuento cómo funcionaría en {nombre}?",
+    mensajeSeguimiento: "Buenas de nuevo, equipo de {nombre}. Le escribí hace unos días por el sistema de citas para clínicas y consultorios médicos: https://neracosu.com/para/citas-y-servicios.html Si prefiere, lo conversamos en una llamada de 30 minutos. Quedo atento.",
+    etiquetaOsm: [["amenity", "clinic"], ["amenity", "doctors"], ["healthcare", "clinic"]],
+  },
+  {
+    // Arquetipo de citas por profesional (neracosu.com/para/citas-y-servicios.html): la agenda NO esta construida y la
+    // pagina lo dice; el mensaje ofrece el diagnostico, no un sistema listo. Sin plantilla de propuesta en el panel.
+    slug: "veterinarias", nombre: "Veterinarias", plantillaPropuesta: "", diasSeguimiento: 3,
+    mensajeInicial: "Buenas, equipo de {nombre}. Soy Neri Colón, desarrollador de sistemas. Mis sistemas funcionan en empresas de Caracas, Valencia y el exterior. Para veterinarias estoy armando un sistema propio de citas con agenda por profesional, recordatorio al cliente y cobro validado, que se paga una sola vez y queda a su nombre. Antes de construirlo quiero verlo con negocios reales: https://neracosu.com/para/citas-y-servicios.html ¿Le parece si en 30 minutos le cuento cómo funcionaría en {nombre}?",
+    mensajeSeguimiento: "Buenas de nuevo, equipo de {nombre}. Le escribí hace unos días por el sistema de citas para veterinarias: https://neracosu.com/para/citas-y-servicios.html Si prefiere, lo conversamos en una llamada de 30 minutos. Quedo atento.",
+    etiquetaOsm: [["amenity", "veterinary"]],
+  },
+  {
     slug: "farmacias", nombre: "Farmacias", plantillaPropuesta: "", diasSeguimiento: 3,
     mensajeInicial: "Buenas, equipo de {nombre}. Soy Neri Colón, desarrollador de sistemas. Preparé una propuesta para que sus clientes compren desde el teléfono y ustedes despachen desde el mostrador. ¿Se la puedo enviar por aquí?",
     mensajeSeguimiento: "Buenas de nuevo, equipo de {nombre}. Le escribí hace unos días con una propuesta para la farmacia. ¿Tuvo chance de verla? Quedo atento.",
