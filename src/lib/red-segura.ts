@@ -42,14 +42,18 @@ type Opciones = {
   // Solo para pruebas: reemplaza la resolucion DNS real para poder simular un host
   // publico que en realidad apunta a un servidor http local levantado por el test.
   // Se ignora siempre fuera de la lista blanca (ver enListaBlancaDePruebas).
-  _lookupParaTests?: (host: string) => Promise<string>;
+  // Puede devolver varias IP (como el DNS real): descargar() prueba en orden si la conexion falla.
+  _lookupParaTests?: (host: string) => Promise<string | string[]>;
   // Solo para pruebas: sin este flag, la IP que devuelva _lookupParaTests se valida
   // igual que una resuelta por DNS real (rechaza privadas). Con el flag, se confia en
   // ella tal cual, para poder simular que un nombre "publico" apunta al server del test.
   _confiarEnLookupParaTests?: boolean;
 };
 
-type ResultadoGuardia = { ok: true; url: URL; ip: string } | { ok: false; motivo: string };
+// `ips`: TODAS las direcciones publicas a las que resuelve el nombre, en el orden del DNS. descargar() las prueba
+// en ese orden si la conexion falla (un dominio con dos servidores y uno caido; curl hace lo mismo). `ip` es la
+// primera, para quien solo quiere una.
+type ResultadoGuardia = { ok: true; url: URL; ip: string; ips: string[] } | { ok: false; motivo: string };
 type ResultadoDescarga =
   | { ok: true; estado: number; urlFinal: string; texto: string; truncado?: true }
   | { ok: false; motivo: string };
@@ -146,7 +150,7 @@ function conVencimiento<T>(promesa: Promise<T>, ms: number): Promise<T> {
 // "plazoRestanteMs", si se da, acota la resolucion DNS (parte del plazo TOTAL de descargar()).
 export async function esUrlPermitida(
   url: string,
-  lookup?: (host: string) => Promise<string>,
+  lookup?: (host: string) => Promise<string | string[]>,
   confiarEnLookup?: boolean,
   plazoRestanteMs?: number
 ): Promise<ResultadoGuardia> {
@@ -165,7 +169,7 @@ export async function esUrlPermitida(
   const sinCorchetes = host.replace(/^\[/, "").replace(/\]$/, "");
   if (net.isIP(sinCorchetes)) {
     if (ipPrivada(sinCorchetes)) return { ok: false, motivo: "Dirección privada o local no permitida" };
-    return { ok: true, url: u, ip: sinCorchetes };
+    return { ok: true, url: u, ip: sinCorchetes, ips: [sinCorchetes] };
   }
   // Un punto final es un nombre de dominio absoluto valido ("algo.localhost.") y no
   // cambia a que resuelve: se quita antes de comparar para que no sirva de escape.
@@ -176,13 +180,16 @@ export async function esUrlPermitida(
   // siempre (produccion, NODE_ENV sin definir, cualquier otro valor).
   const lookupEfectivo = enListaBlancaDePruebas() ? lookup : undefined;
   try {
-    const tareaIp: Promise<string> = lookupEfectivo
-      ? lookupEfectivo(host)
-      : dns.promises.lookup(host).then((r) => r.address);
-    const ip = plazoRestanteMs !== undefined ? await conVencimiento(tareaIp, plazoRestanteMs) : await tareaIp;
+    const tareaIps: Promise<string[]> = lookupEfectivo
+      ? lookupEfectivo(host).then((r) => (Array.isArray(r) ? r : [r]))
+      : dns.promises.lookup(host, { all: true }).then((rs) => [...new Set(rs.map((r) => r.address))]);
+    const ips = plazoRestanteMs !== undefined ? await conVencimiento(tareaIps, plazoRestanteMs) : await tareaIps;
+    if (!ips.length) return { ok: false, motivo: "No se pudo resolver el dominio" };
     const confiar = Boolean(lookupEfectivo) && Boolean(confiarEnLookup);
-    if (!confiar && ipPrivada(ip)) return { ok: false, motivo: "Dirección privada o local no permitida" };
-    return { ok: true, url: u, ip };
+    // Basta UNA direccion privada para rechazar el nombre entero: un dominio que mezcla publicas y privadas es
+    // justo la jugada de un rebinding, y no se elige "la buena" por el.
+    if (!confiar && ips.some(ipPrivada)) return { ok: false, motivo: "Dirección privada o local no permitida" };
+    return { ok: true, url: u, ip: ips[0], ips };
   } catch (err) {
     if (err instanceof ErrorTiempoAgotado) return { ok: false, motivo: "Tiempo de espera agotado" };
     return { ok: false, motivo: "No se pudo resolver el dominio" };
@@ -193,7 +200,7 @@ export async function esUrlPermitida(
 // Se expone por separado para poder probar ese hecho de forma directa.
 export async function _esSaltoPermitido(
   url: string,
-  lookup?: (host: string) => Promise<string>,
+  lookup?: (host: string) => Promise<string | string[]>,
   confiarEnLookup?: boolean,
   plazoRestanteMs?: number
 ): Promise<ResultadoGuardia> {
@@ -367,6 +374,31 @@ function conectarFijo(
   });
 }
 
+// Errores de CONEXION (antes de cualquier byte de respuesta) con los que vale probar la siguiente IP del nombre.
+// Un error de TLS, un plazo agotado o una respuesta cortada no se reintentan: ya se hablo con ese servidor.
+const CODIGOS_SIN_CONEXION = new Set(["ECONNREFUSED", "ECONNRESET", "EHOSTUNREACH", "ENETUNREACH", "ETIMEDOUT", "EADDRNOTAVAIL"]);
+
+async function conectarConRespaldo(
+  u: URL,
+  ips: string[],
+  vence: number,
+  opts: Parameters<typeof conectarFijo>[2]
+): Promise<RespuestaCruda> {
+  for (let i = 0; i < ips.length; i++) {
+    const restante = vence - Date.now();
+    if (restante <= 0) throw new ErrorTiempoAgotado();
+    try {
+      return await conectarFijo(u, ips[i], { ...opts, plazoRestanteMs: restante });
+    } catch (err) {
+      const codigo = (err as NodeJS.ErrnoException | undefined)?.code ?? "";
+      // Se prueba la siguiente solo si la conexion ni siquiera se abrio y queda otra IP y tiempo.
+      if (i < ips.length - 1 && CODIGOS_SIN_CONEXION.has(codigo) && vence - Date.now() > 0) continue;
+      throw err;
+    }
+  }
+  throw new Error("SIN_IPS");
+}
+
 export async function descargar(url: string, o: Opciones = {}): Promise<ResultadoDescarga> {
   const maxBytes = o.maxBytes ?? 2 * 1024 * 1024;
   const timeoutMs = o.timeoutMs ?? 10_000; // inactividad, no total
@@ -390,7 +422,7 @@ export async function descargar(url: string, o: Opciones = {}): Promise<Resultad
     if (restanteParaConexion <= 0) return { ok: false, motivo: "Tiempo de espera agotado" };
 
     try {
-      const r = await conectarFijo(g.url, g.ip, {
+      const r = await conectarConRespaldo(g.url, g.ips, vence, {
         metodo: metodoActual,
         cuerpo: cuerpoActual,
         contentType: contentTypeActual,

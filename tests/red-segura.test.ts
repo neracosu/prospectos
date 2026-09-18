@@ -444,6 +444,22 @@ describe("plazo TOTAL vs. inactividad (no deben confundirse)", () => {
     expect(transcurrido).toBeLessThan(500);
   });
 
+  it("un nombre que mezcla una IP publica y una privada se rechaza entero (rebinding)", async () => {
+    const r = await esUrlPermitida("http://ejemplo.test/", async () => ["8.8.8.8", "10.0.0.1"]);
+    expect(r).toEqual({ ok: false, motivo: "Dirección privada o local no permitida" });
+  });
+
+  it("un nombre con dos IP y la primera caida: se conecta a la segunda (Overpass tiene dos servidores)", async () => {
+    // 127.0.0.2 no tiene nada escuchando en el puerto de pruebas: rechaza la conexion. 127.0.0.1 si.
+    const r = await descargar(url("/final"), { _lookupParaTests: async () => ["127.0.0.2", "127.0.0.1"], _confiarEnLookupParaTests: true, plazoTotalMs: 5000 });
+    expect(r.ok).toBe(true);
+  });
+
+  it("si todas las IP rechazan la conexion, falla como antes y sin decir cual", async () => {
+    const r = await descargar(url("/final"), { _lookupParaTests: async () => ["127.0.0.2", "127.0.0.3"], _confiarEnLookupParaTests: true, plazoTotalMs: 5000 });
+    expect(r).toEqual({ ok: false, motivo: "No se pudo conectar" });
+  });
+
   it("(c) REGRESION: una descarga lenta pero CONTINUA no se corta si el timeout es de inactividad", async () => {
     const r = await descargar(url("/lento-continuo"), { ...publica, timeoutMs: 500, plazoTotalMs: 10_000 });
     expect(r.ok).toBe(true);
