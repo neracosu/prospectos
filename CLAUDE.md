@@ -50,6 +50,18 @@ nichos (`hoteles`, `hoteles-estadia`).
   cada corrida (si no aparece tras un `pm2 restart`, el cron no arrancó). Un proyecto con mensualidad 0 no
   genera cobros; al activar un cliente que ya existía solo se generan mensualidades desde hoy (el rescate
   de 60 días nunca va antes del primer mes facturado). Recorrido real: `scripts/verificar-flujo-proyectos.mts`.
+- **Propuesta por prospecto (17-sep):** los 19 nichos tienen plantilla, por **arquetipo** (`plantillas/<arquetipo>.html`:
+  `hoteles`, `hoteles-estadia`, `restaurantes-y-bares`, `reservas`, `comercio-y-tienda`, `cobros-y-pagos`,
+  `citas-y-servicios`). **Las cinco nuevas se generan**: `plantillas/base/` (cabecera con el CSS de hoteles, barra,
+  autor, qué-recibe, comparar, condiciones) + `plantillas/base/<arquetipo>.cuerpo.html` →
+  `python3 scripts/armar-plantillas.py`; **no editar los `.html` generados**. `renderPropuesta` rellena `{{nombre}}`,
+  `{{ciudad}}`, `{{rubro}}` y deja o quita `<!--si:web-->…<!--fin:web-->` / `<!--si:sinweb-->…` según el prospecto
+  tenga web (a quien ya tiene página no se le vende una página: se le conecta). Antes de tocar una plantilla:
+  `npx tsx scripts/verificar-plantillas.mts` (desbordes de hoja A4 y tokens sin rellenar; las siete pasan con un
+  nombre largo). Cifras y precios **solo** los de `neracosu.com/para/<arquetipo>`; `citas-y-servicios` no lleva
+  precio (diagnóstico $250). Los mensajes de todos los nichos mandan `{enlace}`. La ficha tiene «PDF»
+  (`/p/<código>/pdf`, caché por hash); `scripts/generar-propuestas.mts --primeros N` los deja listos para la cola.
+
 - **Pieza 2 (Buscador e importación) en producción:** `/buscar` con pestañas `?t=osm|maps|importar|bandeja`
   (Mapa · Maps · Importar · Bandeja; un lote se abre con `?t=bandeja&lote=<uuid>`, paginado de a 50),
   `/buscar/plantilla?formato=xlsx|csv`, «Leer web» en la ficha del prospecto (sugiere contactos publicados
