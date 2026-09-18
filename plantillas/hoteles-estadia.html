@@ -1,0 +1,714 @@
+<title>Propuesta NERACOSU para hoteles de estadía</title>
+<meta name="description" content="Propuesta comercial de NERACOSU para hoteles y posadas de estadía en Venezuela: reservas por noche sin comisión, cobros validados en bolívares y divisas, y un sistema propio a la medida de su operación.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&family=Source+Sans+3:wght@400;600;700&display=swap">
+<style>
+  :root {
+    --papel: #ffffff;
+    --mesa: #e3e6e4;
+    --tinta: #1a1d1c;
+    --tinta-2: #3c4240;
+    --gris: #687170;
+    --regla: #d0d6d3;
+    --sello: #1f5a45;
+    --llave: #93661c;
+    --fondo-suave: #f1f4f2;
+    --verde-marca: #5ed29c;
+    --serif: "Source Serif 4", Georgia, "Times New Roman", serif;
+    --sans: "Source Sans 3", "Segoe UI", Arial, sans-serif;
+  }
+  /* Documento impreso: un solo aspecto en ambos temas, a proposito */
+  html, body { background: var(--mesa); color: var(--tinta); }
+  body {
+    margin: 0;
+    font-family: var(--sans);
+    font-size: 10.5pt;
+    line-height: 1.5;
+    padding-block: 28px;
+    padding-inline: 16px;
+    -webkit-font-smoothing: antialiased;
+  }
+  * { box-sizing: border-box; }
+  h1, h2, h3 { font-family: var(--serif); font-weight: 600; margin: 0; text-wrap: balance; }
+  p { margin: 0; }
+  ul, ol { margin: 0; padding: 0; }
+  b, strong { font-weight: 600; color: var(--tinta); }
+  a { color: var(--sello); }
+
+  .documento { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; justify-items: center; }
+  .documento > * { min-width: 0; }
+  .hoja {
+    width: 210mm; max-width: 100%; min-height: 297mm;
+    background: var(--papel);
+    padding: 15mm 19mm 13mm;
+    box-shadow: 0 1px 3px rgba(26, 29, 28, .10), 0 10px 28px rgba(26, 29, 28, .10);
+    display: flex; flex-direction: column; gap: 5mm;
+  }
+  .hoja > * { flex-shrink: 0; }
+
+  /* ---------- membrete y pie ---------- */
+  .membrete {
+    display: flex; justify-content: space-between; align-items: flex-end; gap: 12px;
+    padding-bottom: 3mm; border-bottom: 1.5px solid var(--tinta);
+  }
+  .logo { font-family: var(--sans); font-weight: 700; font-size: 13pt; letter-spacing: .06em; color: var(--tinta); }
+  .logo i { font-style: normal; color: var(--verde-marca); }
+  .membrete__datos { text-align: right; font-size: 7.8pt; color: var(--gris); line-height: 1.4; }
+  .pie {
+    margin-top: auto; display: flex; justify-content: space-between; gap: 12px;
+    font-size: 7.8pt; color: var(--gris); padding-top: 2.5mm; border-top: 1px solid var(--regla);
+  }
+
+  /* ---------- tipografia de seccion ---------- */
+  .seccion { display: grid; gap: 3mm; }
+  .antetitulo { font-size: 7.8pt; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--llave); }
+  .seccion__titulo { font-size: 17pt; line-height: 1.18; }
+  .sub { font-size: 11.5pt; font-family: var(--serif); font-weight: 600; }
+  .parrafo { color: var(--tinta-2); max-width: 74ch; }
+  .nota { font-size: 8.3pt; color: var(--gris); }
+
+  /* ---------- portada ---------- */
+  .portada__cuerpo { margin-top: 22mm; display: grid; grid-template-columns: minmax(0, 1fr) 42mm; gap: 8mm; align-items: start; }
+  .portada__textos { display: grid; gap: 6mm; }
+  .portada__tipo { font-size: 9pt; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--sello); }
+  .portada h1 { font-size: 40pt; line-height: 1.04; font-weight: 700; letter-spacing: -.005em; }
+  .portada h1 span { display: block; color: var(--tinta-2); font-weight: 400; font-style: italic; font-size: 26pt; margin-top: 3mm; }
+  .portada__que { font-family: var(--serif); font-size: 14pt; line-height: 1.35; color: var(--tinta-2); max-width: 34ch; padding-top: 5mm; border-top: 1px solid var(--regla); }
+
+  /* el llavero de habitacion: el objeto que todo recepcionista entrega */
+  .llavero { position: relative; margin-top: 6mm; justify-self: end; width: 36mm; }
+  .llavero__aro { width: 15mm; height: 15mm; border: 1.6mm solid var(--llave); border-radius: 50%; margin: 0 auto -3mm; position: relative; z-index: 1; }
+  .llavero__placa {
+    background: var(--sello); color: #fff; border-radius: 18mm 18mm 5mm 5mm;
+    padding: 9mm 3mm 7mm; text-align: center; display: grid; gap: 1.5mm;
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  }
+  .llavero__agujero { width: 5mm; height: 5mm; border-radius: 50%; background: var(--papel); margin: -4mm auto 1mm; }
+  .llavero__hab { font-family: var(--serif); font-size: 30pt; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+  .llavero__rot { font-size: 6.8pt; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: rgba(255,255,255,.82); }
+  .llavero__hotel { font-size: 7.5pt; color: rgba(255,255,255,.9); border-top: 1px solid rgba(255,255,255,.3); padding-top: 1.5mm; overflow-wrap: anywhere; line-height: 1.25; }
+
+  .portada__ficha { margin: auto 0 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-top: 1.5px solid var(--tinta); }
+  .portada__ficha div { padding: 3.3mm 0; border-bottom: 1px solid var(--regla); display: grid; gap: .8mm; }
+  .portada__ficha div:nth-child(odd) { padding-right: 6mm; }
+  .portada__ficha dt { font-size: 7.5pt; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--gris); }
+  .portada__ficha dd { margin: 0; font-size: 10pt; line-height: 1.4; }
+  .portada__ficha dd small { display: block; color: var(--gris); font-size: 8.8pt; }
+
+  /* ---------- carta ---------- */
+  .carta { display: grid; gap: 2.8mm; color: var(--tinta-2); }
+  .carta__lugar { text-align: right; }
+  .carta__destino { color: var(--tinta); }
+  .resumen { border: 1.5px solid var(--tinta); padding: 4.5mm 6mm; display: grid; gap: 3mm; }
+  .resumen h2 { font-size: 12.5pt; }
+  .resumen dl { display: grid; grid-template-columns: 34mm 1fr; gap: 1.6mm 5mm; margin: 0; }
+  .resumen dt { font-size: 9pt; font-weight: 700; color: var(--gris); padding-top: .4mm; }
+  .resumen dd { margin: 0; font-size: 9.8pt; color: var(--tinta); }
+  .firma-carta { display: grid; gap: .5mm; }
+  .firma-carta__linea { width: 58mm; height: 10mm; border-bottom: 1px solid var(--tinta); margin-bottom: 1.5mm; }
+
+  /* ---------- fugas ---------- */
+  .fugas { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4mm 8mm; }
+  .fuga { display: grid; gap: 1.4mm; align-content: start; padding-top: 3mm; border-top: 1.5px solid var(--tinta); }
+  .fuga h3 { font-size: 11.5pt; line-height: 1.25; }
+  .fuga p { color: var(--tinta-2); font-size: 9.4pt; }
+  .fuga__cierre { font-size: 9pt; color: var(--tinta); background: var(--fondo-suave); padding: 2mm 3mm; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .fuga__cierre b { color: var(--sello); }
+
+  .cuenta { border: 1px dashed var(--gris); padding: 4.5mm 5.5mm; display: grid; gap: 3mm; }
+  .cuenta h3 { font-size: 12pt; }
+  .cuenta__filas { display: grid; gap: 2.4mm; }
+  .cuenta__fila { display: grid; grid-template-columns: 7mm minmax(0, 1fr) 40mm; gap: 3mm; align-items: end; font-size: 10pt; }
+  .cuenta__fila span:first-child { font-family: var(--serif); font-weight: 700; color: var(--sello); }
+  .blanco { display: block; border-bottom: 1px solid var(--tinta); height: 6mm; }
+  .cuenta__ejemplo { font-size: 8.8pt; color: var(--tinta-2); border-top: 1px solid var(--regla); padding-top: 2.5mm; }
+
+  /* ---------- noche ---------- */
+  .noche { list-style: none; display: grid; }
+  .noche li { display: grid; grid-template-columns: 17mm minmax(0, 1fr); gap: 4mm; padding: 2.4mm 0; border-bottom: 1px solid var(--regla); }
+  .noche li:first-child { border-top: 1.5px solid var(--tinta); }
+  .hora { font-family: var(--serif); font-weight: 700; font-size: 12pt; color: var(--llave); font-variant-numeric: tabular-nums; line-height: 1.3; }
+  .noche h3 { font-size: 10.5pt; font-family: var(--sans); font-weight: 700; }
+  .noche p { color: var(--tinta-2); font-size: 9.3pt; }
+
+  .reglas { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 3mm 8mm; }
+  .regla { display: grid; gap: .8mm; }
+  .regla h3 { font-size: 10.5pt; }
+  .regla p { font-size: 9.2pt; color: var(--tinta-2); }
+
+  /* ---------- prueba ---------- */
+  .cifras { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-top: 1.5px solid var(--tinta); border-bottom: 1px solid var(--regla); }
+  .cifra { padding: 3.5mm 3mm 3.5mm 0; display: grid; gap: .8mm; align-content: start; }
+  .cifra + .cifra { padding-left: 3mm; border-left: 1px solid var(--regla); }
+  .cifra b { font-family: var(--serif); font-size: 22pt; line-height: 1; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .cifra span { font-size: 8.4pt; color: var(--tinta-2); line-height: 1.3; }
+
+  .caso { display: grid; grid-template-columns: 38mm minmax(0, 1fr); gap: 6mm; padding: 3.5mm 0; border-bottom: 1px solid var(--regla); }
+  .caso__rotulo { display: grid; gap: .8mm; align-content: start; }
+  .caso__rotulo b { font-family: var(--serif); font-size: 11.5pt; }
+  .caso__rotulo span { font-size: 8.4pt; color: var(--gris); }
+  .caso__cuerpo { display: grid; gap: 2mm; color: var(--tinta-2); font-size: 9.5pt; }
+
+  .lista { display: grid; gap: 1.4mm; list-style: none; }
+  .lista li { position: relative; padding-left: 4.5mm; color: var(--tinta-2); }
+  .lista li::before { content: ""; position: absolute; left: 0; top: .62em; width: 1.6mm; height: 1.6mm; background: var(--sello); }
+
+  .aprendido { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5mm; }
+  .aprendido div { display: grid; gap: 1mm; align-content: start; padding-top: 2.5mm; border-top: 1px solid var(--tinta); }
+  .aprendido i { font-family: var(--serif); font-size: 9.6pt; color: var(--tinta); }
+  .aprendido p { font-size: 8.9pt; color: var(--tinta-2); }
+
+  .autor { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6mm; align-items: end; border: 1.5px solid var(--tinta); padding: 4.5mm 6mm; }
+  .autor h3 { font-size: 12.5pt; }
+  .autor p { color: var(--tinta-2); font-size: 9.5pt; margin-top: 1.5mm; }
+  .autor__datos { font-size: 9pt; color: var(--tinta-2); text-align: right; line-height: 1.55; }
+
+  /* ---------- planes ---------- */
+  .tabla-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 9.3pt; font-variant-numeric: tabular-nums; }
+  th, td { padding: 1.8mm 2.4mm; text-align: left; vertical-align: top; border-bottom: 1px solid var(--regla); }
+  thead th { font-size: 7.6pt; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--gris); border-bottom: 1.5px solid var(--tinta); vertical-align: bottom; }
+  .planes th, .planes td { padding: 1.15mm 2.4mm; }
+  .planes th[scope="row"] { font-weight: 400; color: var(--tinta-2); width: 46%; }
+  .planes td { text-align: center; width: 18%; }
+  .planes thead th { text-align: center; }
+  .planes thead th:first-child { text-align: left; }
+  .planes .nombre-plan { display: block; font-family: var(--serif); font-size: 12pt; letter-spacing: 0; text-transform: none; color: var(--tinta); }
+  .planes .precio { font-family: var(--serif); font-size: 15pt; font-weight: 700; color: var(--tinta); line-height: 1.1; }
+  .planes .mes { font-size: 8.6pt; color: var(--gris); }
+  .rec { background: var(--fondo-suave); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .marca-rec { display: inline-block; margin-bottom: 1mm; font-size: 6.8pt; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: #fff; background: var(--sello); padding: .6mm 1.8mm; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .si::before { content: "●"; color: var(--tinta); font-size: 8pt; }
+  .rec .si::before { color: var(--sello); }
+  .no { color: var(--regla); }
+  .planes tr.grupo td { font-size: 7.6pt; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--sello); padding-top: 2mm; border-bottom: 1px solid var(--tinta); text-align: left; background: none; }
+
+  .dos-col { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4mm 9mm; }
+  .col { display: grid; gap: 2mm; align-content: start; }
+  .destacado { border-left: 1.2mm solid var(--llave); padding: 2.5mm 0 2.5mm 4mm; display: grid; gap: 1mm; }
+  .destacado b { font-family: var(--serif); font-size: 11pt; }
+  .destacado p { font-size: 9.3pt; color: var(--tinta-2); }
+
+  .comparar td:first-child, .comparar th:first-child { width: 50%; }
+  .comparar td { color: var(--tinta-2); font-size: 9pt; }
+
+  .preguntas { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 3.2mm 8mm; }
+  .pregunta { display: grid; gap: .8mm; align-content: start; }
+  .pregunta h3 { font-size: 10.3pt; }
+  .pregunta p { color: var(--tinta-2); font-size: 9.2pt; }
+
+  .pasos { list-style: none; counter-reset: paso; display: grid; }
+  .pasos li { counter-increment: paso; display: grid; grid-template-columns: 8mm 1fr; gap: 2mm; padding: 2.4mm 0; border-bottom: 1px solid var(--regla); color: var(--tinta-2); }
+  .pasos li:first-child { border-top: 1.5px solid var(--tinta); }
+  .pasos li::before { content: counter(paso) "."; font-family: var(--serif); font-weight: 700; font-size: 11.5pt; color: var(--sello); line-height: 1.25; }
+
+  .contacto { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1.5px solid var(--tinta); border-bottom: 1px solid var(--regla); }
+  .contacto div { padding: 3.5mm 3mm 3.5mm 0; display: grid; gap: .8mm; }
+  .contacto div + div { padding-left: 3mm; border-left: 1px solid var(--regla); }
+  .contacto dt { font-size: 7.5pt; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--gris); }
+  .contacto dd { margin: 0; font-family: var(--serif); font-size: 12pt; font-weight: 600; overflow-wrap: anywhere; }
+  .contacto a { color: var(--tinta); text-decoration: none; }
+
+  .eleccion { display: flex; flex-wrap: wrap; gap: 2.5mm 7mm; align-items: center; font-size: 9.8pt; }
+  .caja { display: inline-block; width: 3.6mm; height: 3.6mm; border: 1.2px solid var(--tinta); vertical-align: -.6mm; margin-right: 2mm; }
+  .firmas { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12mm; }
+  .firma { display: grid; gap: .5mm; font-size: 9pt; color: var(--tinta-2); }
+  .firma__linea { height: 14mm; border-bottom: 1px solid var(--tinta); margin-bottom: 1.5mm; }
+
+  /* ---------- barra de descarga (solo pantalla) ---------- */
+  .barra {
+    position: sticky; top: calc(12px + env(safe-area-inset-top, 0px)); z-index: 5;
+    width: 210mm; max-width: 100%;
+    display: flex; justify-content: space-between; align-items: center; gap: 12px 20px;
+    background: var(--tinta); color: #fff; border-radius: 10px; padding: 12px 12px 12px 20px;
+    box-shadow: 0 8px 22px rgba(26, 29, 28, .25);
+  }
+  .barra__info { display: grid; gap: 2px; min-width: 0; flex: 1 1 auto; }
+  .barra__info .logo { color: #fff; font-size: 13px; }
+  .barra__info span { font-size: 12.5px; color: rgba(255,255,255,.7); }
+  .barra__accion { display: flex; align-items: center; gap: 12px; flex: 0 0 auto; }
+  .boton {
+    font: 600 15px/1 var(--sans); background: #fff; color: var(--tinta); border: 0; border-radius: 7px;
+    padding: 12px 18px; cursor: pointer; display: inline-flex; gap: 10px; align-items: center; white-space: nowrap;
+  }
+  .boton:hover { background: #e6ece9; }
+  .boton:focus-visible { outline: 3px solid var(--verde-marca); outline-offset: 2px; }
+  .boton:disabled { opacity: .7; cursor: progress; }
+  .boton svg { width: 18px; height: 18px; }
+  .aviso { font-size: 12.5px; color: rgba(255,255,255,.85); }
+  .aviso:empty { display: none; }
+
+  @media screen and (max-width: 820px) {
+    body { font-size: 15px; }
+    .hoja { min-height: 0; padding: 26px 20px 28px; gap: 20px; }
+    .portada__cuerpo { margin-top: 20px; grid-template-columns: 1fr; }
+    .llavero { justify-self: start; }
+    .portada h1 { font-size: 44px; }
+    .portada h1 span { font-size: 28px; }
+    .portada__que { font-size: 19px; }
+    .portada__ficha { margin-top: 28px; }
+    .portada__ficha, .dos-col, .firmas, .fugas, .reglas, .preguntas, .aprendido, .contacto, .autor { grid-template-columns: 1fr; }
+    .portada__ficha div:nth-child(odd) { padding-right: 0; }
+    .contacto div + div { padding-left: 0; border-left: 0; }
+    .autor__datos { text-align: left; }
+    .cifras { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .cifra + .cifra { padding-left: 0; border-left: 0; }
+    .caso { grid-template-columns: 1fr; gap: 8px; }
+    .cuenta__fila { grid-template-columns: 24px minmax(0, 1fr); }
+    .cuenta__fila .blanco { grid-column: 2; }
+    .resumen { padding: 16px; }
+    .resumen dl { grid-template-columns: 1fr; gap: 2px; }
+    .resumen dd { margin-bottom: 10px; }
+    .membrete { flex-wrap: wrap; }
+    .membrete__datos { text-align: left; }
+    table { font-size: 13px; }
+    .fuga p, .noche p, .regla p, .pregunta p, .nota, .caso__cuerpo, .aprendido p { font-size: 14px; }
+    .barra { top: calc(8px + env(safe-area-inset-top, 0px)); padding: 12px; flex-wrap: wrap; }
+    .barra__info { flex-basis: 100%; }
+    .barra__accion, .boton { width: 100%; justify-content: center; }
+  }
+
+  @page { size: A4; margin: 0; }
+  @media print {
+    html, body { background: var(--papel); }
+    body { padding: 0; }
+    .documento { display: block; }
+    .hoja { width: 210mm; height: 296.5mm; min-height: 0; box-shadow: none; overflow: hidden; break-after: page; }
+    .hoja:last-child { break-after: auto; }
+    .barra { display: none; }
+    .tabla-wrap { overflow: visible; }
+  }
+</style>
+
+<div class="documento">
+
+  <div class="barra" role="region" aria-label="Descarga">
+    <div class="barra__info">
+      <div class="logo">NERACOSU<i>.</i></div>
+      <span>Propuesta para <b data-hotel style="color:#fff">su hotel</b> · 9 hojas A4</span>
+    </div>
+    <div class="barra__accion">
+      <span class="aviso" id="aviso-descarga" role="status"></span>
+      <button class="boton" id="descargar-pdf" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v12m0 0-5-5m5 5 5-5M4 19h16"/></svg>
+        Descargar PDF
+      </button>
+    </div>
+  </div>
+
+  <!-- ===================== 1 · PORTADA ===================== -->
+  <section class="hoja portada" aria-label="Portada">
+    <header class="membrete">
+      <div class="logo">NERACOSU<i>.</i></div>
+      <div class="membrete__datos">Ing. Neri Colón · Desarrollo de sistemas<br>neracosu.com · WhatsApp 0422-270 7095</div>
+    </header>
+
+    <div class="portada__cuerpo">
+      <div class="portada__textos">
+        <p class="portada__tipo">Propuesta para hoteles y posadas de estadía</p>
+        <h1>Sus habitaciones se venden por WhatsApp y por portales.<span>Su calendario vive en un cuaderno.</span></h1>
+        <p class="portada__que">Reservas por noche en su propia página, sin comisión, con el anticipo validado antes de bloquear la habitación; y un sistema propio para ver desde el teléfono cada llegada, cada cobro y cada turno de <b data-hotel>su hotel</b>. Mis sistemas funcionan hoy en empresas de Caracas, Valencia y el exterior.</p>
+      </div>
+      <div class="llavero" aria-hidden="true">
+        <div class="llavero__aro"></div>
+        <div class="llavero__placa">
+          <div class="llavero__agujero"></div>
+          <span class="llavero__rot">Habitación</span>
+          <span class="llavero__hab">204</span>
+          <span class="llavero__rot">Noche 2 de 3</span>
+          <span class="llavero__hotel" data-hotel>su hotel</span>
+        </div>
+      </div>
+    </div>
+
+    <dl class="portada__ficha">
+      <div><dt>Preparada para</dt><dd data-hotel-ficha>Dueños y gerentes de hoteles y posadas<small>Hoteles urbanos, económicos y posadas que venden por noche</small></dd></div>
+      <div><dt>Preparada por</dt><dd>Ing. Neri Colón<small>NERACOSU · 17 años desarrollando sistemas</small></dd></div>
+      <div><dt>Fecha</dt><dd>17 de septiembre de 2026<small>Condiciones vigentes hasta el 31 de octubre de 2026</small></dd></div>
+      <div><dt>Referencias verificables</dt><dd>Hotel VIP La Guaira · hotel en Valencia<small>Llamada con el dueño o visita, a pedido</small></dd></div>
+    </dl>
+    <footer class="pie"><span>NERACOSU · Propuesta comercial</span><span>1 / 9</span></footer>
+  </section>
+
+  <!-- ===================== 2 · CARTA ===================== -->
+  <section class="hoja" aria-label="Carta y resumen">
+    <header class="membrete">
+      <div class="logo">NERACOSU<i>.</i></div>
+      <div class="membrete__datos">Carta de presentación</div>
+    </header>
+
+    <div class="carta">
+      <p class="carta__lugar">Caracas, 17 de septiembre de 2026</p>
+      <p class="carta__destino">Estimado equipo de <b data-hotel>su hotel</b>:</p>
+      <p>En un hotel que vende por noche la plata no se pierde en el mostrador. Se pierde antes: en la reserva por WhatsApp que se apartó sin anticipo y no llegó, en la comisión que se lleva el portal por un huésped que ya lo conocía, en la habitación que se vendió dos veces porque el cuaderno y el teléfono no se hablan, y en el pago móvil que se anotó y nunca entró al banco.</p>
+      <p>Construí para el Hotel VIP La Guaira su página con catálogo de habitaciones, reservas en línea y atención por WhatsApp, conectada al sistema de gestión que el hotel ya usaba. Y construí, mano a mano con el dueño de un hotel en Valencia, la caja en bolívares y divisas, los turnos de recepción y el cierre del día que hoy su personal usa todos los días con plata real.</p>
+      <p>Le escribo porque esas dos piezas se pueden armar para su hotel: si ya tiene un sistema, se le conecta la página de reservas y los cobros validados; si lleva la operación en cuaderno o en Excel, se le construye el sistema completo a la medida de cómo trabaja, empezando por el calendario de noches. Se paga una vez y queda a su nombre: el código, los datos y el dominio.</p>
+      <p>Si al leerlo concluye que no le hace falta, también está bien. Lo único que le pido son 30 minutos para verlo funcionando.</p>
+    </div>
+
+    <div class="firma-carta">
+      <div class="firma-carta__linea"></div>
+      <b>Ing. Neri Colón</b>
+      <span class="nota">NERACOSU · neracosu.com · neracosu@gmail.com</span>
+    </div>
+
+    <div class="resumen">
+      <h2>Resumen en un minuto</h2>
+      <dl>
+        <dt>Qué es</dt><dd>Su página de reservas por noche con calendario de disponibilidad y anticipo validado, más el sistema para llevar llegadas, salidas, cobros en varias monedas, turnos y cierre del día desde el teléfono.</dd>
+        <dt>Dónde funciona</dt><dd>En el teléfono y en la computadora, sin instalar nada. La página de reservas conectada opera en La Guaira; la caja, los turnos y el cierre, en Valencia.</dd>
+        <dt>Qué cambia</dt><dd>Ninguna habitación se aparta sin anticipo confirmado. Cada cobro, cada salida de efectivo y cada turno quedan con nombre, hora y monto. Usted ve el día cerrado antes del desayuno.</dd>
+        <dt>Inversión</dt><dd>Empieza con un <b>diagnóstico de USD 250</b>, entregado en una semana con el precio del sistema por escrito. Si contrata, se descuenta completo. Se paga una vez; la mensualidad paga que alguien lo sostenga.</dd>
+        <dt>Su riesgo</dt><dd>60 días de garantía sobre cualquier falla. Si deja la mensualidad, se lleva el sistema y la base de datos.</dd>
+        <dt>Siguiente paso</dt><dd>Una demostración de 30 minutos con el sistema real, por videollamada o en su hotel.</dd>
+      </dl>
+    </div>
+    <footer class="pie"><span>NERACOSU · Propuesta comercial</span><span>2 / 9</span></footer>
+  </section>
+
+  <!-- ===================== 3 · FUGAS ===================== -->
+  <section class="hoja" aria-label="Lo que cuesta no tener control">
+    <header class="membrete">
+      <div class="logo">NERACOSU<i>.</i></div>
+      <div class="membrete__datos">Lo que cuesta no tener control</div>
+    </header>
+
+    <div class="seccion">
+      <p class="antetitulo">Cuatro fugas que nadie anota</p>
+      <h2 class="seccion__titulo">Ninguna es un robo. Son huecos de operación que a fin de mes no se pueden explicar.</h2>
+    </div>
+
+    <div class="fugas">
+      <article class="fuga">
+        <h3>La reserva que se apartó y no llegó</h3>
+        <p>Alguien escribe por WhatsApp, pide dos noches para el fin de semana y recepción las aparta de buena fe. El viernes no aparece nadie, y a los que sí llamaron ese día se les dijo que no había cupo.</p>
+        <p class="fuga__cierre"><b>Cómo se cierra:</b> la habitación se bloquea solo cuando el anticipo está confirmado contra el banco. Hasta entonces, sigue disponible para quien sí paga.</p>
+      </article>
+      <article class="fuga">
+        <h3>La comisión por un huésped que ya era suyo</h3>
+        <p>El huésped que se hospedó el año pasado lo busca en un portal, porque ahí está la foto y el botón. La reserva llega, y con ella la comisión, por una venta que su propio teléfono podía haber cerrado.</p>
+        <p class="fuga__cierre"><b>Cómo se cierra:</b> su propia página de reservas, en su dominio, sin comisión, con las mismas fotos y el mismo botón. El portal queda para quien no lo conoce.</p>
+      </article>
+      <article class="fuga">
+        <h3>Cada quien cobrando con la tasa que le parece</h3>
+        <p>Usted fija la tasa en la mañana y al mediodía alguien cobra tres noches con la que vio en el teléfono. Sin mala intención, pero al cerrar el mes los números no dan y no hay forma de saber dónde se torcieron.</p>
+        <p class="fuga__cierre"><b>Cómo se cierra:</b> una sola tasa, la suya, en todo el sistema y en la página. Solo un administrador la cambia, con nombre y hora.</p>
+      </article>
+      <article class="fuga">
+        <h3>Pagos por pago móvil que nadie verificó</h3>
+        <p>La recepcionista anota la referencia del anticipo y bloquea la habitación. Si ese pago nunca entró al banco, se descubre el día de la llegada, o nunca.</p>
+        <p class="fuga__cierre"><b>Cómo se cierra:</b> todo pago que no es efectivo queda pendiente hasta que un administrador lo marca contra el banco. Varios de una vez, con casillas.</p>
+      </article>
+    </div>
+
+    <div class="cuenta">
+      <h3>Haga la cuenta de la primera fuga con sus propios números</h3>
+      <div class="cuenta__filas">
+        <div class="cuenta__fila"><span>A</span><span>Reservas apartadas sin anticipo que no llegan, por mes</span><span class="blanco"></span></div>
+        <div class="cuenta__fila"><span>B</span><span>Noches promedio de cada una</span><span class="blanco"></span></div>
+        <div class="cuenta__fila"><span>C</span><span>Precio de una noche, en la moneda en que cobra</span><span class="blanco"></span></div>
+        <div class="cuenta__fila"><span>=</span><span><b>A × B × C</b> &nbsp;es lo que se va cada mes en habitaciones que estuvieron bloqueadas para nadie</span><span class="blanco"></span></div>
+      </div>
+      <p class="cuenta__ejemplo">Ejemplo, no son sus números: 6 reservas al mes que no llegan, de 2 noches cada una, a USD 35 la noche, son <b>USD 420</b> al mes, y USD 5.040 al año, sin contar a los que se rechazaron esos días. Y es solo una de las cuatro.</p>
+    </div>
+    <footer class="pie"><span>NERACOSU · Propuesta comercial</span><span>3 / 9</span></footer>
+  </section>
+
+  <!-- ===================== 4 · UNA SEMANA ===================== -->
+  <section class="hoja" aria-label="Una reserva cualquiera">
+    <header class="membrete">
+      <div class="logo">NERACOSU<i>.</i></div>
+      <div class="membrete__datos">Cómo se trabaja con el sistema</div>
+    </header>
+
+    <div class="seccion">
+      <p class="antetitulo">Una reserva cualquiera</p>
+      <h2 class="seccion__titulo">De la reserva al cierre del día, tal como quedaría en su hotel.</h2>
+    </div>
+
+    <ol class="noche">
+      <li><span class="hora">Lunes 22:40</span><div><h3>Una familia reserva desde el teléfono</h3><p>Entra a su página, ve las fotos y el calendario con lo que de verdad está libre, elige tres noches y paga el anticipo por pago móvil, Zelle o el método que usted acepte. Nadie del hotel tuvo que contestar a esa hora.</p></div></li>
+      <li><span class="hora">Martes 08:15</span><div><h3>El anticipo se confirma contra el banco</h3><p>Un administrador ve los pagos pendientes de la noche y los marca con casillas, varios de una vez. Solo entonces la habitación queda bloqueada en el calendario y el huésped recibe la confirmación por WhatsApp.</p></div></li>
+      <li><span class="hora">Viernes 15:00</span><div><h3>Llegada</h3><p>Recepción abre la reserva del día, hace el check-in en una sola pantalla con cédula, acompañantes y el saldo por cobrar, con la tasa del momento congelada. Si falta un dato, el sistema dice cuál junto al botón.</p></div></li>
+      <li><span class="hora">Sábado</span><div><h3>Consumos durante la estadía</h3><p>Lo que consuma de la nevera o del restaurante entra en la misma cuenta de la habitación, con quién lo cargó y a qué hora. Nada se cobra de memoria a la salida.</p></div></li>
+      <li><span class="hora">Lunes 11:00</span><div><h3>Salida</h3><p>El checkout suma noches, consumos y cualquier daño marcado, cobra el saldo en la moneda que el huésped prefiera y deja la habitación esperando limpieza hasta que la camarera la registre.</p></div></li>
+      <li><span class="hora">Lunes 09:30</span><div><h3>Usted abre el teléfono</h3><p>Ve las llegadas y salidas del día, el turno de cada recepcionista por separado, confirma los pagos digitales contra el banco y firma el cierre del día. Esos números quedan congelados.</p></div></li>
+    </ol>
+
+    <div class="seccion">
+      <p class="antetitulo">Control, no vigilancia</p>
+      <div class="reglas">
+        <div class="regla"><h3>Cada quien ve lo suyo</h3><p>Recepción cobra y atiende, pero no cambia precios, ni la tasa, ni anula un consumo. Las camareras registran su trabajo y no ven la caja.</p></div>
+        <div class="regla"><h3>Nada se borra</h3><p>Una reserva se cancela con motivo. Un producto se corrige. Una cuenta se desactiva. Todo deja rastro de quién y cuándo.</p></div>
+        <div class="regla"><h3>Los montos quedan congelados</h3><p>Cada cobro guarda su par en bolívares y divisa con la tasa del momento. El arqueo de ayer no cambia de número mañana.</p></div>
+        <div class="regla"><h3>Un día firmado no se toca</h3><p>Reabrirlo exige ser administrador y dar un motivo. Así nadie carga con la culpa de otro.</p></div>
+      </div>
+    </div>
+    <footer class="pie"><span>NERACOSU · Propuesta comercial</span><span>4 / 9</span></footer>
+  </section>
+
+  <!-- ===================== 5 · PRUEBA ===================== -->
+  <section class="hoja" aria-label="Está operando hoy">
+    <header class="membrete">
+      <div class="logo">NERACOSU<i>.</i></div>
+      <div class="membrete__datos">No es una promesa</div>
+    </header>
+
+    <div class="seccion">
+      <p class="antetitulo">Está operando hoy</p>
+      <h2 class="seccion__titulo">Las dos piezas de esta propuesta ya funcionan, cada una en un hotel real.</h2>
+    </div>
+
+    <div>
+      <div class="caso">
+        <div class="caso__rotulo"><b>Hotel VIP La Guaira</b><span>Sitio y canal de reservas · <a href="https://hotelviplaguaira.com">hotelviplaguaira.com</a></span></div>
+        <div class="caso__cuerpo">
+          <p>Un complejo con cuatro categorías de habitación, restaurante, casino y spa. Su página con catálogo de habitaciones, reservas en línea y atención por WhatsApp, conectada al sistema de gestión que el hotel ya usaba.</p>
+          <ul class="lista">
+            <li>Conector propio con su sistema de gestión: consulta, crea, cancela y corrige precios sin intervención manual.</li>
+            <li>Once métodos de cobro en una sola caja, con pases de acceso por código QR.</li>
+          </ul>
+        </div>
+      </div>
+      <div class="caso">
+        <div class="caso__rotulo"><b>Hotel en Valencia, Carabobo</b><span>Sistema completo · referencia a pedido</span></div>
+        <div class="caso__cuerpo">
+          <p>Un hotel de alta rotación, con recepcionistas en turnos de 24 horas. Migró desde el sistema que alquilaba y hoy opera todo aquí: habitaciones, caja en bolívares y divisas, turnos, tienda, limpieza y cierre del día, con su propia página de reservas en su dominio. La caja, los turnos y el cierre que le propongo son estos mismos.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="cifras">
+      <div class="cifra"><b>17</b><span>módulos en uso en Valencia, de las habitaciones al cierre de caja</span></div>
+      <div class="cifra"><b>2.148</b><span>registros migrados del sistema anterior, sin perder uno</span></div>
+      <div class="cifra"><b>1.170</b><span>pruebas automáticas antes de cada actualización</span></div>
+      <div class="cifra"><b>107</b><span>versiones publicadas, cada una explicada al personal</span></div>
+    </div>
+
+    <div class="seccion">
+      <p class="antetitulo">Con todas las letras</p>
+      <div class="aprendido">
+        <div><i>Lo que ya existe</i><p>La página de reservas conectada, el cobro validado contra el banco, la caja en dos monedas, los turnos y el cierre firmado. Se adaptan a su hotel en semanas.</p></div>
+        <div><i>Lo que se construye para usted</i><p>El calendario de noches con bloqueos, las tarifas por temporada y la cuenta de la estadía con consumos. Se diseñan sobre cómo trabaja su recepción, no al revés.</p></div>
+        <div><i>Lo que no le voy a vender</i><p>Un conector con Booking o Expedia por ahora no está en este alcance. Si su operación depende de eso, se lo digo en el diagnóstico y no le cobro el sistema.</p></div>
+      </div>
+    </div>
+
+    <div class="autor">
+      <div>
+        <h3>Quién está detrás</h3>
+        <p>Ing. Neri Colón. 17 años construyendo sistemas para negocios venezolanos: gestión, cobros, logística y comercio. Trabajo directo con el dueño, sin intermediarios ni cola de soporte: quien le vende el sistema es quien lo programa y quien le contesta el WhatsApp.</p>
+      </div>
+      <div class="autor__datos">neracosu.com<br>Portafolio y hoja de vida<br>WhatsApp 0422-270 7095</div>
+    </div>
+    <footer class="pie"><span>NERACOSU · Propuesta comercial</span><span>5 / 9</span></footer>
+  </section>
+
+  <!-- ===================== 6 · INVERSION ===================== -->
+  <section class="hoja" aria-label="Inversión">
+    <header class="membrete">
+      <div class="logo">NERACOSU<i>.</i></div>
+      <div class="membrete__datos">Inversión</div>
+    </header>
+
+    <div class="seccion">
+      <p class="antetitulo">Se paga una vez y el sistema es suyo</p>
+      <h2 class="seccion__titulo">El precio se fija por escrito después de ver su operación, no antes.</h2>
+      <p class="parrafo">Un hotel de estadía no se parece a otro: uno ya tiene sistema y solo necesita vender por su página; otro lleva todo en cuaderno. Cotizar sin mirar sería cobrarle de más o prometerle de menos. Por eso el primer paso tiene precio fijo y el resto se cotiza sobre lo que se vio.</p>
+    </div>
+
+    <div class="dos-col">
+      <div class="destacado"><b>Paso 1 · Diagnóstico técnico: USD 250</b><p>Una semana. Reviso cómo reserva, cobra y cierra hoy, qué sistema tiene (si tiene) y qué se conecta y qué se construye. Entrego por escrito el alcance, el plazo y el precio del sistema. <b>Si contrata, se descuenta completo.</b> Si concluyo que no le hace falta, se lo digo ahí mismo.</p></div>
+      <div class="destacado"><b>Paso 2 · El sistema, en un solo pago</b><p>El desarrollo se paga una vez, 50 % al aprobar y 50 % contra entrega, y queda a su nombre. La mensualidad paga hosting, respaldos y soporte, no el permiso de usarlo. Los montos exactos van en la propuesta del paso 1.</p></div>
+    </div>
+
+    <div class="seccion">
+      <p class="antetitulo">Dos alcances posibles</p>
+      <div class="tabla-wrap">
+        <table class="planes">
+          <thead>
+            <tr>
+              <th scope="col">Qué incluye</th>
+              <th scope="col"><span class="nombre-plan">Página conectada</span>ya tiene sistema</th>
+              <th scope="col" class="rec"><span class="marca-rec">Si lleva cuaderno</span><span class="nombre-plan">Sistema completo</span>a la medida</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><th scope="row">Calendario de disponibilidad por noche en su página</th><td><span class="si"></span></td><td class="rec"><span class="si"></span></td></tr>
+            <tr><th scope="row">Anticipo validado contra el banco antes de bloquear</th><td><span class="si"></span></td><td class="rec"><span class="si"></span></td></tr>
+            <tr><th scope="row">Confirmación al huésped por WhatsApp</th><td><span class="si"></span></td><td class="rec"><span class="si"></span></td></tr>
+            <tr><th scope="row">Conexión con el sistema que ya usa</th><td><span class="si"></span></td><td class="rec"><span class="no">lo reemplaza</span></td></tr>
+            <tr><th scope="row">Llegadas, salidas y cuenta de la estadía con consumos</th><td><span class="no">—</span></td><td class="rec"><span class="si"></span></td></tr>
+            <tr><th scope="row">Caja en bolívares y divisas, turnos y cierre firmado</th><td><span class="no">—</span></td><td class="rec"><span class="si"></span></td></tr>
+            <tr><th scope="row">Tarifas por temporada y categoría</th><td><span class="no">—</span></td><td class="rec"><span class="si"></span></td></tr>
+            <tr><th scope="row">Limpieza, tienda, lencería, mantenimiento, avisos</th><td><span class="no">—</span></td><td class="rec"><span class="no">si le hacen falta</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <p class="nota">El precio también depende de cuántas habitaciones y categorías tiene, de lo que haya que migrar y de qué más quiera controlar. Como referencia pública y para que no cotice a ciegas: el sistema completo para hoteles de alta rotación se ofrece en neracosu.com/para/hoteles.html desde USD 2.800 en un solo pago más USD 100 al mes. El suyo comparte la caja, los turnos y el cierre con ese, y suma el calendario de noches; el número exacto sale del diagnóstico.</p>
+
+    <footer class="pie"><span>NERACOSU · Propuesta comercial · Precios en USD, no incluyen IVA</span><span>6 / 9</span></footer>
+  </section>
+
+  <!-- ===================== 7 · QUE RECIBE Y COMPARAR ===================== -->
+  <section class="hoja" aria-label="Qué recibe">
+    <header class="membrete">
+      <div class="logo">NERACOSU<i>.</i></div>
+      <div class="membrete__datos">Qué recibe</div>
+    </header>
+
+    <div class="dos-col">
+      <div class="destacado"><b>¿Hoy le paga a otro sistema?</b><p>Se le descuentan <b>USD 1.000</b> del sistema completo. Es el mismo trato que recibió el hotel de Valencia, que venía pagando una licencia anual.</p></div>
+      <div class="destacado"><b>¿Solo quiere vender por su página?</b><p>La página de reservas conectada a su sistema actual se cotiza aparte del sistema completo, y es lo primero que se entrega: empieza a evitar comisiones antes de cambiar nada más.</p></div>
+    </div>
+
+    <div class="seccion">
+      <p class="antetitulo">Qué recibe</p>
+      <h2 class="seccion__titulo">El desarrollo trae la puesta en marcha completa, y la mensualidad lo mantiene andando.</h2>
+    </div>
+    <div class="dos-col">
+      <div class="col">
+        <p class="sub">Siempre incluido</p>
+        <ul class="lista">
+          <li>Migración de lo que ya tiene, antes de encender nada</li>
+          <li>Puesta en marcha en su dominio, con certificado de seguridad</li>
+          <li>Capacitación del personal y visita guiada dentro del sistema</li>
+          <li>60 días de garantía sobre cualquier falla de funcionamiento</li>
+        </ul>
+      </div>
+      <div class="col">
+        <p class="sub">Qué cubre la mensualidad</p>
+        <ul class="lista">
+          <li>Hosting, dominio, HTTPS y respaldos automáticos diarios</li>
+          <li>Soporte por WhatsApp en horario laboral; lo crítico, el mismo día</li>
+          <li>Actualizaciones de seguridad y mejoras menores</li>
+          <li>Se cancela con 30 días de aviso, y se lleva todo</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="seccion">
+      <p class="antetitulo">La diferencia que importa</p>
+      <h2 class="seccion__titulo">Un sistema alquilado y uno propio pueden costar parecido al mes. Lo que cambia es qué le queda el día que deja de pagar.</h2>
+    </div>
+
+    <div class="tabla-wrap">
+      <table class="comparar">
+        <thead><tr><th scope="col">Alquilado: paga el permiso de uso</th><th scope="col">Propio: paga que alguien lo sostenga</th></tr></thead>
+        <tbody>
+          <tr><td>El día que deja de pagar, se apaga.</td><td>El día que deja de pagar, sigue siendo suyo: lo hospeda por unos USD 25 al mes.</td></tr>
+          <tr><td>Sus clientes y su histórico viven en el servidor de otro.</td><td>El código y la base de datos están en su servidor, con su dominio.</td></tr>
+          <tr><td>El precio lo fija el proveedor y puede cambiar.</td><td>El precio del desarrollo se fija una vez y no se mueve.</td></tr>
+          <tr><td>Cobra en dólares y la tasa, el pago móvil y el Zelle son problema suyo.</td><td>Cobra en bolívares y divisas con su tasa, y valida cada pago contra el banco.</td></tr>
+          <tr><td>Lo que le falta entra en la cola de un producto hecho para miles.</td><td>Lo que le falta se conversa y se construye para su operación.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="nota">Con todas las letras: sumando la mensualidad, a tres años pueden costar parecido. Si lo suyo es gastar lo mínimo y su operación cabe en un producto hecho para miles, alquilar es una decisión razonable. Lo que compra aquí es un sistema hecho a cómo cobra y trabaja un hotel en Venezuela, y la propiedad de lo que pagó.</p>
+
+    <footer class="pie"><span>NERACOSU · Propuesta comercial</span><span>7 / 9</span></footer>
+  </section>
+
+  <!-- ===================== 8 · PREGUNTAS ===================== -->
+  <section class="hoja" aria-label="Preguntas frecuentes">
+    <header class="membrete">
+      <div class="logo">NERACOSU<i>.</i></div>
+      <div class="membrete__datos">Preguntas frecuentes</div>
+    </header>
+    <div class="seccion">
+      <p class="antetitulo">Las preguntas que casi todo dueño se hace</p>
+      <div class="preguntas">
+        <div class="pregunta"><h3>¿Puedo seguir recibiendo reservas de los portales?</h3><p>Sí. Su página no los reemplaza: recupera al huésped que ya lo conoce y le busca por su nombre. Las reservas que lleguen por portales se cargan en el calendario como hasta ahora, y en el diagnóstico se revisa si conviene conectarlos.</p></div>
+        <div class="pregunta"><h3>¿Y si mi personal no aprende a usarlo?</h3><p>Se diseñó con recepcionistas reales, en el teléfono. Trae una visita guiada dentro de cada pantalla, capacitación incluida y un historial de mejoras escrito sin términos técnicos.</p></div>
+        <div class="pregunta"><h3>¿Qué pasa si se va el internet o la luz?</h3><p>Funciona con los datos del teléfono. Si un cobro o una salida se registra tarde por un corte, se deja la hora real y un administrador la aprueba: nada se pierde.</p></div>
+        <div class="pregunta"><h3>¿Mis datos y las cédulas de mis huéspedes?</h3><p>Viven en su servidor, con respaldo diario. Cada persona ve solo lo que su permiso le abre, y quien no maneja clientes ve las cédulas tapadas.</p></div>
+        <div class="pregunta"><h3>¿Y si NERACOSU desaparece?</h3><p>El código, la base de datos y el dominio son suyos desde el primer día. Cualquier programador puede continuarlo; nada queda encerrado conmigo.</p></div>
+        <div class="pregunta"><h3>¿Tengo que dejar mi sistema de un día para otro?</h3><p>No. Si ya tiene uno, la página de reservas se le conecta y su personal sigue en lo suyo, como en La Guaira. Si lo reemplaza, primero se migra el histórico y se prueba con su gente.</p></div>
+        <div class="pregunta"><h3>¿Por qué no hay un precio en esta propuesta?</h3><p>Porque no he visto su operación, y un precio puesto a ciegas se paga de más o se promete de menos. El diagnóstico cuesta USD 250, sale en una semana con el precio por escrito y se descuenta completo si contrata.</p></div>
+        <div class="pregunta"><h3>¿Sirve para una posada pequeña?</h3><p>Sí. Para una posada de pocas habitaciones lo más rentable suele ser solo la página de reservas con anticipo validado, y el diagnóstico lo dice así si es el caso.</p></div>
+        <div class="pregunta"><h3>¿Cuánto tarda?</h3><p>La página de reservas conectada, semanas. El sistema completo se entrega por etapas, empezando por el calendario y las llegadas, y el plazo exacto de cada una queda por escrito en el diagnóstico.</p></div>
+      </div>
+    </div>
+    <div class="destacado"><b>Si después de la demostración no le convence, no pierde nada.</b><p>La reunión no tiene costo y no se firma nada en ella. Y si del diagnóstico sale que su hotel no necesita un sistema, se lo digo ahí mismo.</p></div>
+    <footer class="pie"><span>NERACOSU · Propuesta comercial</span><span>8 / 9</span></footer>
+  </section>
+
+  <!-- ===================== 9 · SIGUIENTE PASO ===================== -->
+  <section class="hoja" aria-label="Siguiente paso">
+    <header class="membrete">
+      <div class="logo">NERACOSU<i>.</i></div>
+      <div class="membrete__datos">Siguiente paso</div>
+    </header>
+
+    <div class="seccion">
+      <p class="antetitulo">Sin compromiso</p>
+      <h2 class="seccion__titulo">Treinta minutos para ver su hotel dentro del sistema.</h2>
+      <p class="parrafo">No hace falta decidir nada hoy. El primer paso es ver el sistema real funcionando, con sus preguntas, y salir de la reunión sabiendo si le conviene la página de reservas, el sistema completo o ninguno de los dos.</p>
+    </div>
+
+    <ol class="pasos">
+      <li><span><b>Escríbame por WhatsApp</b> con el nombre de <b data-hotel>su hotel</b>, cuántas habitaciones tiene y cómo lleva hoy las reservas. Le respondo el mismo día.</span></li>
+      <li><span><b>Demostración de 30 minutos</b> por videollamada o en su hotel: una reserva desde el teléfono, el anticipo validado, un check-in, la caja y el cierre, con datos de ejemplo.</span></li>
+      <li><span><b>Diagnóstico de una semana</b> y propuesta con alcance, plazo y precio por escrito.</span></li>
+      <li><span><b>Arranque</b> con el 50 % al aprobar; el otro 50 % contra entrega, con el sistema funcionando en su hotel.</span></li>
+    </ol>
+
+    <dl class="contacto">
+      <div><dt>WhatsApp</dt><dd><a href="https://wa.me/584222707095?text=Hola%20Neri%2C%20le%C3%AD%20la%20propuesta%20para%20hoteles%20de%20estad%C3%ADa%20y%20quiero%20ver%20la%20demostraci%C3%B3n.">0422-270 7095</a></dd></div>
+      <div><dt>Correo</dt><dd><a href="mailto:neracosu@gmail.com">neracosu@gmail.com</a></dd></div>
+      <div><dt>Portafolio</dt><dd><a href="https://neracosu.com/para/hoteles.html">neracosu.com</a></dd></div>
+    </dl>
+
+    <div class="dos-col">
+      <div class="col">
+        <p class="sub">Condiciones</p>
+        <ul class="lista">
+          <li>Precios en USD, pagaderos en divisas o en bolívares a la tasa BCV del día de pago. No incluyen IVA.</li>
+          <li>Mensualidad por adelantado desde el mes siguiente a la puesta en marcha.</li>
+          <li>Los cambios de alcance se cotizan antes de ejecutarse.</li>
+          <li>Condiciones vigentes hasta el 31 de octubre de 2026.</li>
+        </ul>
+      </div>
+      <div class="col">
+        <p class="sub">Lo que queda a su nombre</p>
+        <ul class="lista">
+          <li>El código del sistema y su base de datos</li>
+          <li>El dominio y la página de reservas</li>
+          <li>Sus huéspedes, su histórico y sus reportes</li>
+          <li>La libertad de cambiar de proveedor cuando quiera</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="seccion">
+      <p class="sub">Aceptación</p>
+      <p class="eleccion"><span><span class="caja"></span>Diagnóstico · $250</span><span><span class="caja"></span>Demostración primero, sin costo</span></p>
+      <div class="firmas">
+        <div class="firma"><div class="firma__linea"></div><b data-hotel>Por el hotel</b><span>Nombre, cargo y fecha</span></div>
+        <div class="firma"><div class="firma__linea"></div><b>Ing. Neri Colón</b><span>NERACOSU</span></div>
+      </div>
+    </div>
+    <footer class="pie"><span>NERACOSU · Propuesta comercial</span><span>9 / 9</span></footer>
+  </section>
+</div>
+
+<script>
+  // Personalizacion: el nombre que el generador del PDF deja en data-nombre
+  // del documento manda; ?hotel=Nombre en la direccion es solo respaldo
+  // cuando no hay data-nombre (por ejemplo, al abrir el archivo suelto).
+  (function () {
+    var nombre = "";
+    var doc = document.querySelector(".documento");
+    if (doc && doc.dataset.nombre) nombre = doc.dataset.nombre;
+    if (!nombre) { try { nombre = new URLSearchParams(location.search).get("hotel") || ""; } catch (e) {} }
+    nombre = nombre.trim().slice(0, 60);
+    if (!nombre) return;
+    document.querySelectorAll("[data-hotel]").forEach(function (el) { el.textContent = nombre; });
+    var ficha = document.querySelector("[data-hotel-ficha]");
+    if (ficha) { ficha.textContent = nombre; }
+    document.title = "Propuesta NERACOSU para " + nombre;
+  })();
+</script>
