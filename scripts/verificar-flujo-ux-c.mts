@@ -111,7 +111,7 @@ try {
   const activo = await pg.evaluate(() => Promise.race([navigator.serviceWorker.ready.then((r) => !!r.active), new Promise<boolean>((r) => setTimeout(() => r(false), 8000))]));
   revisar(activo, "en el panel el service worker queda activo");
   // Que /sin-conexion ya este en cache (se precachea al instalar).
-  const enCache = await pg.evaluate(async () => { const c = await caches.open("pr-estaticos-v1"); return !!(await c.match("/sin-conexion")); });
+  const enCache = await pg.evaluate(async () => { const c = await caches.open("pr-sin-conexion-v1"); return !!(await c.match("/sin-conexion")); });
   revisar(enCache, "la página de sin conexión quedó en la caché al instalar");
   const ancho = await pg.evaluate(() => document.documentElement.scrollWidth);
   revisar(ancho <= 390, `sin scroll horizontal a 390 px (${ancho}px)`);
