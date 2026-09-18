@@ -25,7 +25,7 @@ for (const n of nichos) {
     const t0 = Date.now();
     // Overpass limita por IP (429) y a veces corta la conexion: se reintenta hasta tres veces con espera creciente.
     let r = await buscarEnOverpass(n.id, c.slug);
-    for (let intento = 1; !r.ok && intento <= 3 && /429|no respondió|conectar/i.test(r.motivo); intento++) {
+    for (let intento = 1; !r.ok && intento <= 3 && /429|50[234]|no respondió|conectar/i.test(r.motivo); intento++) {
       const espera = 30_000 * intento;
       console.log(`${n.slug.padEnd(24)} ${c.nombre.padEnd(20)} ${r.motivo} Espero ${espera / 1000} s y reintento (${intento}/3).`);
       await new Promise((f) => setTimeout(f, espera));
