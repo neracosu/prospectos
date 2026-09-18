@@ -100,6 +100,9 @@ nichos (`hoteles`, `hoteles-estadia`).
     bandeja): «Repetido en el mismo archivo» siempre, y «Ya existe» solo si no trae ningún dato que al existente le
     falte (`esRepetidoSinValor` en `revision-contrato.ts`, misma lista `CAMPOS_CONTACTO` que `completarExistente`).
     Para lotes de antes, «Descartar N repetidos sin nada nuevo» en la bandeja (`descartarRepetidos`). Nada se borra.
+    **El mismo archivo importado dos veces**: la fila que ya está pendiente en un lote anterior (mismo nicho, nombre
+    y ciudad, textos tal cual) nace descartada con «Ya está pendiente en otro lote» (`copiaPendienteEnOtroLote`; Neri
+    importó el mismo archivo cuatro veces el 17-sep). La copia vieja es la que vale.
   - **«Revisar de nuevo N con problema»** (`revisarDeNuevo`): vuelve a validar y clasificar en bloque las filas
     pendientes con problema sin tocar sus datos, para cuando el problema estaba afuera (un archivo con un nicho que
     el panel no tenía: se crea el nicho en `sembrar-nichos.mjs`, se siembra y se revisa). Lo que sigue mal (falta la

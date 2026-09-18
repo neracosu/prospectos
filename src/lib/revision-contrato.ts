@@ -20,6 +20,8 @@ export function etiquetaOrigen(origen: string): string {
 export const CAMPOS_CONTACTO = ["telefono", "whatsapp", "email", "web", "instagram", "facebook", "tiktok", "estado", "tipo", "tamano", "nota"] as const;
 export const REPETIDO_EN_ARCHIVO = "Repetido en el mismo archivo";
 export const SIN_NADA_NUEVO = "Ya existe y no trae nada nuevo";
+// El mismo archivo importado dos veces: la copia nueva no vale una decision mientras la vieja siga pendiente.
+export const PENDIENTE_EN_OTRO_LOTE = "Ya está pendiente en otro lote";
 type Campos = Partial<Record<(typeof CAMPOS_CONTACTO)[number], string | null | undefined>>;
 // true si la fila trae algun dato que al existente le falta.
 export function aportaAlgo(existente: Campos, datos: Campos): boolean {
@@ -29,7 +31,7 @@ export function aportaAlgo(existente: Campos, datos: Campos): boolean {
 // mismo archivo» que nadie deberia tener que descartar a mano (17-sep-2026, Farmatodo en Caracas). Esas, y los
 // «ya existe» sin nada nuevo, nacen descartadas. Nada se borra: la fila queda en el lote con su decision.
 export function esRepetidoSinValor(errores: string[], existente: Campos | null, datos: Campos): boolean {
-  if (errores.includes(REPETIDO_EN_ARCHIVO)) return true;
+  if (errores.includes(REPETIDO_EN_ARCHIVO) || errores.includes(PENDIENTE_EN_OTRO_LOTE)) return true;
   return existente !== null && !aportaAlgo(existente, datos);
 }
 

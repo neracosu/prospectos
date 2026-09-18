@@ -9,8 +9,8 @@ import { generarCodigo } from "@/lib/codigo";
 import { claveProspecto } from "@/lib/clave-prospecto";
 import { regionDe } from "@/lib/importar";
 import { validarFila, COLUMNAS, type Columna } from "@/lib/tabla-contrato";
-import { clasificar, leerDatos, listaDeTextos, mapaDeTextos, repetidosSinValor, TOPE_APROBACION } from "@/lib/revision";
-import { CAMPOS_CONTACTO, SIN_NADA_NUEVO, esRepetidoSinValor } from "@/lib/revision-contrato";
+import { clasificar, leerDatos, listaDeTextos, mapaDeTextos, repetidosSinValor, copiaPendienteEnOtroLote, TOPE_APROBACION } from "@/lib/revision";
+import { CAMPOS_CONTACTO, SIN_NADA_NUEVO, PENDIENTE_EN_OTRO_LOTE, esRepetidoSinValor } from "@/lib/revision-contrato";
 import { fallo, exito, type Resultado } from "@/acciones/resultado";
 
 // exigirSesion() va FUERA del try/catch (redirige lanzando). Dueno y prospectador
@@ -203,6 +203,8 @@ export async function revisarDeNuevo(lote: string): Promise<Resultado<{ revisada
       })) as Record<Columna, string>;
       const { entrada, errores } = validarFila(fila);
       const c = await clasificar(entrada, errores, new Set());
+      // La copia mas vieja se queda; esta se descarta si la misma fila sigue pendiente en un lote anterior.
+      if (c.estado === "nuevo" && (await copiaPendienteEnOtroLote(entrada, e.data, r.id)) !== null) { c.estado = "repetido"; c.errores = [PENDIENTE_EN_OTRO_LOTE]; }
       // Misma regla que al crear el lote: un repetido que no aporta nada no vale una decision.
       const existente = c.existenteId ? await prisma.prospecto.findUnique({ where: { id: c.existenteId }, select: Object.fromEntries(CAMPOS_CONTACTO.map((k) => [k, true])) as Record<(typeof CAMPOS_CONTACTO)[number], true> }) : null;
       const sinValor = c.estado === "repetido" && esRepetidoSinValor(c.errores, existente, entrada);

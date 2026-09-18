@@ -13,6 +13,7 @@ vi.mock("next/cache", () => ({ revalidatePath: () => {} }));
 
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
 import { prisma } from "@/lib/db";
+import type { Prisma } from "@prisma/client";
 import { DB_HABILITADA, limpiarBase, sembrarBasico, crearProspectoDePrueba } from "./ayuda-db";
 import { sesionFalsa } from "./ayuda-sesion";
 import { crearLote, loteConDetalle, lotesRecientes, limpiarLotesViejos } from "@/lib/revision";
@@ -387,9 +388,10 @@ describe.runIf(DB_HABILITADA)("bandeja de revision", () => {
     expect(porFila[1].errores).toEqual(["Falta la ciudad"]);
     expect(d.conProblema).toBe(1);
     expect(d.aprobables).toBe(2);
-    // El mismo archivo importado dos veces: al aprobar la copia A, «revisar de nuevo» en la copia B la marca
-    // repetida y, como no trae nada nuevo, descartada. Sin tocar la base a mano.
-    const copia = await crearLote("importado", [fila({ nombre: "Hotel Bien", ciudad: "Caracas" })], ids.prospectadorId);
+    // Una fila nueva cuya copia se aprueba por otro lado: «revisar de nuevo» la marca repetida y, como no trae
+    // nada nuevo, descartada. (Se simula una copia pendiente creada antes de la regla de «pendiente en otro lote».)
+    const copia = await crearLote("importado", [fila({ nombre: "Hotel Bien Copia", ciudad: "Caracas" })], ids.prospectadorId);
+    await prisma.revision.updateMany({ where: { lote: copia.lote }, data: { datos: { ...(porFila[2].datos as unknown as Record<string, unknown>), nombre: "Hotel Bien" } as Prisma.InputJsonValue } });
     expect((await aprobarFila(porFila[2].id)).ok).toBe(true);
     expect(await revisarDeNuevo(copia.lote)).toEqual({ ok: true, datos: { revisadas: 1, liberadas: 0 } });
     const c = (await loteConDetalle(copia.lote))!;
@@ -397,6 +399,19 @@ describe.runIf(DB_HABILITADA)("bandeja de revision", () => {
     expect(c.filas[0].errores).toContain("Ya existe y no trae nada nuevo");
     expect(c.pendientes).toBe(0);
     await prisma.nicho.delete({ where: { slug: "gimnasios" } });
+  });
+
+  it("el mismo archivo importado dos veces: la segunda copia nace descartada porque ya esta pendiente en el primer lote", async () => {
+    const a = await crearLote("importado", [fila({ nombre: "Posada Copia", ciudad: "Mérida", whatsapp: "0414 555 55 55" })], ids.prospectadorId);
+    const b = await crearLote("importado", [fila({ nombre: "Posada Copia", ciudad: "Mérida", whatsapp: "0414 555 55 55" })], ids.prospectadorId);
+    expect(a).toMatchObject({ nuevos: 1 });
+    expect(b).toMatchObject({ nuevos: 0, repetidos: 1 });
+    const db = (await loteConDetalle(b.lote))!;
+    expect(db.filas[0]).toMatchObject({ estado: "repetido", decision: "descartado" });
+    expect(db.filas[0].errores).toContain("Ya está pendiente en otro lote");
+    expect(db.pendientes).toBe(0);
+    // La primera copia sigue intacta y aprobable.
+    expect((await loteConDetalle(a.lote))!).toMatchObject({ pendientes: 1, aprobables: 1 });
   });
 
   it("descartarFila distingue la fila que no existe de la ya decidida", async () => {

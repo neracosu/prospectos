@@ -2,10 +2,10 @@
 // primero se clasifica (nuevo / repetido / error) y despues alguien decide.
 // Nada se borra: descartar es una decision, no un delete.
 import { z } from "zod";
-import type { Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { claveProspecto } from "@/lib/clave-prospecto";
-import { POR_PAGINA, CAMPOS_CONTACTO, REPETIDO_EN_ARCHIVO, SIN_NADA_NUEVO, esRepetidoSinValor } from "@/lib/revision-contrato";
+import { POR_PAGINA, CAMPOS_CONTACTO, REPETIDO_EN_ARCHIVO, SIN_NADA_NUEVO, PENDIENTE_EN_OTRO_LOTE, esRepetidoSinValor } from "@/lib/revision-contrato";
 import type { EntradaValidada } from "@/lib/tabla-contrato";
 
 export const ORIGENES = ["overpass", "web", "maps", "importado"] as const;
@@ -108,6 +108,22 @@ export async function clasificar(
     : { estado: "nuevo", errores: [], existenteId: null };
 }
 
+// La misma fila (nicho + nombre + ciudad) ya esta pendiente en OTRO lote mas viejo: pasa cuando el mismo archivo se
+// importa dos veces. Se compara por los textos tal cual (mismo archivo, mismos textos); la clave normalizada no se
+// guarda en Revision. Devuelve el id de la copia vieja, o null.
+export async function copiaPendienteEnOtroLote(entrada: EntradaValidada, loteActual: string, antesDeId?: number): Promise<number | null> {
+  const nicho = (entrada.nicho ?? "").trim();
+  const filas = await prisma.$queryRaw<{ id: number }[]>`
+    SELECT id FROM Revision
+    WHERE decision = 'pendiente' AND lote <> ${loteActual}
+      AND JSON_UNQUOTE(JSON_EXTRACT(datos, '$.nicho')) = ${nicho}
+      AND JSON_UNQUOTE(JSON_EXTRACT(datos, '$.nombre')) = ${entrada.nombre}
+      AND JSON_UNQUOTE(JSON_EXTRACT(datos, '$.ciudad')) = ${entrada.ciudad}
+      ${antesDeId !== undefined ? Prisma.sql`AND id < ${antesDeId}` : Prisma.empty}
+    ORDER BY id ASC LIMIT 1`;
+  return filas[0]?.id ?? null;
+}
+
 // Resuelve los nichos de un tiron y las claves que ya existen con un findMany
 // por nicho (mismo criterio que importarProspectos en src/lib/importar.ts).
 async function precargar(entradas: { entrada: EntradaValidada; errores: string[] }[]): Promise<CacheLote> {
@@ -166,6 +182,11 @@ export async function crearLote(
     // Un repetido que no aporta nada nace descartado (ver esRepetidoSinValor): la bandeja es para decidir, no para
     // descartar 40 sucursales de la misma cadena a mano.
     const existente = c.existenteId !== null ? cache.existenteDatos.get(c.existenteId) ?? null : null;
+    // Una fila nueva que ya esta pendiente en un lote anterior (el mismo archivo dos veces) tampoco vale una decision.
+    if (c.estado === "nuevo" && (await copiaPendienteEnOtroLote(entradas[i].entrada, lote)) !== null) {
+      c.estado = "repetido"; c.errores = [PENDIENTE_EN_OTRO_LOTE];
+      cuenta.nuevos--; cuenta.repetidos++;
+    }
     const sinValor = c.estado === "repetido" && esRepetidoSinValor(c.errores, existente, entradas[i].entrada);
     filas.push({
       lote, origen: o.data, fila: i + 1,
