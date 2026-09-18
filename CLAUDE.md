@@ -67,6 +67,11 @@ nichos (`hoteles`, `hoteles-estadia`).
     de la inactividad de 10 s, tope de bytes, máximo 3 redirecciones. Desde el 17-sep resuelve **todas** las IP del
     nombre y las prueba en orden si la conexión falla (Overpass tiene dos servidores y uno estaba caído); si
     alguna es privada se rechaza el nombre entero.
+  - **«Leer web» en bloque:** `scripts/leer-webs.mts [--aplicar]` (env cargado): lee la web de cada prospecto con contacto
+    vacío, una a la vez con 3 s entre sitios, y llena solo los campos vacíos que traigan **un único** candidato (con
+    varios no adivina: quedan en el evento `lectura_web`). La fuente del dato es la URL final de la web.
+  - **Totales en `/prospectos`** (17-sep): un número grande y chips por etapa, nicho y ciudad que filtran al tocarlos
+    (`resumenProspectos`, mismos filtros que la lista); filtro `?ciudad=` exacto y páginas de 100 (`?pagina=`).
   - **Buscar por lotes desde el servidor:** `scripts/buscar-region.mts <nichos> <ciudades>` (con el env cargado y
     `PROSPECTOS_OVERPASS_ESPERA_MS=12000`: Overpass devuelve 429 con el ritmo de 5 s del panel; el script reintenta
     con espera creciente). Deja lotes en la bandeja igual que el botón del panel. Región central del 17-sep: 7
