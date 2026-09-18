@@ -4,7 +4,7 @@
 // Corre contra `next start` del clon (build previo con NODE_ENV=production): en `next dev` no hay service worker.
 // Siembra con la marca (PRUEBA), entra con un dueno temporal y al terminar borra lo suyo. SOLO base de tests.
 // Uso (desde el clon, con su next start en 3014):
-//   DATABASE_URL="$TEST_DATABASE_URL" BASE_URL=http://127.0.0.1:3014 npx tsx scripts/verificar-flujo-ux-c.mts
+//   PW_EXPERIMENTAL_SERVICE_WORKER_NETWORK_EVENTS=1 DATABASE_URL="$TEST_DATABASE_URL" BASE_URL=http://127.0.0.1:3014 npx tsx scripts/verificar-flujo-ux-c.mts
 import bcrypt from "bcryptjs";
 import { chromium, type Page } from "playwright";
 import { prisma } from "../src/lib/db";
@@ -51,10 +51,14 @@ try {
   const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
   const pg = await ctx.newPage();
   pg.on("pageerror", (e) => errores.push(`pageerror: ${e.message}`));
-  // Retencion selectiva: solo las respuestas cuya ruta coincida con `retenida`.
+  // Retencion selectiva: solo las respuestas cuya ruta coincida con `retenida`. `caida` corta la red (como sin senal)
+  // para las rutas que coincidan: context.setOffline no alcanza a las peticiones que hace el service worker, y por
+  // eso este script se corre con PW_EXPERIMENTAL_SERVICE_WORKER_NETWORK_EVENTS=1 (asi el route tambien las ve).
   let retenida: RegExp | null = null;
+  let caida: RegExp | null = null;
   await ctx.route((url) => url.origin === new URL(BASE).origin, async (route) => {
     const u = new URL(route.request().url());
+    if (caida && caida.test(u.pathname + u.search)) return route.abort("internetdisconnected");
     if (retenida && retenida.test(u.pathname + u.search)) await new Promise((r) => setTimeout(r, RETENCION_MS));
     await route.continue();
   });
@@ -109,13 +113,17 @@ try {
   // Que /sin-conexion ya este en cache (se precachea al instalar).
   const enCache = await pg.evaluate(async () => { const c = await caches.open("pr-estaticos-v1"); return !!(await c.match("/sin-conexion")); });
   revisar(enCache, "la página de sin conexión quedó en la caché al instalar");
-  await ctx.setOffline(true);
+  const ancho = await pg.evaluate(() => document.documentElement.scrollWidth);
+  revisar(ancho <= 390, `sin scroll horizontal a 390 px (${ancho}px)`);
+  caida = /^\/(prospectos|c\/)/;
   await pg.goto(`${BASE}/prospectos`).catch(() => {});
-  revisar(await pg.getByRole("heading", { name: "Sin conexión" }).isVisible().catch(() => false), "sin red, una navegación del panel muestra «Sin conexión»");
+  const sinConexion = await pg.getByRole("heading", { name: "Sin conexión" }).isVisible().catch(() => false);
+  revisar(sinConexion, `sin red, una navegación del panel muestra «Sin conexión» (quedó en ${pg.url()})`);
+  if (sinConexion) revisar(errores.every((e) => !e.startsWith("pageerror")), "y la página de sin conexión carga sus propios archivos desde la caché");
   let portalCayoEnSinConexion = false;
   await pg.goto(`${BASE}/c/abcdefghijklmnopqrstuv`).then(async () => { portalCayoEnSinConexion = await pg.getByRole("heading", { name: "Sin conexión" }).isVisible().catch(() => false); }).catch(() => {});
   revisar(!portalCayoEnSinConexion, "sin red, el portal del cliente NO cae en la página del panel (el service worker lo ignora)");
-  await ctx.setOffline(false);
+  caida = null;
 
   // 5. Un contexto limpio que abre el portal no registra ningun service worker.
   const ctx2 = await b.newContext({ viewport: { width: 390, height: 844 }, isMobile: true });
@@ -132,8 +140,6 @@ try {
   revisar(prop.status() === 200 && cuerpo.includes("hoteles y posadas de estadía") && cuerpo.includes(`Posada Los Frailes ${marca}`), `la propuesta de estadía se sirve personalizada (${prop.status()})`);
   revisar(!cuerpo.includes("$2.800") || cuerpo.includes("neracosu.com/para/hoteles.html"), "la propuesta de estadía no trae tabla de precios propia");
 
-  const ancho = await pg.evaluate(() => document.documentElement.scrollWidth);
-  revisar(ancho <= 390, `sin scroll horizontal a 390 px (${ancho}px)`);
 } catch (e) {
   errores.push(`excepcion: ${(e as Error).message}`);
 } finally {

@@ -30,8 +30,21 @@ function podar(cache) {
 }
 
 if (typeof self !== "undefined" && self.addEventListener && typeof caches !== "undefined") {
+  // Al instalar se guarda la pagina de sin conexion Y los archivos con hash que ella referencia (su CSS y su JS):
+  // sin ellos, sin red, la pagina sale sin estilo y con un error de carga.
+  function precachear(c) {
+    return fetch(SIN_CONEXION).then(function (r) {
+      if (!r.ok) throw new Error("sin-conexion " + r.status);
+      var copia = r.clone();
+      return r.text().then(function (html) {
+        var rutas = [], m, re = /(?:href|src)="(\/_next\/static\/[^"]+)"/g;
+        while ((m = re.exec(html))) if (rutas.indexOf(m[1]) < 0) rutas.push(m[1]);
+        return c.put(SIN_CONEXION, copia).then(function () { return c.addAll(rutas); });
+      });
+    });
+  }
   self.addEventListener("install", function (e) {
-    e.waitUntil(caches.open(CACHE).then(function (c) { return c.add(SIN_CONEXION); }).then(function () { return self.skipWaiting(); }));
+    e.waitUntil(caches.open(CACHE).then(precachear).then(function () { return self.skipWaiting(); }));
   });
   self.addEventListener("activate", function (e) {
     e.waitUntil(caches.keys().then(function (nombres) {
