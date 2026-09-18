@@ -30,12 +30,12 @@ export async function GET(_req: Request, ctx: { params: Promise<{ codigo: string
   const { codigo } = await ctx.params;
   if (!CODIGO_VALIDO.test(codigo)) return new Response("No encontrado", { status: 404 });
   if (!permitirIntento(`pdf:${await ipCliente()}`, 10, 60_000)) return new Response("Demasiadas descargas. Intenta en un minuto.", { status: 429 });
-  const p = await prisma.prospecto.findUnique({ where: { codigo }, select: { nombre: true, nicho: { select: { plantillaPropuesta: true } } } });
+  const p = await prisma.prospecto.findUnique({ where: { codigo }, select: { nombre: true, ciudad: true, web: true, nicho: { select: { plantillaPropuesta: true, nombre: true } } } });
   if (!p || !p.nicho.plantillaPropuesta) return new Response("No encontrado", { status: 404 });
   const plantilla = await leerPlantilla(p.nicho.plantillaPropuesta);
   if (!plantilla) return new Response("No encontrado", { status: 404 });
   try {
-    const html = renderPropuesta(plantilla, p.nombre, "#");
+    const html = renderPropuesta(plantilla, p.nombre, "#", { ciudad: p.ciudad, rubro: p.nicho.nombre.toLowerCase(), conWeb: !!p.web });
     const ruta = await generarPdf(codigo, html, hashDe(html));
     const bytes = await readFile(ruta);
     const nombreArchivo = `Propuesta-NERACOSU-${saneado(p.nombre) || "Propuesta"}.pdf`;

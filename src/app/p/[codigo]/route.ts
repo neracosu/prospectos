@@ -33,11 +33,12 @@ async function tieneSesion(): Promise<boolean> {
 
 async function encontrarProspecto(codigo: string) {
   if (!CODIGO_VALIDO.test(codigo)) return null;
-  const p = await prisma.prospecto.findUnique({ where: { codigo }, select: { id: true, nombre: true, nicho: { select: { plantillaPropuesta: true } } } });
+  const p = await prisma.prospecto.findUnique({ where: { codigo }, select: { id: true, nombre: true, ciudad: true, web: true, nicho: { select: { plantillaPropuesta: true, nombre: true } } } });
   if (!p || !p.nicho.plantillaPropuesta) return null;
   const plantilla = await leerPlantilla(p.nicho.plantillaPropuesta);
   if (!plantilla) return null;
-  return { id: p.id, nombre: p.nombre, plantilla };
+  // Lo unico del prospecto que sale a la propuesta publica: nombre, ciudad, rubro y si tiene web. Nada de contacto.
+  return { id: p.id, nombre: p.nombre, plantilla, extra: { ciudad: p.ciudad, rubro: p.nicho.nombre.toLowerCase(), conWeb: !!p.web } };
 }
 
 // Deja un Evento "abierto", salvo que quien abre tenga sesion (Neri revisando
@@ -74,7 +75,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ codigo: string 
   if (!p) return new Response("No encontrado", { status: 404 });
   await registrarAbiertoSiHaceFalta(p.id, req);
   try {
-    const html = renderPropuesta(p.plantilla, p.nombre, `/p/${codigo}/pdf`);
+    const html = renderPropuesta(p.plantilla, p.nombre, `/p/${codigo}/pdf`, p.extra);
     return new Response(html, { headers: encabezados() });
   } catch (err) {
     // Una plantilla sin los marcadores esperados no debe tumbar la ruta

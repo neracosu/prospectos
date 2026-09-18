@@ -50,7 +50,7 @@ export default async function Ficha({ params }: { params: Promise<{ id: string }
       {p.tienePropuesta && (
         <section className="tarjeta">
           <b>Propuesta</b>
-          <div className="fila-botones"><a className="boton" href={p.enlace} target="_blank" rel="noopener">Ver</a><BotonCopiar texto={p.enlace} etiqueta="Copiar enlace" /><BotonCopiar texto={p.mensaje} /></div>
+          <div className="fila-botones"><a className="boton" href={p.enlace} target="_blank" rel="noopener">Ver</a><a className="boton" href={`${p.enlace}/pdf`}>PDF</a><BotonCopiar texto={p.enlace} etiqueta="Copiar enlace" /><BotonCopiar texto={p.mensaje} /></div>
           <p className="suave">{p.abrio ? "El prospecto abrió la propuesta." : "Todavía no la ha abierto."}</p>
         </section>
       )}
