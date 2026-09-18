@@ -153,10 +153,10 @@ export function Bandeja({ lote: loteDelServidor }: { lote: LoteDetalle }) {
                   : `Aprobar las ${lote.aprobables} nuevas`}
             </button>
           )}
-          {lote.conProblema > 0 && (
+          {lote.pendientes > 0 && (
             // Para cuando el problema estaba afuera (un nicho que no existia): se revisan todas de una vez.
             <button className="boton" disabled={pendiente} onClick={() => correr("lote", async () => { const r = await revisarDeNuevo(lote.lote); if (r.ok) avisar({ texto: r.datos.liberadas ? `${r.datos.liberadas} de ${r.datos.revisadas} ya no tienen problema` : `Se revisaron ${r.datos.revisadas}: siguen con problema` }); return r; })}>
-              {corriendo === "lote" ? "Revisando…" : `Revisar de nuevo ${lote.conProblema} con problema`}
+              {corriendo === "lote" ? "Revisando…" : (lote.conProblema > 0 ? `Revisar de nuevo (${lote.conProblema} con problema)` : "Revisar de nuevo")}
             </button>
           )}
           {lote.descartables > 0 && (

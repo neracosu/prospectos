@@ -377,16 +377,25 @@ describe.runIf(DB_HABILITADA)("bandeja de revision", () => {
     expect(r).toMatchObject({ nuevos: 1, errores: 2 });
     let d = (await loteConDetalle(r.lote))!;
     expect(d.conProblema).toBe(2);
-    // Sin el nicho, revisar no cambia nada.
-    expect(await revisarDeNuevo(r.lote)).toEqual({ ok: true, datos: { revisadas: 2, liberadas: 0 } });
+    // Sin el nicho, revisar no cambia nada (revisa las tres pendientes: las dos con problema y la nueva).
+    expect(await revisarDeNuevo(r.lote)).toEqual({ ok: true, datos: { revisadas: 3, liberadas: 0 } });
     await prisma.nicho.create({ data: { slug: "gimnasios", nombre: "Gimnasios", mensajeInicial: "x", mensajeSeguimiento: "y" } });
-    expect(await revisarDeNuevo(r.lote)).toEqual({ ok: true, datos: { revisadas: 2, liberadas: 1 } });
+    expect(await revisarDeNuevo(r.lote)).toEqual({ ok: true, datos: { revisadas: 3, liberadas: 1 } });
     d = (await loteConDetalle(r.lote))!;
     const porFila = [...d.filas].sort((a, b) => a.fila - b.fila);
     expect(porFila.map((f) => f.estado)).toEqual(["nuevo", "error", "nuevo"]);
     expect(porFila[1].errores).toEqual(["Falta la ciudad"]);
     expect(d.conProblema).toBe(1);
     expect(d.aprobables).toBe(2);
+    // El mismo archivo importado dos veces: al aprobar la copia A, «revisar de nuevo» en la copia B la marca
+    // repetida y, como no trae nada nuevo, descartada. Sin tocar la base a mano.
+    const copia = await crearLote("importado", [fila({ nombre: "Hotel Bien", ciudad: "Caracas" })], ids.prospectadorId);
+    expect((await aprobarFila(porFila[2].id)).ok).toBe(true);
+    expect(await revisarDeNuevo(copia.lote)).toEqual({ ok: true, datos: { revisadas: 1, liberadas: 0 } });
+    const c = (await loteConDetalle(copia.lote))!;
+    expect(c.filas[0]).toMatchObject({ estado: "repetido", decision: "descartado" });
+    expect(c.filas[0].errores).toContain("Ya existe y no trae nada nuevo");
+    expect(c.pendientes).toBe(0);
     await prisma.nicho.delete({ where: { slug: "gimnasios" } });
   });
 

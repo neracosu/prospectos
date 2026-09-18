@@ -10,7 +10,7 @@ import { claveProspecto } from "@/lib/clave-prospecto";
 import { regionDe } from "@/lib/importar";
 import { validarFila, COLUMNAS, type Columna } from "@/lib/tabla-contrato";
 import { clasificar, leerDatos, listaDeTextos, mapaDeTextos, repetidosSinValor, TOPE_APROBACION } from "@/lib/revision";
-import { CAMPOS_CONTACTO } from "@/lib/revision-contrato";
+import { CAMPOS_CONTACTO, SIN_NADA_NUEVO, esRepetidoSinValor } from "@/lib/revision-contrato";
 import { fallo, exito, type Resultado } from "@/acciones/resultado";
 
 // exigirSesion() va FUERA del try/catch (redirige lanzando). Dueno y prospectador
@@ -181,15 +181,16 @@ export async function descartarRepetidos(lote: string): Promise<Resultado<{ desc
   }
 }
 
-// Vuelve a validar y clasificar en bloque las filas pendientes con problema de un lote. Es lo que «Corregir» hace
-// con una fila, sin tocar sus datos: sirve cuando el problema estaba afuera (un nicho que no existia y se creo, un
-// existente que se borro). Lo que sigue mal (falta la ciudad) sigue con problema, con su texto actualizado.
+// Vuelve a validar y clasificar en bloque las filas pendientes de un lote (con problema Y nuevas), sin tocar sus
+// datos. Es lo que «Corregir» hace con una fila. Sirve cuando el mundo cambio afuera: un nicho que no existia y se
+// creo, o el mismo archivo importado dos veces (al aprobar una copia, la otra pasa a repetida y, si no aporta nada,
+// a descartada). Lo que sigue mal (falta la ciudad) sigue con problema, con su texto actualizado.
 export async function revisarDeNuevo(lote: string): Promise<Resultado<{ revisadas: number; liberadas: number }>> {
   await exigirSesion();
   const e = Lote.safeParse(lote);
   if (!e.success) return fallo(ERROR);
   try {
-    const filas = await prisma.revision.findMany({ where: { lote: e.data, estado: "error", decision: "pendiente" }, select: { id: true, datos: true }, orderBy: { fila: "asc" } });
+    const filas = await prisma.revision.findMany({ where: { lote: e.data, estado: { in: ["error", "nuevo"] }, decision: "pendiente" }, select: { id: true, datos: true, estado: true }, orderBy: { fila: "asc" } });
     let liberadas = 0;
     // Cada fila con su propio `vistas`: los repetidos dentro del lote ya se marcaron al crearlo.
     for (const r of filas) {
@@ -202,8 +203,15 @@ export async function revisarDeNuevo(lote: string): Promise<Resultado<{ revisada
       })) as Record<Columna, string>;
       const { entrada, errores } = validarFila(fila);
       const c = await clasificar(entrada, errores, new Set());
-      await prisma.revision.update({ where: { id: r.id }, data: { datos: entrada as unknown as Prisma.InputJsonValue, estado: c.estado, errores: c.errores, existenteId: c.existenteId } });
-      if (c.estado !== "error") liberadas++;
+      // Misma regla que al crear el lote: un repetido que no aporta nada no vale una decision.
+      const existente = c.existenteId ? await prisma.prospecto.findUnique({ where: { id: c.existenteId }, select: Object.fromEntries(CAMPOS_CONTACTO.map((k) => [k, true])) as Record<(typeof CAMPOS_CONTACTO)[number], true> }) : null;
+      const sinValor = c.estado === "repetido" && esRepetidoSinValor(c.errores, existente, entrada);
+      await prisma.revision.update({ where: { id: r.id }, data: {
+        datos: entrada as unknown as Prisma.InputJsonValue, estado: c.estado, existenteId: c.existenteId,
+        errores: sinValor && !c.errores.length ? [SIN_NADA_NUEVO] : c.errores,
+        ...(sinValor ? { decision: "descartado", decididoEn: new Date() } : {}),
+      } });
+      if (r.estado === "error" && c.estado !== "error") liberadas++;
     }
     if (liberadas) refrescar();
     return exito({ revisadas: filas.length, liberadas });
