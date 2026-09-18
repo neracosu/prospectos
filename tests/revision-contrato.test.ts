@@ -65,3 +65,19 @@ describe("etiquetas y topes", () => {
     expect(POR_PAGINA).toBeLessThanOrEqual(50);
   });
 });
+
+describe("repetidos sin valor", async () => {
+  const { aportaAlgo, esRepetidoSinValor, REPETIDO_EN_ARCHIVO } = await import("@/lib/revision-contrato");
+  it("aportaAlgo: solo cuenta un dato que el existente no tiene", () => {
+    expect(aportaAlgo({ telefono: "1", email: "" }, { telefono: "2", email: "" })).toBe(false); // el mismo campo lleno no pisa nada
+    expect(aportaAlgo({ telefono: "1", email: "" }, { email: "a@b.c" })).toBe(true);
+    expect(aportaAlgo({ telefono: "1" }, { email: "   " })).toBe(false); // espacios no son un dato
+    expect(aportaAlgo({}, {})).toBe(false);
+  });
+  it("esRepetidoSinValor: el del mismo archivo siempre; el «ya existe» solo si no aporta", () => {
+    expect(esRepetidoSinValor([REPETIDO_EN_ARCHIVO], null, { web: "https://x.test" })).toBe(true);
+    expect(esRepetidoSinValor([], { telefono: "1" }, { telefono: "1" })).toBe(true);
+    expect(esRepetidoSinValor([], { telefono: "1" }, { nota: "Dirección: calle 2" })).toBe(false);
+    expect(esRepetidoSinValor([], null, {})).toBe(false); // sin existente ni marca no es repetido: no se toca
+  });
+});

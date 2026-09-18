@@ -5,7 +5,7 @@ import { z } from "zod";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { claveProspecto } from "@/lib/clave-prospecto";
-import { POR_PAGINA } from "@/lib/revision-contrato";
+import { POR_PAGINA, CAMPOS_CONTACTO, REPETIDO_EN_ARCHIVO, SIN_NADA_NUEVO, esRepetidoSinValor } from "@/lib/revision-contrato";
 import type { EntradaValidada } from "@/lib/tabla-contrato";
 
 export const ORIGENES = ["overpass", "web", "maps", "importado"] as const;
@@ -26,8 +26,11 @@ export type FilaRevision = {
 export type LoteResumen = { lote: string; origen: string; creadoEn: Date; pendientes: number; total: number };
 // Mapas precargados para clasificar un lote entero sin una consulta por fila.
 // La llave de `existentePorClave` es "<nichoId>|<clave>", igual que la de `vistas`.
-export type CacheLote = { nichoPorSlug: Map<string, number>; existentePorClave: Map<string, number> };
+export type CacheLote = { nichoPorSlug: Map<string, number>; existentePorClave: Map<string, number>; existenteDatos: Map<number, ExistenteCampos> };
 
+// Los campos que se pueden completar, para saber si una fila repetida aporta algo.
+const SELECT_CAMPOS_CONTACTO = Object.fromEntries(CAMPOS_CONTACTO.map((c) => [c, true])) as Record<(typeof CAMPOS_CONTACTO)[number], true>;
+type ExistenteCampos = Record<(typeof CAMPOS_CONTACTO)[number], string>;
 const SELECT_EXISTENTE = {
   id: true, nombre: true, ciudad: true, telefono: true, whatsapp: true,
   email: true, web: true, instagram: true, facebook: true, tiktok: true,
@@ -95,7 +98,7 @@ export async function clasificar(
   if (errs.length) return { estado: "error", errores: errs, existenteId: null };
   const clave = claveProspecto(entrada.nombre, entrada.ciudad);
   const llave = `${nichoId}|${clave}`;
-  if (vistas.has(llave)) return { estado: "repetido", errores: ["Repetido en el mismo archivo"], existenteId: null };
+  if (vistas.has(llave)) return { estado: "repetido", errores: [REPETIDO_EN_ARCHIVO], existenteId: null };
   vistas.add(llave);
   const existenteId = cache
     ? cache.existentePorClave.get(llave) ?? null
@@ -123,6 +126,7 @@ async function precargar(entradas: { entrada: EntradaValidada; errores: string[]
     if (hallado) nichoPorSlug.set(pedido, hallado.id);
   }
   const existentePorClave = new Map<string, number>();
+  const existenteDatos = new Map<number, ExistenteCampos>();
   for (const [slug, nichoId] of nichoPorSlug) {
     // Solo las filas que van a llegar a la busqueda: las que ya traen error no
     // se clasifican contra la base.
@@ -131,12 +135,12 @@ async function precargar(entradas: { entrada: EntradaValidada; errores: string[]
       .map((e) => claveProspecto(e.entrada.nombre, e.entrada.ciudad)))];
     for (const trozo of trozos(claves, TROZO_CLAVES)) {
       const hallados = await prisma.prospecto.findMany({
-        where: { nichoId, clave: { in: trozo } }, select: { id: true, clave: true },
+        where: { nichoId, clave: { in: trozo } }, select: { id: true, clave: true, ...SELECT_CAMPOS_CONTACTO },
       });
-      for (const p of hallados) existentePorClave.set(`${nichoId}|${p.clave}`, p.id);
+      for (const p of hallados) { existentePorClave.set(`${nichoId}|${p.clave}`, p.id); existenteDatos.set(p.id, p); }
     }
   }
-  return { nichoPorSlug, existentePorClave };
+  return { nichoPorSlug, existentePorClave, existenteDatos };
 }
 
 export async function crearLote(
@@ -159,10 +163,15 @@ export async function crearLote(
   for (let i = 0; i < entradas.length; i++) {
     const c = await clasificar(entradas[i].entrada, entradas[i].errores, vistas, cache);
     cuenta[c.estado === "nuevo" ? "nuevos" : c.estado === "repetido" ? "repetidos" : "errores"]++;
+    // Un repetido que no aporta nada nace descartado (ver esRepetidoSinValor): la bandeja es para decidir, no para
+    // descartar 40 sucursales de la misma cadena a mano.
+    const existente = c.existenteId !== null ? cache.existenteDatos.get(c.existenteId) ?? null : null;
+    const sinValor = c.estado === "repetido" && esRepetidoSinValor(c.errores, existente, entradas[i].entrada);
     filas.push({
       lote, origen: o.data, fila: i + 1,
       datos: entradas[i].entrada as unknown as Prisma.InputJsonValue,
-      estado: c.estado, errores: c.errores, existenteId: c.existenteId, usuarioId,
+      estado: c.estado, errores: sinValor && !c.errores.length ? [SIN_NADA_NUEVO] : c.errores, existenteId: c.existenteId, usuarioId,
+      ...(sinValor ? { decision: "descartado", decididoEn: new Date() } : {}),
     });
   }
   if (filas.length) await prisma.revision.createMany({ data: filas });
@@ -174,6 +183,8 @@ export type LoteDetalle = {
   // Del lote ENTERO, no de la pagina: el resumen de arriba no puede cambiar
   // segun en que pagina estes parado.
   total: number; pendientes: number; aprobables: number;
+  // Repetidos pendientes que no aportan nada (lotes de antes de la regla): «Descartar los repetidos» los limpia.
+  descartables: number;
   pagina: number; paginas: number; porPagina: number; desde: number; hasta: number;
   filas: FilaRevision[];
 };
@@ -264,12 +275,22 @@ export async function loteConDetalle(
 
   return {
     lote, origen: primera.origen, creadoEn: primera.creadoEn,
-    total, pendientes, aprobables: await contarAprobables(lote, nuevas),
+    total, pendientes, aprobables: await contarAprobables(lote, nuevas), descartables: (await repetidosSinValor(lote)).length,
     pagina, paginas, porPagina,
     desde: total === 0 ? 0 : saltar + 1,
     hasta: saltar + crudas.length,
     filas: crudas.map(aFilaRevision),
   };
+}
+
+// Ids de los repetidos pendientes del lote que no aportan nada: los del mismo archivo y los «ya existe» cuyo
+// existente ya tiene todo lo que traen. Los de un lote nuevo nacen descartados; esto es para los lotes de antes.
+export async function repetidosSinValor(lote: string): Promise<number[]> {
+  const filas = await prisma.revision.findMany({
+    where: { lote, estado: "repetido", decision: "pendiente" },
+    select: { id: true, errores: true, datos: true, existente: { select: SELECT_CAMPOS_CONTACTO } },
+  });
+  return filas.filter((f) => { const d = leerDatos(f.datos); return d !== null && esRepetidoSinValor(listaDeTextos(f.errores), f.existente, d); }).map((f) => f.id);
 }
 
 // Los ultimos 20 lotes, el mas nuevo primero, con cuantas filas quedan sin decidir.

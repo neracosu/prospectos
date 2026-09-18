@@ -89,6 +89,10 @@ nichos (`hoteles`, `hoteles-estadia`).
     (ver `20260917000100_json_defaults`) → `migrate deploy`.
   - **Topes compartidos** entre importación y alta manual en `TOPES` de `src/lib/tabla-contrato.ts`
     (nombre 120, ciudad 80, estado 60, y el par nombre+ciudad ≤ 191, que es el largo de `clave`).
+  - **Los repetidos que no aportan nada nacen descartados** (17-sep, tras ver 40 sucursales de Farmatodo en la
+    bandeja): «Repetido en el mismo archivo» siempre, y «Ya existe» solo si no trae ningún dato que al existente le
+    falte (`esRepetidoSinValor` en `revision-contrato.ts`, misma lista `CAMPOS_CONTACTO` que `completarExistente`).
+    Para lotes de antes, «Descartar N repetidos sin nada nuevo» en la bandeja (`descartarRepetidos`). Nada se borra.
   - La clave de duplicado sigue siendo la de la pieza 1 (`nombre|ciudad` normalizados): **no quita
     «hotel/farmacia/posada» inicial** como pedía la spec. Cambiarla recalcula la clave de todos los
     prospectos; decisión de Neri, pendiente.

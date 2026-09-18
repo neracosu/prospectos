@@ -9,7 +9,8 @@ import { generarCodigo } from "@/lib/codigo";
 import { claveProspecto } from "@/lib/clave-prospecto";
 import { regionDe } from "@/lib/importar";
 import { validarFila, COLUMNAS, type Columna } from "@/lib/tabla-contrato";
-import { clasificar, leerDatos, listaDeTextos, mapaDeTextos, TOPE_APROBACION } from "@/lib/revision";
+import { clasificar, leerDatos, listaDeTextos, mapaDeTextos, repetidosSinValor, TOPE_APROBACION } from "@/lib/revision";
+import { CAMPOS_CONTACTO } from "@/lib/revision-contrato";
 import { fallo, exito, type Resultado } from "@/acciones/resultado";
 
 // exigirSesion() va FUERA del try/catch (redirige lanzando). Dueno y prospectador
@@ -21,8 +22,6 @@ const DATOS_MALOS = "Esa fila tiene datos inválidos: descártala.";
 const YA_DECIDIDA = "Esa fila ya se decidió.";
 const Id = z.number().int().positive();
 const Lote = z.string().min(8).max(64);
-// Campos que se pueden rellenar en un existente. nombre y ciudad nunca: son la clave.
-const CAMPOS_CONTACTO = ["telefono", "whatsapp", "email", "web", "instagram", "facebook", "tiktok", "estado", "tipo", "tamano", "nota"] as const;
 
 function refrescar() {
   revalidatePath("/buscar");
@@ -157,6 +156,27 @@ export async function completarExistente(id: number): Promise<Resultado> {
     if (err instanceof Error && err.message === "YA_DECIDIDA") return fallo(YA_DECIDIDA);
     if (err instanceof Error && err.message === "SIN_EXISTENTE") return fallo("El prospecto existente ya no está.");
     console.error("completarExistente", err);
+    return fallo(ERROR);
+  }
+}
+
+// Descarta en bloque los repetidos pendientes de un lote que no aportan nada (los del mismo archivo y los «ya
+// existe» sin dato nuevo). Los lotes nuevos ya nacen asi; esto limpia los de antes. Nada se borra.
+export async function descartarRepetidos(lote: string): Promise<Resultado<{ descartadas: number }>> {
+  const u = await exigirSesion();
+  const e = Lote.safeParse(lote);
+  if (!e.success) return fallo(ERROR);
+  try {
+    const ids = await repetidosSinValor(e.data);
+    if (!ids.length) return exito({ descartadas: 0 });
+    const r = await prisma.revision.updateMany({
+      where: { id: { in: ids }, decision: "pendiente" },
+      data: { decision: "descartado", decididoPor: u.id, decididoEn: new Date() },
+    });
+    refrescar();
+    return exito({ descartadas: r.count });
+  } catch (err) {
+    console.error("descartarRepetidos", err);
     return fallo(ERROR);
   }
 }

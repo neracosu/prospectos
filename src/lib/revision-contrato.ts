@@ -14,6 +14,25 @@ export function etiquetaOrigen(origen: string): string {
   return ETIQUETA_ORIGEN[origen] ?? origen;
 }
 
+// --- Repetidos que no valen una decision -----------------------------------
+// Campos que se pueden rellenar en un existente (nombre y ciudad nunca: son la clave). Los usa completarExistente
+// y la regla de abajo: si la fila que llega no trae NADA que el existente no tenga, no hay decision que tomar.
+export const CAMPOS_CONTACTO = ["telefono", "whatsapp", "email", "web", "instagram", "facebook", "tiktok", "estado", "tipo", "tamano", "nota"] as const;
+export const REPETIDO_EN_ARCHIVO = "Repetido en el mismo archivo";
+export const SIN_NADA_NUEVO = "Ya existe y no trae nada nuevo";
+type Campos = Partial<Record<(typeof CAMPOS_CONTACTO)[number], string | null | undefined>>;
+// true si la fila trae algun dato que al existente le falta.
+export function aportaAlgo(existente: Campos, datos: Campos): boolean {
+  return CAMPOS_CONTACTO.some((c) => (datos[c] ?? "").toString().trim() && !(existente[c] ?? "").toString().trim());
+}
+// Una cadena con 40 sucursales entra a la bandeja 40 veces con la misma clave (nombre|ciudad): 39 «repetido en el
+// mismo archivo» que nadie deberia tener que descartar a mano (17-sep-2026, Farmatodo en Caracas). Esas, y los
+// «ya existe» sin nada nuevo, nacen descartadas. Nada se borra: la fila queda en el lote con su decision.
+export function esRepetidoSinValor(errores: string[], existente: Campos | null, datos: Campos): boolean {
+  if (errores.includes(REPETIDO_EN_ARCHIVO)) return true;
+  return existente !== null && !aportaAlgo(existente, datos);
+}
+
 // Filas por pagina de la bandeja. Un lote de 5000 no se puede pintar entero: el
 // HTML se va a varios MB y el telefono no lo mueve.
 export const POR_PAGINA = 50;

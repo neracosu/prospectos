@@ -16,7 +16,7 @@ import { prisma } from "@/lib/db";
 import { DB_HABILITADA, limpiarBase, sembrarBasico, crearProspectoDePrueba } from "./ayuda-db";
 import { sesionFalsa } from "./ayuda-sesion";
 import { crearLote, loteConDetalle, lotesRecientes, limpiarLotesViejos } from "@/lib/revision";
-import { aprobarFila, completarExistente, descartarFila, corregirFila, aprobarNuevos } from "@/acciones/revision";
+import { aprobarFila, completarExistente, descartarFila, corregirFila, aprobarNuevos, descartarRepetidos } from "@/acciones/revision";
 import { validarFila, COLUMNAS, type Columna } from "@/lib/tabla-contrato";
 import { claveProspecto } from "@/lib/clave-prospecto";
 
@@ -48,11 +48,14 @@ describe.runIf(DB_HABILITADA)("bandeja de revision", () => {
     expect(r).toMatchObject({ nuevos: 1, repetidos: 2, errores: 2 });
     lote = r.lote;
     const d = (await loteConDetalle(lote))!;
-    expect(d.filas.map((f) => f.estado)).toEqual(["nuevo", "repetido", "error", "repetido", "error"]);
+    // Los pendientes salen primero; el repetido del mismo archivo nace descartado y va al final.
+    expect(d.filas.map((f) => f.estado)).toEqual(["nuevo", "repetido", "error", "error", "repetido"]);
     expect(d.filas[1].existente?.nombre).toBe("Hotel Existente");
-    expect(d.filas[3].errores).toContain("Repetido en el mismo archivo");
-    expect(d.filas[4].errores).toContain("Nicho desconocido");
-    expect((await lotesRecientes())[0]).toMatchObject({ lote, pendientes: 5, total: 5 });
+    expect(d.filas[1].decision).toBe("pendiente"); // trae un correo que el existente no tiene: hay algo que completar
+    expect(d.filas[4].errores).toContain("Repetido en el mismo archivo");
+    expect(d.filas[4].decision).toBe("descartado"); // nadie tiene que tocarlo: la primera copia ya esta en el lote
+    expect(d.filas[3].errores).toContain("Nicho desconocido");
+    expect((await lotesRecientes())[0]).toMatchObject({ lote, pendientes: 4, total: 5 });
   });
 
   it("aprobarFila crea el prospecto con fuentes y evento; dos toques, uno", async () => {
@@ -90,7 +93,8 @@ describe.runIf(DB_HABILITADA)("bandeja de revision", () => {
     expect((await corregirFila(sinCiudad.id, fd({ ciudad: "Mérida" }))).ok).toBe(true);
     let d2 = (await loteConDetalle(lote))!;
     expect(d2.filas.find((f) => f.id === sinCiudad.id)!.estado).toBe("nuevo");
-    expect((await descartarFila(d.filas.find((f) => f.fila === 4)!.id)).ok).toBe(true);
+    // La fila 4 (repetida en el mismo archivo) nacio descartada: descartarla a mano ya no es una decision.
+    expect(await descartarFila(d.filas.find((f) => f.fila === 4)!.id)).toEqual({ ok: false, mensaje: "Esa fila ya se decidió." });
     const r = await aprobarNuevos(lote);
     expect(r.ok).toBe(true);
     if (r.ok) expect(r.datos).toMatchObject({ aprobadas: 1, fallidas: 0, quedan: 0 }); // solo "Sin Ciudad" corregida
@@ -321,6 +325,47 @@ describe.runIf(DB_HABILITADA)("bandeja de revision", () => {
     expect(l.slice(0, 2).map((x) => x.lote)).toEqual([b.lote, a.lote]);
     expect(l[0]).toMatchObject({ origen: "maps", total: 1, pendientes: 1 });
     expect(l[1]).toMatchObject({ origen: "importado", total: 2, pendientes: 1 });
+  });
+
+  it("una cadena con muchas sucursales entra una sola vez: las demas nacen descartadas; un existente sin nada nuevo tambien", async () => {
+    // Un existente completo: telefono y correo. La fila que llega con los mismos datos no aporta nada.
+    const completo = await crearProspectoDePrueba(ids.nichoId, { nombre: "Farmacia Llena", ciudad: "Caracas", telefono: "02121111111", email: "info@llena.test" });
+    const r = await crearLote("overpass", [
+      fila({ nombre: "Farmacadena", ciudad: "Caracas", telefono: "02121" }),
+      fila({ nombre: "Farmacadena", ciudad: "Caracas", telefono: "02122" }),
+      fila({ nombre: "Farmacadena", ciudad: "Caracas", telefono: "02123" }),
+      fila({ nombre: "Farmacia Llena", ciudad: "Caracas", telefono: "02121111111", email: "info@llena.test" }), // ya existe, nada nuevo
+      fila({ nombre: "Farmacia Llena", ciudad: "Caracas", web: "https://llena.test" }), // repetida en el archivo: descartada aunque traiga web
+    ], ids.prospectadorId);
+    expect(r).toMatchObject({ nuevos: 1, repetidos: 4, errores: 0 });
+    const d = (await loteConDetalle(r.lote))!;
+    expect(d.pendientes).toBe(1);
+    expect(d.filas.filter((f) => f.decision === "descartado").map((f) => f.fila).sort()).toEqual([2, 3, 4, 5]);
+    expect(d.filas.find((f) => f.fila === 4)!.errores).toContain("Ya existe y no trae nada nuevo");
+    expect((await prisma.prospecto.findUniqueOrThrow({ where: { id: completo.id } })).web).toBe(""); // nada se completo solo
+    // Nada de esto es un delete: las filas siguen en el lote con su decision.
+    expect(await prisma.revision.count({ where: { lote: r.lote } })).toBe(5);
+  });
+
+  it("descartarRepetidos limpia en bloque los repetidos sin nada nuevo de un lote viejo y deja los que si aportan", async () => {
+    const existente = await crearProspectoDePrueba(ids.nichoId, { nombre: "Farmacia Media", ciudad: "Caracas", telefono: "02129999999" });
+    const r = await crearLote("overpass", [
+      fila({ nombre: "Farmacia Media", ciudad: "Caracas", telefono: "02129999999", email: "nuevo@media.test" }), // aporta el correo: se queda
+      fila({ nombre: "Farmacia Media", ciudad: "Caracas", telefono: "02129999999" }), // repetida en el archivo
+      fila({ nombre: "Otra Nueva", ciudad: "Caracas" }),
+    ], ids.prospectadorId);
+    // Se simula un lote de antes de esta regla: todo pendiente.
+    await prisma.revision.updateMany({ where: { lote: r.lote }, data: { decision: "pendiente", decididoEn: null } });
+    expect((await loteConDetalle(r.lote))!.pendientes).toBe(3);
+    const s = await descartarRepetidos(r.lote);
+    expect(s).toEqual({ ok: true, datos: { descartadas: 1 } });
+    const d = (await loteConDetalle(r.lote))!;
+    expect(d.pendientes).toBe(2);
+    expect(d.filas.find((f) => f.fila === 2)!.decision).toBe("descartado");
+    expect(d.filas.find((f) => f.fila === 1)!.decision).toBe("pendiente");
+    expect(d.filas.find((f) => f.fila === 3)!.decision).toBe("pendiente");
+    expect((await descartarRepetidos(r.lote)).ok && (await descartarRepetidos(r.lote) as { ok: true; datos: { descartadas: number } }).datos.descartadas).toBe(0);
+    expect((await prisma.prospecto.findUniqueOrThrow({ where: { id: existente.id } })).email).toBe("");
   });
 
   it("descartarFila distingue la fila que no existe de la ya decidida", async () => {
