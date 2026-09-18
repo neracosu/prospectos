@@ -6,7 +6,7 @@ import type { LoteDetalle } from "@/lib/revision";
 import { COLUMNAS, type Columna } from "@/lib/tabla-contrato";
 import { etiquetaOrigen, siguientePasada, APROBACION_INICIAL } from "@/lib/revision-contrato";
 import { aplicarDecision, type CambioFila } from "@/lib/optimista-contrato";
-import { aprobarFila, completarExistente, descartarFila, corregirFila, aprobarNuevos, descartarRepetidos } from "@/acciones/revision";
+import { aprobarFila, completarExistente, descartarFila, corregirFila, aprobarNuevos, descartarRepetidos, revisarDeNuevo } from "@/acciones/revision";
 import { useFlotante } from "@/componentes/LineaFlotante";
 
 // La bandeja es el filtro: nada llega al panel sin que alguien lo mire aca. Cada
@@ -151,6 +151,12 @@ export function Bandeja({ lote: loteDelServidor }: { lote: LoteDetalle }) {
                 : lote.aprobables === 1
                   ? "Aprobar la nueva"
                   : `Aprobar las ${lote.aprobables} nuevas`}
+            </button>
+          )}
+          {lote.conProblema > 0 && (
+            // Para cuando el problema estaba afuera (un nicho que no existia): se revisan todas de una vez.
+            <button className="boton" disabled={pendiente} onClick={() => correr("lote", async () => { const r = await revisarDeNuevo(lote.lote); if (r.ok) avisar({ texto: r.datos.liberadas ? `${r.datos.liberadas} de ${r.datos.revisadas} ya no tienen problema` : `Se revisaron ${r.datos.revisadas}: siguen con problema` }); return r; })}>
+              {corriendo === "lote" ? "Revisando…" : `Revisar de nuevo ${lote.conProblema} con problema`}
             </button>
           )}
           {lote.descartables > 0 && (

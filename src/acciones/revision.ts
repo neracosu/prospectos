@@ -181,6 +181,38 @@ export async function descartarRepetidos(lote: string): Promise<Resultado<{ desc
   }
 }
 
+// Vuelve a validar y clasificar en bloque las filas pendientes con problema de un lote. Es lo que «Corregir» hace
+// con una fila, sin tocar sus datos: sirve cuando el problema estaba afuera (un nicho que no existia y se creo, un
+// existente que se borro). Lo que sigue mal (falta la ciudad) sigue con problema, con su texto actualizado.
+export async function revisarDeNuevo(lote: string): Promise<Resultado<{ revisadas: number; liberadas: number }>> {
+  await exigirSesion();
+  const e = Lote.safeParse(lote);
+  if (!e.success) return fallo(ERROR);
+  try {
+    const filas = await prisma.revision.findMany({ where: { lote: e.data, estado: "error", decision: "pendiente" }, select: { id: true, datos: true }, orderBy: { fila: "asc" } });
+    let liberadas = 0;
+    // Cada fila con su propio `vistas`: los repetidos dentro del lote ya se marcaron al crearlo.
+    for (const r of filas) {
+      const d = leerDatos(r.datos);
+      if (!d) continue; // datos ilegibles: solo se descarta, no se revalida
+      const anteriores = d as unknown as Record<string, unknown>;
+      const fila = Object.fromEntries(COLUMNAS.map((c) => {
+        const anterior = c === "fuente" ? listaDeTextos(d.fuentes)[0] ?? "" : anteriores[c];
+        return [c, typeof anterior === "string" ? anterior : ""];
+      })) as Record<Columna, string>;
+      const { entrada, errores } = validarFila(fila);
+      const c = await clasificar(entrada, errores, new Set());
+      await prisma.revision.update({ where: { id: r.id }, data: { datos: entrada as unknown as Prisma.InputJsonValue, estado: c.estado, errores: c.errores, existenteId: c.existenteId } });
+      if (c.estado !== "error") liberadas++;
+    }
+    if (liberadas) refrescar();
+    return exito({ revisadas: filas.length, liberadas });
+  } catch (err) {
+    console.error("revisarDeNuevo", err);
+    return fallo(ERROR);
+  }
+}
+
 export async function descartarFila(id: number): Promise<Resultado> {
   const u = await exigirSesion();
   const e = Id.safeParse(id);

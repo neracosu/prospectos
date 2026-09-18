@@ -16,7 +16,7 @@ import { prisma } from "@/lib/db";
 import { DB_HABILITADA, limpiarBase, sembrarBasico, crearProspectoDePrueba } from "./ayuda-db";
 import { sesionFalsa } from "./ayuda-sesion";
 import { crearLote, loteConDetalle, lotesRecientes, limpiarLotesViejos } from "@/lib/revision";
-import { aprobarFila, completarExistente, descartarFila, corregirFila, aprobarNuevos, descartarRepetidos } from "@/acciones/revision";
+import { aprobarFila, completarExistente, descartarFila, corregirFila, aprobarNuevos, descartarRepetidos, revisarDeNuevo } from "@/acciones/revision";
 import { validarFila, COLUMNAS, type Columna } from "@/lib/tabla-contrato";
 import { claveProspecto } from "@/lib/clave-prospecto";
 
@@ -366,6 +366,28 @@ describe.runIf(DB_HABILITADA)("bandeja de revision", () => {
     expect(d.filas.find((f) => f.fila === 3)!.decision).toBe("pendiente");
     expect((await descartarRepetidos(r.lote)).ok && (await descartarRepetidos(r.lote) as { ok: true; datos: { descartadas: number } }).datos.descartadas).toBe(0);
     expect((await prisma.prospecto.findUniqueOrThrow({ where: { id: existente.id } })).email).toBe("");
+  });
+
+  it("revisarDeNuevo vuelve a clasificar en bloque las filas con problema: un nicho creado despues las libera", async () => {
+    const r = await crearLote("importado", [
+      fila({ nicho: "gimnasios", nombre: "Gym Uno", ciudad: "Caracas" }),
+      fila({ nicho: "gimnasios", nombre: "Gym Dos", ciudad: "" }), // seguira con problema: falta la ciudad
+      fila({ nombre: "Hotel Bien", ciudad: "Caracas" }), // nuevo desde el principio, no se toca
+    ], ids.prospectadorId);
+    expect(r).toMatchObject({ nuevos: 1, errores: 2 });
+    let d = (await loteConDetalle(r.lote))!;
+    expect(d.conProblema).toBe(2);
+    // Sin el nicho, revisar no cambia nada.
+    expect(await revisarDeNuevo(r.lote)).toEqual({ ok: true, datos: { revisadas: 2, liberadas: 0 } });
+    await prisma.nicho.create({ data: { slug: "gimnasios", nombre: "Gimnasios", mensajeInicial: "x", mensajeSeguimiento: "y" } });
+    expect(await revisarDeNuevo(r.lote)).toEqual({ ok: true, datos: { revisadas: 2, liberadas: 1 } });
+    d = (await loteConDetalle(r.lote))!;
+    const porFila = [...d.filas].sort((a, b) => a.fila - b.fila);
+    expect(porFila.map((f) => f.estado)).toEqual(["nuevo", "error", "nuevo"]);
+    expect(porFila[1].errores).toEqual(["Falta la ciudad"]);
+    expect(d.conProblema).toBe(1);
+    expect(d.aprobables).toBe(2);
+    await prisma.nicho.delete({ where: { slug: "gimnasios" } });
   });
 
   it("descartarFila distingue la fila que no existe de la ya decidida", async () => {

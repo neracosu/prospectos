@@ -185,6 +185,8 @@ export type LoteDetalle = {
   total: number; pendientes: number; aprobables: number;
   // Repetidos pendientes que no aportan nada (lotes de antes de la regla): «Descartar los repetidos» los limpia.
   descartables: number;
+  // Filas pendientes con problema (nicho desconocido, falta la ciudad…): «Revisar de nuevo» las vuelve a clasificar.
+  conProblema: number;
   pagina: number; paginas: number; porPagina: number; desde: number; hasta: number;
   filas: FilaRevision[];
 };
@@ -239,10 +241,11 @@ export async function loteConDetalle(
   };
   const porPagina = Math.min(Math.max(1, entero(opciones.porPagina ?? POR_PAGINA, POR_PAGINA)), 200);
 
-  const [total, pendientes, nuevas, primera] = await Promise.all([
+  const [total, pendientes, nuevas, conProblema, primera] = await Promise.all([
     prisma.revision.count({ where: { lote } }),
     prisma.revision.count({ where: { lote, decision: "pendiente" } }),
     prisma.revision.count({ where: { lote, estado: "nuevo", decision: "pendiente" } }),
+    prisma.revision.count({ where: { lote, estado: "error", decision: "pendiente" } }),
     prisma.revision.findFirst({ where: { lote }, orderBy: { fila: "asc" }, select: { origen: true, creadoEn: true } }),
   ]);
   if (!primera) return null;
@@ -275,7 +278,7 @@ export async function loteConDetalle(
 
   return {
     lote, origen: primera.origen, creadoEn: primera.creadoEn,
-    total, pendientes, aprobables: await contarAprobables(lote, nuevas), descartables: (await repetidosSinValor(lote)).length,
+    total, pendientes, aprobables: await contarAprobables(lote, nuevas), descartables: (await repetidosSinValor(lote)).length, conProblema,
     pagina, paginas, porPagina,
     desde: total === 0 ? 0 : saltar + 1,
     hasta: saltar + crudas.length,
