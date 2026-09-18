@@ -304,8 +304,12 @@ nichos (`hoteles`, `hoteles-estadia`).
   ajeno no puede poner esa cabecera y Next hace lo mismo), y el vigía de guardas no mira `layout.tsx`.
   Pendiente aparte: la **pasada de UX** del panel
   (`docs/superpowers/specs/2026-09-17-ux-panel-design.md`, propuesta sin aprobar).
-- Pendientes de Neri: **decidir el respaldo de `~/prospectos-archivos/`** (recibos y documentos no se
-  regeneran); probar una subida real de ~10 MB desde el teléfono (el tope de Apache/ModSecurity de este cPanel
+- **Respaldo diario (desde el 17-sep):** `scripts/respaldo.sh` por cron a las 03:40 → `~/backups/prospectos/`
+  (volcado de la base y tar de `recibos/` + `documentos/`, 30 días; más `archivos-espejo/`, copia acumulativa sin
+  borrado). Credenciales en `~/.config/prospectos/my.cnf` (600) y nombre de la base en `base-nombre`; log en
+  `~/.config/prospectos/respaldo.log`. **Está en el mismo disco**: cubre errores, no la pérdida del servidor; copiar
+  `~/backups/prospectos` fuera queda pendiente de Neri.
+- Pendientes de Neri: probar una subida real de ~10 MB desde el teléfono (el tope de Apache/ModSecurity de este cPanel
   no se puede probar desde el clon); rotar la contraseña de la base (spec, decisiones abiertas) y decidir los precios
   de farmacias (bloquea la propuesta de ese nicho; hoy `farmacias` no tiene plantilla y la ficha no
   muestra enlace de propuesta).
