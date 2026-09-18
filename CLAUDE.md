@@ -64,7 +64,14 @@ nichos (`hoteles`, `hoteles-estadia`).
   misma instancia; limpia lo que crea por la marca `(PRUEBA) <timestamp>`).
   - **Toda petición saliente va por `src/lib/red-segura.ts`** (`descargar`), nunca `fetch` en el servidor:
     solo http(s), sin IPs privadas ni nombres locales, DNS resuelto y fijado, plazo total 30 s separado
-    de la inactividad de 10 s, tope de bytes, máximo 3 redirecciones.
+    de la inactividad de 10 s, tope de bytes, máximo 3 redirecciones. Desde el 17-sep resuelve **todas** las IP del
+    nombre y las prueba en orden si la conexión falla (Overpass tiene dos servidores y uno estaba caído); si
+    alguna es privada se rechaza el nombre entero.
+  - **Buscar por lotes desde el servidor:** `scripts/buscar-region.mts <nichos> <ciudades>` (con el env cargado y
+    `PROSPECTOS_OVERPASS_ESPERA_MS=12000`: Overpass devuelve 429 con el ritmo de 5 s del panel; el script reintenta
+    con espera creciente). Deja lotes en la bandeja igual que el botón del panel. Región central del 17-sep: 7
+    ciudades nuevas en `CIUDADES` y tres nichos nuevos sin plantilla (`restaurantes-y-bares`, `canchas-y-espacios`,
+    `licorerias-y-bodegones`; sus mensajes mandan a la página pública de `/para/`).
   - **Overpass:** una consulta a la vez por proceso, 5 s entre consultas, User-Agent identificado, caché
     de 7 días en `BusquedaOsm` con huella de la consulta (cambiar `etiquetaOsm` la invalida); solo se
     cachean respuestas 200 con resultados; una búsqueda puede tardar hasta 90 s. Ciudades y alias en
