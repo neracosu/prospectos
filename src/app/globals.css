@@ -26,7 +26,7 @@ button, input, select, textarea { font: inherit; }
 .boton:disabled { opacity: .5; cursor: default; }
 .fila-botones { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
 .campo { display: block; margin-bottom: 12px; }
-.campo > span { display: block; font-size: 14px; color: var(--tinta-suave); margin-bottom: 4px; }
+.campo > span, .campo > .campo__etiqueta { display: block; font-size: 14px; color: var(--tinta-suave); margin-bottom: 4px; }
 .campo input, .campo select, .campo textarea { width: 100%; min-height: 44px; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--borde-control); background: var(--fondo); color: var(--tinta); }
 .suave { color: var(--tinta-suave); font-size: 14px; }
 .error { color: var(--rojo); font-size: 14px; }
@@ -175,9 +175,9 @@ button, input, select, textarea { font: inherit; }
 .campo--error input, .campo--error select, .campo--error textarea { border-color: var(--rojo); }
 /* Esqueleto de carga (fase C): bloques quietos; el pulso empieza al segundo, y sin animaciones queda quieto, que tambien vale. */
 .solo-lector { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-.esqueleto { display: grid; gap: 12px; }
+.esqueleto { display: grid; gap: 12px; animation: esqueleto-pulso 1.4s ease-in-out 1s infinite; }
 .esqueleto__tarjeta { margin-bottom: 0; display: grid; gap: 10px; }
-.esqueleto__bloque { display: block; border-radius: 8px; background: var(--superficie-2); animation: esqueleto-pulso 1.4s ease-in-out 1s infinite; }
+.esqueleto__bloque { display: block; border-radius: 8px; background: var(--superficie-2); }
 .esqueleto__bloque--grande { width: 46%; height: 26px; }
 .esqueleto__bloque--barra { width: 100%; height: 8px; border-radius: 4px; }
 .esqueleto__bloque--fila { width: 100%; height: 40px; }

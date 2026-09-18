@@ -8,9 +8,9 @@ export type Regla =
   | { tipo: "texto"; min?: number; max: number }
   | { tipo: "monto" }
   | { tipo: "fecha" }
-  | { tipo: "entero"; min: number; max: number }
-  | { tipo: "correo" }
-  | { tipo: "url" };
+  | { tipo: "entero"; min: number; max: number };
+// No hay regla de correo ni de url: el servidor acepta cualquier texto (un hotel publica «reservas@x.com /
+// ventas@x.com», o una web sin http://). Lo que el servidor no exige, el navegador tampoco.
 
 export const FALTA = "Este dato hace falta.";
 
@@ -31,10 +31,5 @@ export function validar(regla: Regla, valor: string, requerido: boolean): string
       const n = /^-?\d+$/.test(v) ? Number(v) : NaN;
       return Number.isInteger(n) && n >= regla.min && n <= regla.max ? "" : `Tiene que ser un número entre ${regla.min} y ${regla.max}.`;
     }
-    case "correo":
-      // La misma forma que exige el navegador para type="email": algo@algo.algo sin espacios.
-      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) ? "" : "Escribe un correo válido.";
-    case "url":
-      return /^https?:\/\/\S+$/i.test(v) ? "" : "Escribe una dirección que empiece por http:// o https://.";
   }
 }

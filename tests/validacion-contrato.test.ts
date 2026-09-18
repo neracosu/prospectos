@@ -29,11 +29,9 @@ describe("validar (reglas del navegador, copia de las del servidor)", () => {
     expect(validar({ tipo: "entero", min: 1, max: 28 }, "5.5", true)).toBe("Tiene que ser un número entre 1 y 28.");
     expect(validar({ tipo: "entero", min: 2, max: 12 }, "0", true)).toBe("Tiene que ser un número entre 2 y 12.");
   });
-  it("correo y url", () => {
-    expect(validar({ tipo: "correo" }, "gerencia@hotel.test", false)).toBe("");
-    expect(validar({ tipo: "correo" }, "gerencia@", false)).toBe("Escribe un correo válido.");
-    expect(validar({ tipo: "correo" }, "sin arroba", false)).toBe("Escribe un correo válido.");
-    expect(validar({ tipo: "url" }, "https://hotel.test/contacto", false)).toBe("");
-    expect(validar({ tipo: "url" }, "hotel.test", false)).toBe("Escribe una dirección que empiece por http:// o https://.");
+  it("un correo es texto con tope, como en el servidor: dos direcciones o una sin punto pasan", () => {
+    expect(validar({ tipo: "texto", max: 120 }, "reservas@hotel.com / ventas@hotel.com", false)).toBe("");
+    expect(validar({ tipo: "texto", max: 120 }, "info@hotel", false)).toBe("");
+    expect(validar({ tipo: "texto", max: 120 }, "x".repeat(121), false)).toBe("Máximo 120 letras.");
   });
 });

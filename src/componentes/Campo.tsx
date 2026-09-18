@@ -19,11 +19,16 @@ type Props = {
   className?: string;
 } & Record<string, unknown>;
 
+const fechaLegible = (iso: string | null) => (iso && /^\d{4}-\d{2}-\d{2}$/.test(iso) ? `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}` : iso ?? "…");
+
+// Lo que dice el navegador (required, min, max) traducido a nuestro idioma. Las reglas propias van en `validar`.
 function mensajeNativo(el: Control): string {
   const v = el.validity;
   if (v.valueMissing) return FALTA;
-  if (v.typeMismatch) return el.getAttribute("type") === "email" ? "Escribe un correo válido." : "Escribe una dirección que empiece por http:// o https://.";
-  if (v.rangeUnderflow || v.rangeOverflow || v.stepMismatch) return `Tiene que ser un número entre ${el.getAttribute("min") ?? "…"} y ${el.getAttribute("max") ?? "…"}.`;
+  const esFecha = el.getAttribute("type") === "date";
+  if (v.rangeOverflow) return esFecha ? `La fecha no puede ser después del ${fechaLegible(el.getAttribute("max"))}.` : `Tiene que ser un número entre ${el.getAttribute("min") ?? "…"} y ${el.getAttribute("max") ?? "…"}.`;
+  if (v.rangeUnderflow) return esFecha ? `La fecha no puede ser antes del ${fechaLegible(el.getAttribute("min"))}.` : `Tiene que ser un número entre ${el.getAttribute("min") ?? "…"} y ${el.getAttribute("max") ?? "…"}.`;
+  if (v.stepMismatch) return `Tiene que ser un número entre ${el.getAttribute("min") ?? "…"} y ${el.getAttribute("max") ?? "…"}.`;
   if (v.tooLong) return `Máximo ${el.getAttribute("maxlength")} letras.`;
   return v.valid ? "" : "Revisa este dato.";
 }
@@ -54,17 +59,20 @@ export function Campo({ etiqueta, nombre, regla, requerido = false, control = "i
     onInvalid: (e: React.FormEvent<Control>) => {
       e.preventDefault(); // sin la burbuja del navegador: el mensaje va pegado al campo, en nuestro idioma
       const el = e.currentTarget;
-      mostrar(evaluar(el) || mensajeNativo(el) || "Revisa este dato.");
+      mostrar(evaluar(el) || "Revisa este dato.");
       // Los eventos `invalid` llegan en orden: el primero del formulario se lleva el foco.
       if (el.form?.querySelector(":invalid") === el) { el.focus({ preventScroll: true }); el.scrollIntoView({ block: "center", behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" }); }
     },
   };
 
+  // El mensaje va FUERA del <label>: adentro pasaria a ser parte del nombre accesible del control y un lector lo
+  // diria tres veces (nombre, describedby y alert). Un control readOnly queda fuera de la validacion nativa: se
+  // muestra el mensaje pero no bloquea el envio; hoy solo lo usa la fuente fija del alta de prospecto.
   return (
-    <label className={"campo" + (mensaje ? " campo--error" : "") + (className ? ` ${className}` : "")} htmlFor={`${id}-c`}>
-      <span>{etiqueta}</span>
+    <div className={"campo" + (mensaje ? " campo--error" : "") + (className ? ` ${className}` : "")}>
+      <label className="campo__etiqueta" htmlFor={`${id}-c`}>{etiqueta}</label>
       {mensaje && <small id={`${id}-m`} className="campo__error" role="alert">{mensaje}</small>}
       {createElement(control, props, children)}
-    </label>
+    </div>
   );
 }

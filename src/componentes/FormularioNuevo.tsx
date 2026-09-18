@@ -11,7 +11,7 @@ import type { Regla } from "@/lib/validacion-contrato";
 const CAMPOS: [string, string, Regla, string?][] = [
   ["nombre", "Nombre del negocio", { tipo: "texto", min: 2, max: TOPES.nombre }], ["ciudad", "Ciudad", { tipo: "texto", min: 2, max: TOPES.ciudad }],
   ["estado", "Estado", { tipo: "texto", max: TOPES.estado }], ["tipo", "Tipo", { tipo: "texto", max: 60 }], ["tamano", "Tamaño (ej. 20 hab.)", { tipo: "texto", max: 40 }],
-  ["telefono", "Teléfono(s)", { tipo: "texto", max: 80 }, "tel"], ["whatsapp", "WhatsApp", { tipo: "texto", max: 40 }, "tel"], ["email", "Correo", { tipo: "correo" }, "email"],
+  ["telefono", "Teléfono(s)", { tipo: "texto", max: 80 }, "tel"], ["whatsapp", "WhatsApp", { tipo: "texto", max: 40 }, "tel"], ["email", "Correo", { tipo: "texto", max: 120 }, "email"],
   ["web", "Web", { tipo: "texto", max: 200 }, "url"], ["instagram", "Instagram", { tipo: "texto", max: 200 }], ["facebook", "Facebook", { tipo: "texto", max: 200 }],
   ["tiktok", "TikTok", { tipo: "texto", max: 200 }], ["fuente", "Fuente (URL donde publican el contacto)", { tipo: "texto", max: 300 }, "url"],
 ];
@@ -37,8 +37,8 @@ export function FormularioNuevo({ nichos, valores = {} }: { nichos: { id: number
       {CAMPOS.map(([n, t, regla, tipo]) => (
         <Campo key={n} nombre={n} etiqueta={n === "fuente" && fuenteFija ? "Fuente (del enlace que se leyó)" : t} regla={regla}
           requerido={n === "nombre" || n === "ciudad"}
-          // type="url" nativo exigiria http://, que el servidor no exige: web y fuente van como texto.
-          type={tipo === "url" ? "text" : (tipo ?? "text")} inputMode={tipo === "url" ? "url" : undefined}
+          // type="url" y type="email" nativos exigen un formato que el servidor no exige: van como texto con el teclado adecuado.
+          type={tipo === "url" || tipo === "email" ? "text" : (tipo ?? "text")} inputMode={tipo === "url" || tipo === "email" ? tipo : undefined}
           defaultValue={inicial[n] ?? ""} readOnly={n === "fuente" && !!fuenteFija} />
       ))}
       <Campo nombre="nota" etiqueta="Nota interna" control="textarea" regla={{ tipo: "texto", max: 2000 }} rows={3} defaultValue={valores.nota ?? ""} />

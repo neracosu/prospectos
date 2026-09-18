@@ -49,7 +49,7 @@ export function FormularioEmisor({ emisor }: { emisor: DatosEmisor }) {
       <Campo nombre="nombre" etiqueta="Nombre" regla={{ tipo: "texto", min: 2, max: 80 }} requerido defaultValue={emisor.nombre} autoComplete="organization" />
       <Campo nombre="rif" etiqueta="RIF" regla={{ tipo: "texto", max: 20 }} defaultValue={emisor.rif} autoComplete="off" />
       <Campo nombre="whatsapp" etiqueta="WhatsApp" regla={{ tipo: "texto", max: 40 }} type="tel" inputMode="tel" defaultValue={emisor.whatsapp} autoComplete="tel" />
-      <Campo nombre="email" etiqueta="Correo" regla={{ tipo: "correo" }} type="email" defaultValue={emisor.email} autoComplete="email" />
+      <Campo nombre="email" etiqueta="Correo" regla={{ tipo: "texto", max: 120 }} inputMode="email" defaultValue={emisor.email} autoComplete="email" />
       <button className="boton boton--primario" disabled={pendiente}>Guardar</button>
       {msj && <p className={msj.ok ? "suave" : "error"} role="status">{msj.texto}</p>}
     </form>

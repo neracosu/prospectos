@@ -220,11 +220,12 @@ ramas, **sin fusionar ni desplegar hasta que Neri las vea**.
     barre la rama buscando caracteres por debajo de 0x20, el 0x7F y los combinantes U+0300–U+036F.
   - ⚠️ **La próxima migración debe llevar un sello posterior a `20260919090000`** (la de esta pieza va dos días
     por delante del calendario y ya está aplicada en producción: no se renombra).
-- **Pasada de UX del panel** (spec `2026-09-17-ux-panel-design.md`): **Fase A** (visual) en la rama `ux-fase-a` y
-  **Fase B** (reactividad) en `ux-fase-b`, que sale de la A. **Ninguna está fusionada ni desplegada: esperan el
-  visto bueno de Neri** (antes y después en el artefacto `KMx9tx5cUwkSDN6zQKDMdT`). Falta la Fase C (esqueletos,
-  validación en línea, service worker). Plan de la B: `docs/superpowers/plans/2026-09-17-ux-fase-b-reactividad.md`.
-  Lo que trae la B y sus trampas:
+- **Pasada de UX del panel** (spec `2026-09-17-ux-panel-design.md`): **Fase A** (visual) en la rama `ux-fase-a`,
+  **Fase B** (reactividad) en `ux-fase-b` (sale de la A) y **Fase C** (carga, validación en línea, service worker) en
+  `ux-fase-c` (sale de la B, con `main` fusionado). **Ninguna está fusionada ni desplegada: Neri pidió terminar todo y
+  verlo antes** (antes y después en el artefacto `KMx9tx5cUwkSDN6zQKDMdT`). Planes en `docs/superpowers/plans/`
+  (`…-ux-fase-b-reactividad.md`, `…-ux-fase-c-carga-validacion-sw.md`). Al fusionar: `ux-fase-c` contiene a las otras
+  dos; basta fusionar esa. Lo que trae la B y sus trampas:
   - **Una sola línea de resultado** (`src/componentes/LineaFlotante.tsx`, `useFlotante()`), montada en el layout del
     panel. Lo reversible trae «Deshacer»; lo irreversible (anular, descartar) sigue con su confirmación en la
     tarjeta y **no** pasa por ahí. Un `prospectador` ve los avisos de Hoy y de Prospectos: **sin montos**.
@@ -262,6 +263,34 @@ ramas, **sin fusionar ni desplegar hasta que Neri las vea**.
   - Recorrido real: `scripts/verificar-flujo-ux.mts` (⚠️ solo contra el clon y la base de tests): retiene cada
     Server Action 2 s y exige que la pantalla cambie antes, que «Deshacer» deshaga en la base y que no haya un
     segundo GET a la misma ruta. `scripts/capturas-panel.mts` también captura la línea flotante.
+  Lo que trae la C y sus trampas:
+  - **Validación en línea** = `src/componentes/Campo.tsx` + `src/lib/validacion-contrato.ts`. **Las reglas del navegador
+    COPIAN las de zod del servidor** (`TOPES`, `MONTO_TEXTO`, `esFechaIso`, mínimos y topes de cada acción): si cambia
+    una regla en una acción, cambia en el formulario. El servidor sigue mandando. Funciona con el envío nativo:
+    `setCustomValidity` bloquea el envío y `onInvalid` muestra el mensaje **entre la etiqueta y el control** (con el
+    teclado abierto lo de abajo no se ve), sin la burbuja del navegador. `autoComplete="off"` en los datos de
+    prospectos y clientes (rellenar el teléfono de Neri en la ficha de un hotel sería un dato falso); solo el emisor
+    de Ajustes lleva autocompletado. Web, redes y fuente van como texto, no `type="url"`: el servidor no exige `http://`.
+  - **Esqueleto**: `src/app/(panel)/loading.tsx`, decorativo (`aria-hidden`) más «Cargando…» para lectores. Cambiar de
+    pestaña con `?t=` dentro de un proyecto NO lo muestra (React conserva lo viejo en la transición; lo comprueba el
+    recorrido). Es lo que Next prefetch-ea en las `Link` de la barra: por eso sale en ~30 ms en producción.
+  - ⚠️ **Service worker `public/sw.js`, clásico, con la decisión en `decidir` (puro; `tests/sw.test.ts`)**: solo cachea
+    `/_next/static/*`, iconos y manifiesto (cache primero, poda a 200) y, si una navegación del panel falla sin red,
+    sirve `/sin-conexion` (precacheada con su CSS y JS al instalar). **Nunca HTML, RSC ni datos; ignora `/c/`, `/p/`,
+    `/recibos/`, `/api/`, `/entrar`, `/salir` y los documentos.** Se registra solo en producción (`RegistrarSW` en el
+    layout del panel; `next dev` no lo tiene). `/sw.js` sale con `Cache-Control: no-cache` (`next.config.ts`). Alcance
+    `/`: en el mismo navegador sirve también los `/_next/static/` del portal (assets públicos con hash), nada más. La
+    página de sin conexión vive en su propia caché (`pr-sin-conexion-*`), que la poda no toca; iconos y manifiesto
+    (sin hash) van por red y la copia es solo de respaldo. **Al cambiar `/sin-conexion` o el propio `sw.js`, subir
+    `VERSION`** para que `activate` bote las cachés viejas (lo encontró la revisión: con la poda FIFO en una sola caché,
+    a los 6-8 despliegues se comía la página de sin conexión).
+  - Recorrido real: `scripts/verificar-flujo-ux-c.mts`, **contra `next start` del clon** (build previo con
+    `NODE_ENV=production`; en dev no hay SW) y con `PW_EXPERIMENTAL_SERVICE_WORKER_NETWORK_EVENTS=1` (sin eso el
+    `route()` de Playwright no ve las peticiones del SW y `setOffline` tampoco las corta). ⚠️ Los otros recorridos
+    (`verificar-flujo*.mts`, portal, recibos) están hechos para `next dev`: contra `next start` fallan por el arnés
+    (la cookie es `Secure` y `ctx.request` no la manda por `http://127.0.0.1`; el prefetch de producción parece un
+    «segundo viaje»), no por el código. En dev, las capturas de Playwright pueden disparar avisos de hidratación
+    (`caret-color: transparent` que inyecta la captura): son del arnés.
 - ⚠️ **Procesos: matar solo por PID.** Nunca `pkill`/`killall` ni matar por patrón en este servidor:
   `pkill -f next-server` tumbó los cinco sitios de PM2 el 16-sep (Adastram incluido). Un dev server de
   prueba se lanza desde un clon fuera del docroot con `DATABASE_URL` de prueba, con

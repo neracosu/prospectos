@@ -98,7 +98,7 @@ try {
   await pg.waitForTimeout(300);
   const enfocado = await pg.evaluate(() => (document.activeElement as HTMLInputElement | null)?.name ?? "");
   revisar(enfocado === "ciudad", `al enviar con ciudad vacía, el foco cae en ciudad (cayó en «${enfocado}»)`);
-  revisar(await pg.locator("label", { hasText: "Ciudad" }).getByText("Este dato hace falta.").isVisible().catch(() => false), "y el mensaje «Este dato hace falta.» queda en ese campo");
+  revisar(await pg.locator(".campo", { hasText: "Ciudad" }).getByText("Este dato hace falta.").isVisible().catch(() => false), "y el mensaje «Este dato hace falta.» queda en ese campo");
   revisar(pg.url().endsWith("/prospectos/nuevo"), "el formulario no se envió al servidor");
   await pg.locator("input[name=ciudad]").fill("Caracas");
   await pg.waitForTimeout(100);
