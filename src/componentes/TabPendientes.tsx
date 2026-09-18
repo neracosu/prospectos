@@ -5,6 +5,7 @@ import { fechaVisible } from "@/lib/fecha-caracas";
 import { porcentajeAvance } from "@/lib/proyectos-contrato";
 import { aplicarCambioPendiente, type CambioPendiente } from "@/lib/optimista-contrato";
 import { useFlotante } from "@/componentes/LineaFlotante";
+import { Campo } from "@/componentes/Campo";
 import { agregarPendiente, marcarPendiente, alternarVisible, moverPendiente, eliminarPendiente, avisarHito } from "@/acciones/pendientes";
 
 export function TabPendientes({ proyectoId, pendientes }: { proyectoId: number; pendientes: PendienteFila[] }) {
@@ -68,10 +69,11 @@ export function TabPendientes({ proyectoId, pendientes }: { proyectoId: number; 
       ))}
       <form className="pregunta" action={(fd) => correr(async () => { const r = await agregarPendiente(fd); return r; })}>
         <input type="hidden" name="proyectoId" value={proyectoId} />
-        <label className="campo"><span>Nuevo pendiente</span><input name="texto" required /></label>
+        {/* Reglas copiadas de NuevoZ (src/acciones/pendientes.ts). */}
+        <Campo nombre="texto" etiqueta="Nuevo pendiente" regla={{ tipo: "texto", min: 2, max: 200 }} requerido autoComplete="off" />
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
           <label className="campo"><span><input type="checkbox" name="visibleCliente" /> Visible al cliente</span></label>
-          <label className="campo"><span>Fecha estimada</span><input name="fechaEstimada" type="date" /></label>
+          <Campo nombre="fechaEstimada" etiqueta="Fecha estimada" regla={{ tipo: "fecha" }} type="date" />
         </div>
         <button className="boton boton--primario" disabled={pendiente}>Agregar</button>
       </form>

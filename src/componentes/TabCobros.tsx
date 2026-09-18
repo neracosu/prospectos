@@ -5,6 +5,7 @@ import { CANALES_COBRO, ETIQUETA_CANAL_COBRO, ETIQUETA_CONCEPTO, ETIQUETA_COBRO 
 import { formatoUSD } from "@/lib/dinero";
 import { fechaVisible } from "@/lib/fecha-caracas";
 import { MasAcciones } from "@/componentes/MasAcciones";
+import { Campo } from "@/componentes/Campo";
 import { aplicarCambioCobro, type CambioCobro, type CobroOptimista } from "@/lib/optimista-contrato";
 import { marcarPagado, deshacerPago, anularCobro, agregarCobro, registrarRecordatorio, avisarCobro } from "@/acciones/cobros";
 import { useFlotante } from "@/componentes/LineaFlotante";
@@ -91,10 +92,11 @@ export function TabCobros({ proyectoId, cobros, hoy, emisorListo }: { proyectoId
           {abierto?.id === c.id && abierto.modo === "pagar" && (
             <form className="pregunta" style={{ gridColumn: "1 / -1" }} hidden={c.provisional} onSubmit={(e) => { e.preventDefault(); pagar(c, new FormData(e.currentTarget)); }}>
               <input type="hidden" name="cobroId" value={c.id} />
-              <label className="campo"><span>Fecha de pago</span><input name="pagadoEn" type="date" defaultValue={hoy} max={hoy} required /></label>
-              <label className="campo"><span>Canal</span><select name="canal">{CANALES_COBRO.map((k) => <option key={k} value={k}>{ETIQUETA_CANAL_COBRO[k]}</option>)}</select></label>
-              <label className="campo"><span>Referencia</span><input name="referencia" /></label>
-              <label className="campo"><span>Nota</span><input name="nota" /></label>
+              {/* Reglas copiadas de PagoZ (src/acciones/cobros.ts). */}
+              <Campo nombre="pagadoEn" etiqueta="Fecha de pago" regla={{ tipo: "fecha" }} requerido type="date" defaultValue={hoy} max={hoy} />
+              <Campo nombre="canal" etiqueta="Canal" control="select">{CANALES_COBRO.map((k) => <option key={k} value={k}>{ETIQUETA_CANAL_COBRO[k]}</option>)}</Campo>
+              <Campo nombre="referencia" etiqueta="Referencia" regla={{ tipo: "texto", max: 80 }} autoComplete="off" />
+              <Campo nombre="nota" etiqueta="Nota" regla={{ tipo: "texto", max: 500 }} autoComplete="off" />
               <div className="fila-botones"><button className="boton boton--primario" disabled={pendiente}>Confirmar</button><button type="button" className="boton" onClick={() => setAbierto(null)}>Cancelar</button></div>
             </form>
           )}
@@ -116,10 +118,11 @@ export function TabCobros({ proyectoId, cobros, hoy, emisorListo }: { proyectoId
       {nuevo && (
         <form className="pregunta" action={(fd) => correr(() => agregarCobro(fd), "Cobro agregado")}>
           <input type="hidden" name="proyectoId" value={proyectoId} />
-          <label className="campo"><span>Concepto</span><select name="concepto"><option value="extra">Extra (fuera de alcance)</option><option value="cuota">Cuota</option></select></label>
-          <label className="campo"><span>Detalle</span><input name="detalle" required placeholder="Módulo de reportes" /></label>
-          <label className="campo"><span>Monto (USD)</span><input name="monto" inputMode="decimal" required placeholder="150 o 150,50" /></label>
-          <label className="campo"><span>Vence</span><input name="vence" type="date" defaultValue={hoy} required /></label>
+          {/* Reglas copiadas de NuevoZ (src/acciones/cobros.ts). */}
+          <Campo nombre="concepto" etiqueta="Concepto" control="select"><option value="extra">Extra (fuera de alcance)</option><option value="cuota">Cuota</option></Campo>
+          <Campo nombre="detalle" etiqueta="Detalle" regla={{ tipo: "texto", min: 2, max: 120 }} requerido placeholder="Módulo de reportes" autoComplete="off" />
+          <Campo nombre="monto" etiqueta="Monto (USD)" regla={{ tipo: "monto" }} requerido inputMode="decimal" placeholder="150 o 150,50" />
+          <Campo nombre="vence" etiqueta="Vence" regla={{ tipo: "fecha" }} requerido type="date" defaultValue={hoy} />
           <button className="boton boton--primario" disabled={pendiente}>Agregar</button>
         </form>
       )}

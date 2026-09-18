@@ -2,6 +2,7 @@
 import { useState, useTransition } from "react";
 import { guardarMensajesCobro, guardarDatosEmisor, guardarTarifa, guardarMensajesAviso } from "@/acciones/ajustes";
 import type { DatosEmisor } from "@/lib/configuracion";
+import { Campo } from "@/componentes/Campo";
 
 function useEnvio() {
   const [msj, setMsj] = useState<{ ok: boolean; texto: string } | null>(null);
@@ -44,10 +45,11 @@ export function FormularioEmisor({ emisor }: { emisor: DatosEmisor }) {
   return (
     <form className="tarjeta" action={(fd) => enviar(() => guardarDatosEmisor(fd))}>
       <b>Datos del emisor (para los recibos)</b>
-      <label className="campo"><span>Nombre</span><input name="nombre" defaultValue={emisor.nombre} required /></label>
-      <label className="campo"><span>RIF</span><input name="rif" defaultValue={emisor.rif} /></label>
-      <label className="campo"><span>WhatsApp</span><input name="whatsapp" inputMode="tel" defaultValue={emisor.whatsapp} /></label>
-      <label className="campo"><span>Correo</span><input name="email" type="email" defaultValue={emisor.email} /></label>
+      {/* Son los datos del propio dueno: aqui si aplica el autocompletado del telefono. */}
+      <Campo nombre="nombre" etiqueta="Nombre" regla={{ tipo: "texto", min: 2, max: 80 }} requerido defaultValue={emisor.nombre} autoComplete="organization" />
+      <Campo nombre="rif" etiqueta="RIF" regla={{ tipo: "texto", max: 20 }} defaultValue={emisor.rif} autoComplete="off" />
+      <Campo nombre="whatsapp" etiqueta="WhatsApp" regla={{ tipo: "texto", max: 40 }} type="tel" inputMode="tel" defaultValue={emisor.whatsapp} autoComplete="tel" />
+      <Campo nombre="email" etiqueta="Correo" regla={{ tipo: "correo" }} type="email" defaultValue={emisor.email} autoComplete="email" />
       <button className="boton boton--primario" disabled={pendiente}>Guardar</button>
       {msj && <p className={msj.ok ? "suave" : "error"} role="status">{msj.texto}</p>}
     </form>
