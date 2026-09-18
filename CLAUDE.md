@@ -100,6 +100,11 @@ nichos (`hoteles`, `hoteles-estadia`).
     bandeja): «Repetido en el mismo archivo» siempre, y «Ya existe» solo si no trae ningún dato que al existente le
     falte (`esRepetidoSinValor` en `revision-contrato.ts`, misma lista `CAMPOS_CONTACTO` que `completarExistente`).
     Para lotes de antes, «Descartar N repetidos sin nada nuevo» en la bandeja (`descartarRepetidos`). Nada se borra.
+  - **«Revisar de nuevo N con problema»** (`revisarDeNuevo`): vuelve a validar y clasificar en bloque las filas
+    pendientes con problema sin tocar sus datos, para cuando el problema estaba afuera (un archivo con un nicho que
+    el panel no tenía: se crea el nicho en `sembrar-nichos.mjs`, se siembra y se revisa). Lo que sigue mal (falta la
+    ciudad) sigue con problema. Al 17-sep el panel tiene **19 nichos**; los que no tienen plantilla mandan a su
+    página de `/para/`.
   - La clave de duplicado sigue siendo la de la pieza 1 (`nombre|ciudad` normalizados): **no quita
     «hotel/farmacia/posada» inicial** como pedía la spec. Cambiarla recalcula la clave de todos los
     prospectos; decisión de Neri, pendiente.
