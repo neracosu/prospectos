@@ -15,6 +15,15 @@ export const CIUDADES: Ciudad[] = [
   { slug: "los-teques", nombre: "Los Teques", estado: "Miranda", lat: 10.3444, lon: -67.0428, radioM: 8000 },
   { slug: "valencia", nombre: "Valencia", estado: "Carabobo", lat: 10.162, lon: -68.0077, radioM: 15000, alias: ["Naguanagua", "San Diego"] },
   { slug: "maracay", nombre: "Maracay", estado: "Aragua", lat: 10.2469, lon: -67.5958, radioM: 12000 },
+  // Region central (17-sep-2026): Carabobo, Aragua y Cojedes fuera de las dos capitales, mas los pueblos de Miranda
+  // que gravitan sobre Caracas. Radios cortos para que un lote sea de una sola ciudad.
+  { slug: "puerto-cabello", nombre: "Puerto Cabello", estado: "Carabobo", lat: 10.4731, lon: -68.0125, radioM: 8000, alias: ["Morón"] },
+  { slug: "guacara", nombre: "Guacara", estado: "Carabobo", lat: 10.2287, lon: -67.8778, radioM: 7000, alias: ["San Joaquín", "Los Guayos"] },
+  { slug: "la-victoria", nombre: "La Victoria", estado: "Aragua", lat: 10.2273, lon: -67.3312, radioM: 7000 },
+  { slug: "cagua-turmero", nombre: "Cagua – Turmero", estado: "Aragua", lat: 10.2079, lon: -67.4681, radioM: 8000, alias: ["Cagua", "Turmero", "Santa Cruz de Aragua"] },
+  { slug: "san-carlos", nombre: "San Carlos", estado: "Cojedes", lat: 9.6612, lon: -68.5822, radioM: 7000 },
+  { slug: "guarenas-guatire", nombre: "Guarenas – Guatire", estado: "Miranda", lat: 10.4715, lon: -66.6017, radioM: 9000, alias: ["Guarenas", "Guatire"] },
+  { slug: "valles-del-tuy", nombre: "Valles del Tuy", estado: "Miranda", lat: 10.2399, lon: -66.8582, radioM: 9000, alias: ["Charallave", "Cúa", "Ocumare del Tuy", "Santa Teresa del Tuy"] },
   { slug: "maracaibo", nombre: "Maracaibo", estado: "Zulia", lat: 10.6427, lon: -71.6125, radioM: 18000 },
   { slug: "barquisimeto", nombre: "Barquisimeto", estado: "Lara", lat: 10.0678, lon: -69.3474, radioM: 12000 },
   { slug: "barcelona-plc", nombre: "Barcelona – Puerto La Cruz", estado: "Anzoátegui", lat: 10.1667, lon: -64.6833, radioM: 15000, alias: ["Barcelona", "Puerto La Cruz", "Lechería", "Guanta"] },
