@@ -130,6 +130,23 @@ try {
     await pg.locator(".flotante").getByText("Pago deshecho").waitFor({ timeout: 10000 });
     await pg.screenshot({ path: `${SALIDA}/16-cobros-pago-deshecho.png` });
   }
+  // Fase C (si la pantalla ya la tiene): validacion en linea, esqueleto de carga y pagina de sin conexion.
+  await pg.goto(`${BASE}/prospectos/nuevo`, { waitUntil: "networkidle" });
+  if (await pg.locator("input[name=nombre]").count()) {
+    await pg.locator("input[name=nombre]").fill("A");
+    await pg.locator("input[name=nombre]").press("Tab");
+    await pg.getByRole("button", { name: "Guardar" }).click();
+    await pg.waitForTimeout(400);
+    if (await pg.locator(".campo__error").count()) await pg.screenshot({ path: `${SALIDA}/17-validacion-en-linea.png` });
+  }
+  const sinConexion = await pg.goto(`${BASE}/sin-conexion`, { waitUntil: "networkidle" });
+  if (sinConexion?.status() === 200) await pg.screenshot({ path: `${SALIDA}/18-sin-conexion.png` });
+  await pg.goto(`${BASE}/hoy`, { waitUntil: "networkidle" });
+  await ctx.route((url) => /\/prospectos(\?|$)/.test(url.pathname + url.search), async (r) => { await new Promise((f) => setTimeout(f, 2500)); await r.continue(); });
+  await pg.getByRole("link", { name: "Prospectos" }).click();
+  const esqueleto = await pg.locator(".esqueleto").waitFor({ timeout: 1500 }).then(() => true).catch(() => false);
+  if (esqueleto) await pg.screenshot({ path: `${SALIDA}/19-esqueleto.png` });
+  await pg.waitForURL(/\/prospectos$/, { timeout: 15000 }).catch(() => {});
 } catch (e) {
   errores.push(`excepcion: ${(e as Error).message}`);
 } finally {
