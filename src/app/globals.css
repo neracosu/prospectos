@@ -173,3 +173,18 @@ button, input, select, textarea { font: inherit; }
 /* Validacion en linea (fase C): el mensaje va entre la etiqueta y el control, para verse con el teclado abierto. */
 .campo__error { display: block; color: var(--rojo); font-size: 14px; margin: -2px 0 4px; }
 .campo--error input, .campo--error select, .campo--error textarea { border-color: var(--rojo); }
+/* Esqueleto de carga (fase C): bloques quietos; el pulso empieza al segundo, y sin animaciones queda quieto, que tambien vale. */
+.solo-lector { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.esqueleto { display: grid; gap: 12px; }
+.esqueleto__tarjeta { margin-bottom: 0; display: grid; gap: 10px; }
+.esqueleto__bloque { display: block; border-radius: 8px; background: var(--superficie-2); animation: esqueleto-pulso 1.4s ease-in-out 1s infinite; }
+.esqueleto__bloque--grande { width: 46%; height: 26px; }
+.esqueleto__bloque--barra { width: 100%; height: 8px; border-radius: 4px; }
+.esqueleto__bloque--fila { width: 100%; height: 40px; }
+.esqueleto__bloque--titulo { width: 52%; height: 22px; margin: 4px 0; }
+.esqueleto__bloque--linea { height: 16px; }
+.esqueleto__bloque--suave { opacity: .6; }
+.esqueleto__botones { display: flex; gap: 8px; margin-top: 4px; }
+.esqueleto__bloque--boton { width: 96px; height: 44px; border-radius: 10px; }
+.esqueleto__bloque--principal { width: 150px; opacity: .8; }
+@keyframes esqueleto-pulso { 0%, 100% { opacity: 1; } 50% { opacity: .55; } }

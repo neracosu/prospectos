@@ -13,6 +13,8 @@ const config: NextConfig = {
           { key: "X-Frame-Options", value: "SAMEORIGIN" },
         ],
       },
+      // El service worker del panel (fase C): el navegador lo revalida en cada carga, para que un despliegue nuevo lo reemplace.
+      { source: "/sw.js", headers: [{ key: "Cache-Control", value: "no-cache" }] },
       // Las propuestas son publicas por codigo pero no se indexan.
       { source: "/p/:path*", headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }] },
       // Los recibos son privados: que ningun buscador guarde ni la redireccion.
