@@ -20,9 +20,8 @@ acá a pedido de Neri y esa misma tarde se amplió de un panel a una plataforma 
 
 Orden de construcción: **1 → 3 → 2 → 4 → 5**. Cada pieza sale a producción cuando termina.
 
-Estado al 17-sep: **las cinco piezas construidas y en producción** (la 5 en dos entregas: 5a acceso y
-lectura, 5b documentos y avisos). Lo que sigue es la pasada de UX del panel: Fases A y B construidas en sus
-ramas, **sin fusionar ni desplegar hasta que Neri las vea**.
+Estado al 17-sep: **las cinco piezas y la pasada de UX (Fases A, B y C) en producción**. Hoteles repartidos en dos
+nichos (`hoteles`, `hoteles-estadia`).
 
 - Código en `main` (rama `pieza-1` ya fusionada). Proceso PM2 **`prospectos`**, puerto 3013 en
   `127.0.0.1`, proxy en el `.htaccess` (ver abajo). Repo: `git@github.com:neracosu/prospectos.git`.
@@ -222,10 +221,11 @@ ramas, **sin fusionar ni desplegar hasta que Neri las vea**.
     por delante del calendario y ya está aplicada en producción: no se renombra).
 - **Pasada de UX del panel** (spec `2026-09-17-ux-panel-design.md`): **Fase A** (visual) en la rama `ux-fase-a`,
   **Fase B** (reactividad) en `ux-fase-b` (sale de la A) y **Fase C** (carga, validación en línea, service worker) en
-  `ux-fase-c` (sale de la B, con `main` fusionado). **Ninguna está fusionada ni desplegada: Neri pidió terminar todo y
-  verlo antes** (antes y después en el artefacto `KMx9tx5cUwkSDN6zQKDMdT`). Planes en `docs/superpowers/plans/`
-  (`…-ux-fase-b-reactividad.md`, `…-ux-fase-c-carga-validacion-sw.md`). Al fusionar: `ux-fase-c` contiene a las otras
-  dos; basta fusionar esa. Lo que trae la B y sus trampas:
+  `ux-fase-c` (sale de la B). **Las tres en producción desde el 17-sep** (fusionadas en `main`, build y
+  `pm2 restart prospectos` verificados; Neri las aprobó tras ver el antes y después del artefacto
+  `KMx9tx5cUwkSDN6zQKDMdT`). Planes en `docs/superpowers/plans/` (`…-ux-fase-b-reactividad.md`,
+  `…-ux-fase-c-carga-validacion-sw.md`); revisiones en `~/backups/prospectos-ux-fase-{a,b,c}-revision-20260917.md`.
+  Lo que trae la B y sus trampas:
   - **Una sola línea de resultado** (`src/componentes/LineaFlotante.tsx`, `useFlotante()`), montada en el layout del
     panel. Lo reversible trae «Deshacer»; lo irreversible (anular, descartar) sigue con su confirmación en la
     tarjeta y **no** pasa por ahí. Un `prospectador` ve los avisos de Hoy y de Prospectos: **sin montos**.
