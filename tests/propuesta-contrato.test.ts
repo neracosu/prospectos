@@ -23,6 +23,22 @@ describe("renderPropuesta", () => {
     expect(nombreSeguro('Hotel <b>"X"</b> & Cía')).toBe("Hotel bX/b  Cía");
     expect(nombreSeguro("a".repeat(100))).toHaveLength(60);
   });
+  it("rellena {{nombre}}, {{ciudad}} y {{rubro}} escapados, y los bloques si:web / si:sinweb segun tenga web", () => {
+    const plantilla = `<title>x</title><style></style><div class="documento"><p>{{nombre}} en {{ciudad}}, {{rubro}}.</p><!--si:web--><p>Ya tiene web.</p><!--fin:web--><!--si:sinweb--><p>Sin web.</p><!--fin:sinweb--><button class="boton" id="descargar-pdf" type="button">PDF</button></div>`;
+    const con = renderPropuesta(plantilla, "Bar Uno", "/p/x/pdf", { ciudad: "Valencia & Co", rubro: "restaurantes y bares", conWeb: true });
+    expect(con).toContain("Bar Uno en Valencia &amp; Co, restaurantes y bares.");
+    expect(con).toContain("Ya tiene web.");
+    expect(con).not.toContain("Sin web.");
+    expect(con).not.toContain("{{");
+    const sin = renderPropuesta(plantilla, "Bar Uno", "/p/x/pdf", { ciudad: "", rubro: "", conWeb: false });
+    expect(sin).toContain("Sin web.");
+    expect(sin).not.toContain("Ya tiene web.");
+    // Sin extra (las plantillas viejas de hoteles): los bloques de web se quitan y los tokens quedan vacios.
+    const viejo = renderPropuesta(plantilla, "Bar Uno", "/p/x/pdf");
+    expect(viejo).not.toContain("Ya tiene web.");
+    expect(viejo).toContain("Bar Uno en su ciudad, su negocio.");
+  });
+
   it("revienta si la plantilla no tiene los marcadores esperados", () => {
     expect(() => renderPropuesta("<html><body>sin nada util</body></html>", "X", "/p/x/pdf")).toThrow(
       "PLANTILLA_SIN_MARCADORES",

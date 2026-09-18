@@ -53,12 +53,29 @@ const SCRIPT_DESCARGA = `
 })();
 </script>`;
 
-export function renderPropuesta(plantilla: string, nombre: string, urlPdf: string): string {
+// Lo que una plantilla puede pedir del prospecto ademas del nombre (fase «propuesta por prospecto», 17-sep-2026).
+// Los tokens {{nombre}} {{ciudad}} {{rubro}} se rellenan escapados en el servidor; los bloques
+// <!--si:web-->…<!--fin:web--> y <!--si:sinweb-->…<!--fin:sinweb--> se dejan o se quitan segun el prospecto tenga
+// web publicada: a quien ya tiene pagina no se le propone «una pagina», se le propone conectarla.
+export type ExtraPropuesta = { ciudad?: string; rubro?: string; conWeb?: boolean };
+
+const escapar = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+function bloque(html: string, nombre: string, dejar: boolean): string {
+  const re = new RegExp(`<!--si:${nombre}-->([\\s\\S]*?)<!--fin:${nombre}-->`, "g");
+  return html.replace(re, dejar ? "$1" : "");
+}
+
+export function renderPropuesta(plantilla: string, nombre: string, urlPdf: string, extra: ExtraPropuesta = {}): string {
   if (!plantilla.includes('<div class="documento">') || !plantilla.includes("</style>")) {
     throw new Error("PLANTILLA_SIN_MARCADORES");
   }
   const n = nombreSeguro(nombre);
   let cuerpo = plantilla.replace('<div class="documento">', `<div class="documento" data-nombre="${n}">`);
+  cuerpo = cuerpo
+    .replace(/\{\{nombre\}\}/g, escapar(n) || "su negocio")
+    .replace(/\{\{ciudad\}\}/g, escapar((extra.ciudad ?? "").trim().slice(0, 80)) || "su ciudad")
+    .replace(/\{\{rubro\}\}/g, escapar((extra.rubro ?? "").trim().slice(0, 60)) || "su negocio");
+  cuerpo = bloque(bloque(cuerpo, "web", extra.conWeb === true), "sinweb", extra.conWeb === false);
   cuerpo = cuerpo.replace(
     /<button class="boton" id="descargar-pdf"[^>]*>([\s\S]*?)<\/button>/,
     `<a class="boton" id="descargar-pdf" href="${urlPdf}">$1</a>`,
