@@ -62,15 +62,25 @@ export async function resumenHoy(hoy: string): Promise<{ embudo: Record<Etapa, n
   return { embudo, porUsuario };
 }
 
-export async function buscarProspectos(f: { q?: string; nichoId?: number; etapa?: Etapa }): Promise<ProspectoTarjeta[]> {
+export type FiltrosProspectos = { q?: string; nichoId?: number; etapa?: Etapa; ciudad?: string };
+export const POR_PAGINA_PROSPECTOS = 100;
+
+// Los mismos filtros para la lista y para los totales: lo que se cuenta es lo que se lista.
+function whereDe(f: FiltrosProspectos): Prisma.ProspectoWhereInput {
   const q = f.q?.trim();
+  return {
+    ...(f.nichoId ? { nichoId: f.nichoId } : {}),
+    ...(f.etapa ? { etapa: f.etapa } : {}),
+    ...(f.ciudad ? { ciudad: f.ciudad } : {}),
+    ...(q ? { OR: [{ nombre: { contains: q } }, { ciudad: { contains: q } }, { whatsapp: { contains: q } }, { telefono: { contains: q } }] } : {}),
+  };
+}
+
+export async function buscarProspectos(f: FiltrosProspectos & { pagina?: number }): Promise<ProspectoTarjeta[]> {
+  const pagina = Math.max(1, Math.trunc(f.pagina ?? 1) || 1);
   const filas = await prisma.prospecto.findMany({
-    where: {
-      ...(f.nichoId ? { nichoId: f.nichoId } : {}),
-      ...(f.etapa ? { etapa: f.etapa } : {}),
-      ...(q ? { OR: [{ nombre: { contains: q } }, { ciudad: { contains: q } }, { whatsapp: { contains: q } }, { telefono: { contains: q } }] } : {}),
-    },
-    select: SELECT, orderBy: [{ etapa: "asc" }, { nombre: "asc" }], take: 100,
+    where: whereDe(f),
+    select: SELECT, orderBy: [{ etapa: "asc" }, { nombre: "asc" }], skip: (pagina - 1) * POR_PAGINA_PROSPECTOS, take: POR_PAGINA_PROSPECTOS,
   });
   const ab = await abrieron(filas.map((x) => x.id));
   return filas.map((x) => aTarjeta(x, ab.has(x.id), x.etapa === "por_contactar" ? "inicial" : "seguimiento"));
@@ -92,6 +102,32 @@ export async function fichaProspecto(
     // carga vieja. Sin fuente, el dato se muestra sin enlace, no con uno roto.
     fuentesPorCampo: mapaDeTextos(f.fuentesPorCampo),
     historial: eventos.map((e) => ({ id: e.id, tipo: e.tipo, de: e.de, a: e.a, canal: e.canal, texto: e.texto, creadoEn: e.creadoEn, usuarioNombre: e.usuario?.nombre ?? "" })),
+  };
+}
+
+// Totales de la pantalla de prospectos (17-sep: «veo solo listado, no veo totales»): cuantos hay con los filtros
+// puestos y como se reparten por etapa, nicho y ciudad. Cada reparto sirve de filtro al tocarlo.
+export type ResumenProspectos = {
+  total: number;
+  porEtapa: { etapa: Etapa; n: number }[];
+  porNicho: { nichoId: number; nombre: string; n: number }[];
+  porCiudad: { ciudad: string; n: number }[];
+};
+export async function resumenProspectos(f: FiltrosProspectos): Promise<ResumenProspectos> {
+  const where = whereDe(f);
+  const [total, etapas, nichos, ciudades, nombres] = await Promise.all([
+    prisma.prospecto.count({ where }),
+    prisma.prospecto.groupBy({ by: ["etapa"], where, _count: { _all: true } }),
+    prisma.prospecto.groupBy({ by: ["nichoId"], where, _count: { _all: true } }),
+    prisma.prospecto.groupBy({ by: ["ciudad"], where, _count: { _all: true }, orderBy: [{ _count: { ciudad: "desc" } }, { ciudad: "asc" }] }),
+    prisma.nicho.findMany({ select: { id: true, nombre: true } }),
+  ]);
+  const nombreDe = new Map(nombres.map((n) => [n.id, n.nombre]));
+  return {
+    total,
+    porEtapa: ETAPAS.map((e) => ({ etapa: e, n: etapas.find((x) => x.etapa === e)?._count._all ?? 0 })).filter((x) => x.n > 0),
+    porNicho: nichos.map((x) => ({ nichoId: x.nichoId, nombre: nombreDe.get(x.nichoId) ?? String(x.nichoId), n: x._count._all })).sort((a, b) => b.n - a.n || a.nombre.localeCompare(b.nombre)),
+    porCiudad: ciudades.map((x) => ({ ciudad: x.ciudad, n: x._count._all })),
   };
 }
 

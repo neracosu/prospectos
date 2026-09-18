@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { prisma } from "@/lib/db";
 import { DB_HABILITADA, limpiarBase, sembrarBasico, crearProspectoDePrueba } from "./ayuda-db";
-import { colaDelDia, seguimientosQueTocan, resumenHoy, buscarProspectos, fichaProspecto } from "@/lib/prospectos";
+import { colaDelDia, seguimientosQueTocan, resumenHoy, buscarProspectos, fichaProspecto, resumenProspectos } from "@/lib/prospectos";
 
 describe.runIf(DB_HABILITADA)("consultas de prospectos", () => {
   let ids: Awaited<ReturnType<typeof sembrarBasico>>;
@@ -51,6 +51,23 @@ describe.runIf(DB_HABILITADA)("consultas de prospectos", () => {
     const neri17 = r17.porUsuario.find((u) => u.id === ids.usuarioId)!;
     expect(neri17.enviados).toBe(1); // el evento que ya cayo en el 17
   });
+  it("resumenProspectos cuenta el total y reparte por etapa, nicho y ciudad con los mismos filtros de la lista", async () => {
+    const r = await resumenProspectos({});
+    expect(r.total).toBeGreaterThanOrEqual(3);
+    expect(r.porEtapa.find((e) => e.etapa === "por_contactar")?.n).toBe(2);
+    expect(r.porNicho.length).toBeGreaterThanOrEqual(1);
+    expect(r.porNicho.reduce((s, x) => s + x.n, 0)).toBe(r.total);
+    expect(r.porCiudad.reduce((s, x) => s + x.n, 0)).toBe(r.total);
+    // Con un filtro, los repartos son del subconjunto.
+    const f = await resumenProspectos({ etapa: "por_contactar" });
+    expect(f.total).toBe(2);
+    expect(f.porCiudad.reduce((s, x) => s + x.n, 0)).toBe(2);
+    // Filtro por ciudad exacta.
+    const ciudad = r.porCiudad[0].ciudad;
+    expect((await resumenProspectos({ ciudad })).total).toBe(r.porCiudad[0].n);
+    expect((await buscarProspectos({ ciudad })).every((p) => p.ciudad === ciudad)).toBe(true);
+  });
+
   it("buscar filtra por texto y etapa", async () => {
     expect((await buscarProspectos({ q: "viejo" })).map((p) => p.nombre)).toEqual(["Enviado viejo"]);
     expect((await buscarProspectos({ etapa: "por_contactar" })).length).toBe(2);

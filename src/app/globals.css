@@ -188,3 +188,11 @@ button, input, select, textarea { font: inherit; }
 .esqueleto__bloque--boton { width: 96px; height: 44px; border-radius: 10px; }
 .esqueleto__bloque--principal { width: 150px; opacity: .8; }
 @keyframes esqueleto-pulso { 0%, 100% { opacity: 1; } 50% { opacity: .55; } }
+/* Totales de la lista de prospectos (17-sep): un numero grande y los repartos como chips que filtran. */
+.totales { display: grid; gap: 10px; }
+.totales__grupo { display: grid; gap: 4px; }
+.totales__rotulo { font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--tinta-suave); }
+.totales__chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.totales__chip { text-decoration: none; min-height: 32px; display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; font-size: 13px; white-space: normal; }
+.totales__chip b { color: inherit; font-variant-numeric: tabular-nums; }
+.totales__chip--activo { outline: 2px solid var(--verde); outline-offset: 0; color: var(--tinta); }
