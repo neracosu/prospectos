@@ -79,7 +79,8 @@ try {
   pg.on("request", (rq) => {
     const url = new URL(rq.url());
     if (rq.method() === "POST" && rq.headers()["next-action"]) ultimaAccion = Date.now();
-    else if (rq.method() === "GET" && url.searchParams.has("_rsc") && url.pathname === new URL(pg.url()).pathname && Date.now() - ultimaAccion < 3000 + retener) dobles.push(url.pathname);
+    // Un prefetch de <Link> (produccion) tambien pide _rsc de la ruta actual: no es el doble viaje que se busca.
+    else if (rq.method() === "GET" && url.searchParams.has("_rsc") && !rq.headers()["next-router-prefetch"] && url.pathname === new URL(pg.url()).pathname && Date.now() - ultimaAccion < 3000 + retener) dobles.push(url.pathname);
   });
   const flotante = pg.locator(".flotante");
 
