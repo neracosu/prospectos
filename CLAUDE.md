@@ -58,7 +58,9 @@ nichos (`hoteles`, `hoteles-estadia`).
   `{{ciudad}}`, `{{rubro}}` y deja o quita `<!--si:web-->…<!--fin:web-->` / `<!--si:sinweb-->…` según el prospecto
   tenga web (a quien ya tiene página no se le vende una página: se le conecta). Antes de tocar una plantilla:
   `npx tsx scripts/verificar-plantillas.mts` (desbordes de hoja A4 y tokens sin rellenar; las siete pasan con un
-  nombre largo). Cifras y precios **solo** los de `neracosu.com/para/<arquetipo>`; `citas-y-servicios` no lleva
+  nombre largo). **Texto corrido justificado con silabeo** (regla de Neri, 27-sep): bloque `:where(...)` al final del
+  `<style>` de `base/cabecera.html`, `hoteles.html` y `hoteles-estadia.html`; toda plantilla nueva lo lleva.
+  Cifras y precios **solo** los de `neracosu.com/para/<arquetipo>`; `citas-y-servicios` no lleva
   precio (diagnóstico $250). Los mensajes de todos los nichos mandan `{enlace}`. La ficha tiene «PDF»
   (`/p/<código>/pdf`, caché por hash); `scripts/generar-propuestas.mts --primeros N` los deja listos para la cola.
 

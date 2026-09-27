@@ -279,4 +279,10 @@
     .barra { display: none; }
     .tabla-wrap { overflow: visible; }
   }
+  /* texto corrido justificado, con silabeo en espanol (regla de Neri, 2026-09-27). :where() lo deja sin
+     especificidad: cualquier alineacion explicita (fecha de la carta a la derecha, centrados) sigue ganando */
+  :where(.parrafo, .portada__que, .carta p, .resumen dd, .regla p, .fuga p, .noche p, .aprendido p,
+    .destacado p, .pregunta p, .pasos li > *, .lista li, .caso__cuerpo, .autor p, .cuenta__ejemplo, .nota, .fuente) {
+    text-align: justify; hyphens: auto; -webkit-hyphens: auto;
+  }
 </style>
