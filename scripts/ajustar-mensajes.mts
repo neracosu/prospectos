@@ -24,6 +24,12 @@ export function ajustar(texto: string, slug: string, plantilla: string | null): 
   // «se la muestro funcionando»: «la» era la propuesta, no el sistema.
   if (slug === "hoteles") t = t.replaceAll("se la muestro funcionando", "le muestro el sistema funcionando");
   if (slug === "hoteles-estadia") t = t.replaceAll("se la muestro funcionando", "le muestro la página de reservas funcionando");
+  // 6-oct-2026: en hoteles de estadia el bot de WhatsApp va al frente (es el que ya opera en un hotel real).
+  if (slug === "hoteles-estadia") {
+    t = t
+      .replaceAll("para el Hotel VIP La Guaira construí su página de reservas en línea conectada al sistema que ya usaban, y para un hotel de Valencia la caja en bolívares y divisas y los turnos de recepción. Preparé una propuesta de 9 páginas para {nombre}: vender sus noches por su propia página, sin comisión y con el anticipo validado antes de bloquear la habitación: {enlace} {promo} ¿Le parece si en 30 minutos le muestro la página de reservas funcionando?", "para el Hotel VIP La Guaira construí el bot de WhatsApp que hoy atiende a sus huéspedes, reserva y cobra el anticipo solo, conectado a su página y al sistema que ya usaban; y para un hotel de Valencia la caja en bolívares y divisas y los turnos de recepción. Preparé una propuesta de 9 páginas para {nombre}: que su WhatsApp reserve y cobre solo, a cualquier hora, y sus noches se vendan por su propia página, sin comisión: {enlace} {promo} ¿Le parece si en 30 minutos le muestro el bot y la página funcionando?")
+      .replaceAll("con una propuesta para vender sus noches por su propia página, sin comisión: {enlace} Si prefiere, le muestro la página de reservas funcionando en una llamada de 30 minutos.", "con una propuesta para que su WhatsApp reserve y cobre solo y sus noches se vendan por su propia página, sin comisión: {enlace} Si prefiere, le muestro el bot y la página funcionando en una llamada de 30 minutos.");
+  }
   // El gancho de la temporada promocional va justo antes de la pregunta con la que cierra el primer mensaje.
   if (!t.includes("{promo}")) t = t.replace(" ¿Le parece si", " {promo} ¿Le parece si");
   return t;
