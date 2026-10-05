@@ -8,6 +8,7 @@ export const ETIQUETA_ORIGEN: Record<string, string> = {
   maps: "Google Maps",
   importado: "Importado",
   web: "Lectura de web",
+  overture: "Directorio abierto",
 };
 
 export function etiquetaOrigen(origen: string): string {

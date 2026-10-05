@@ -58,6 +58,7 @@ describe("etiquetas y topes", () => {
   it("traduce el origen y deja pasar lo desconocido", () => {
     expect(etiquetaOrigen("overpass")).toBe("Mapa (OSM)");
     expect(etiquetaOrigen("importado")).toBe("Importado");
+    expect(etiquetaOrigen("overture")).toBe("Directorio abierto");
     expect(etiquetaOrigen("loquesea")).toBe("loquesea");
   });
 

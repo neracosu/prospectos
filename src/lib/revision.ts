@@ -8,7 +8,7 @@ import { claveProspecto } from "@/lib/clave-prospecto";
 import { POR_PAGINA, CAMPOS_CONTACTO, REPETIDO_EN_ARCHIVO, SIN_NADA_NUEVO, PENDIENTE_EN_OTRO_LOTE, esRepetidoSinValor } from "@/lib/revision-contrato";
 import type { EntradaValidada } from "@/lib/tabla-contrato";
 
-export const ORIGENES = ["overpass", "web", "maps", "importado"] as const;
+export const ORIGENES = ["overpass", "web", "maps", "importado", "overture"] as const;
 export type Origen = (typeof ORIGENES)[number];
 const OrigenZ = z.enum(ORIGENES);
 

@@ -10,7 +10,9 @@ import { buscarEnOverpass } from "@/lib/overpass";
 import { parsearTabla, validarFila, validarTopes, TOPES, type EntradaValidada } from "@/lib/tabla-contrato";
 import { extraerContactos } from "@/lib/contactos-web-contrato";
 import { esUrlMaps, extraerFichaMaps } from "@/lib/maps-contrato";
-import { ciudadPorNombre } from "@/lib/overpass-contrato";
+import { ciudadPorNombre, ciudadPorSlug } from "@/lib/overpass-contrato";
+import { reglaDeNicho, prospectosDesdeOverture } from "@/lib/overture-contrato";
+import { lugaresDeOverture, publicacionCargada } from "@/lib/overture";
 import { leerXlsx, decodificarTexto } from "@/lib/plantilla-importar";
 import { crearLote, listaDeTextos, mapaDeTextos, type Origen } from "@/lib/revision";
 import { normalizarCelular, normalizarRed } from "@/lib/celular-contrato";
@@ -87,6 +89,38 @@ export async function buscarOverpass(
     return exito({ ...lote, desdeCache: r.desdeCache, antiguedadDias: r.antiguedadDias, consultadoEn: r.consultadoEn });
   } catch (err) {
     console.error("buscarOverpass", err);
+    return fallo(ERROR);
+  }
+}
+
+// El directorio abierto (Overture Maps) ya esta en la base: aqui no hay red, ni cola, ni cache. Lo usan dueno y
+// prospectador, igual que la busqueda del mapa.
+export async function buscarOverture(formData: FormData): Promise<Resultado<Resumen & { publicacion: string }>> {
+  const u = await exigirSesion();
+  const e = z
+    .object({
+      nichoId: z.coerce.number().int().positive(),
+      ciudad: z.string().regex(/^[a-z0-9-]{2,40}$/),
+      soloContactables: z.string().optional(),
+    })
+    .safeParse(Object.fromEntries(formData));
+  if (!e.success) return fallo("Elige nicho y ciudad.");
+  try {
+    const nicho = await prisma.nicho.findUnique({ where: { id: e.data.nichoId }, select: { slug: true } });
+    const ciudad = ciudadPorSlug(e.data.ciudad);
+    if (!nicho || !ciudad) return fallo("Elige nicho y ciudad.");
+    const regla = reglaDeNicho(nicho.slug);
+    if (!regla) return fallo("Este nicho no está en el directorio.");
+    const publicacion = await publicacionCargada();
+    if (!publicacion) return fallo("El directorio no está cargado todavía.");
+    const entradas = prospectosDesdeOverture(await lugaresDeOverture(regla, ciudad), ciudad, nicho.slug, {
+      soloContactables: e.data.soloContactables === "on",
+    });
+    if (!entradas.length) return fallo("El directorio no tiene negocios de ese nicho en esa ciudad.");
+    const lote = await loteDesdeEntradas("overture", entradas, entradas.map(validarTopes), u.id);
+    return exito({ ...lote, publicacion });
+  } catch (err) {
+    console.error("buscarOverture", err);
     return fallo(ERROR);
   }
 }

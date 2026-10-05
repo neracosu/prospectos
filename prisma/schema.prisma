@@ -66,7 +66,7 @@ model Prospecto {
   fuentes            Json // lista de URLs (pieza 2 suma {campo: url})
   // {campo: url} de donde salio cada dato (pieza 2). `fuentes` sigue siendo la lista plana de URLs.
   fuentesPorCampo    Json       @default("{}")
-  origen             String     @default("importado") // importado | manual | overpass | web | maps
+  origen             String     @default("importado") // importado | manual | overpass | web | maps | overture
   etapa              String     @default("por_contactar")
   // Texto ISO YYYY-MM-DD en dia de Caracas. Nulo = sin seguimiento pendiente.
   proximoSeguimiento String?
@@ -129,7 +129,7 @@ model BusquedaOsm {
 model Revision {
   id          Int        @id @default(autoincrement())
   lote        String // uuid del lote
-  origen      String // overpass | web | maps | importado
+  origen      String // overpass | web | maps | importado | overture
   fila        Int
   datos       Json // ProspectoEntrada + fuentesPorCampo
   // nuevo | repetido | error
