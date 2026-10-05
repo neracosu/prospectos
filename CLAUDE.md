@@ -67,7 +67,13 @@ nichos (`hoteles`, `hoteles-estadia`).
   El correo de las propuestas es `info@neracosu.com`. El pago único se llama «adaptación e instalación» (no
   «desarrollo») salvo donde de verdad se construye (citas, calendario de estadía), y **la demostración es con datos de
   ejemplo**: no se promete cargar el menú, los productos o los espacios del prospecto. `scripts/ajustar-mensajes.mts`
-  corrige frases de los mensajes en la base sin pisar lo editado en Ajustes. La ficha tiene «PDF»
+  corrige frases de los mensajes en la base sin pisar lo editado en Ajustes.
+  **Temporada promocional (decisión de Neri, 5-oct): 40 % de descuento en el pago único de cualquier plan para quien
+  contrate hasta el 31-dic-2026**; la mensualidad no cambia. En las plantillas va dentro de `<!--si:promo-->…<!--fin:promo-->`,
+  que `renderPropuesta` deja mientras el día de Caracas no pase de `PROMO_HASTA` (`propuesta-contrato.ts`): fila de
+  precios con el descuento y gancho en el resumen. La meta que dio: al menos 10 negocios pagando USD 100 a 130 al mes
+  de aquí a diciembre. En la web vive en `~/build-para/precios.py` (`PROMO_PCT`, `PROMO_HASTA`) y en `body-index.html`;
+  se esconde sola al vencer, pero **en enero hay que quitarla de las fuentes** y de las plantillas. La ficha tiene «PDF»
   (`/p/<código>/pdf`, caché por hash); `scripts/generar-propuestas.mts --primeros N` los deja listos para la cola.
 
 - **Pieza 2 (Buscador e importación) en producción:** `/buscar` con pestañas `?t=osm|maps|importar|bandeja`
