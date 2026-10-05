@@ -429,6 +429,10 @@ hace que el bot diga cosas ciertas. «Automatización» sola es una palabra gast
 - **Solo se pone el bot al frente donde opera de verdad.** Hoy es un hotel de La Guaira (Hotel VIP): consulta lo que
   hay libre, toma la reserva y cobra el anticipo. El de Terrazas está en pausa. Por eso el giro empezó por
   `hoteles-estadia` (propuesta, mensajes y `/para/hoteles`); los demás nichos siguen como estaban.
+- **Terrazas VIP Sport Park cerró por ahora (6-oct).** Las propuestas ya no lo dan como negocio en operación:
+  reservas dice «un bowling de La Guaira» (antes «dos complejos») y cobros «dos negocios» (antes tres); Terrazas
+  queda nombrado como sistema construido, en pausa. **Antes de escribir «opera hoy» sobre una referencia, confirmar
+  con Neri que el negocio sigue abierto.**
 - El bot actual corre con un proveedor externo; el servicio propio está solo diseñado (`~/bot-whatsapp/DISENO.md`).
 - **Sin resolver:** cómo entra el bot en los planes (hoy en estadía va en Profesional y Completo y su consumo «se
   estima aparte») y qué cuesta al mes. No usar el bot de un cliente como demostración: hace falta una copia aparte.
