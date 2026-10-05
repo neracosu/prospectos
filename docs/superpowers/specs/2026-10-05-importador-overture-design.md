@@ -1,6 +1,6 @@
 # Importador de Overture Maps (Venezuela) — diseño
 
-**Fecha:** 2026-10-05 · **Dueño:** Neri Colón · **Estado:** implementada en la rama `overture` (5-oct); pendiente de despliegue.
+**Fecha:** 2026-10-05 · **Dueño:** Neri Colón · **Estado:** en producción desde el 5-oct (20.524 lugares cargados, publicación `2026-09-23.1`).
 Extiende la pieza 2 (`2026-09-16-buscador-importacion-design.md`). No cambia la bandeja ni la clave de duplicado.
 
 ## Qué resuelve
