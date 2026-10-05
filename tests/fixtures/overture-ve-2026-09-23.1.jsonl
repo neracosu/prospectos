@@ -1,0 +1,5 @@
+{"id":"prueba-1","nombre":"Arepera Uno","categoriaBase":"restaurant","categoriaFina":"venezuelan_restaurant","lat":10.4806,"lon":-66.9036,"direccion":"Av. Urdaneta","telefonos":["+584141234567"],"correos":["uno@gmail.com"],"webs":[],"redes":["https://www.facebook.com/prueba1"],"confianza":0.93}
+{"id":"prueba-2","nombre":"Farmacia Dos","categoriaBase":"pharmacy_and_drug_store","categoriaFina":"pharmacy","lat":10.162,"lon":-68.0077,"direccion":null,"telefonos":[],"correos":[],"webs":["https://farmaciados.com.ve/"],"redes":[],"confianza":0.81}
+{"id":"prueba-3","nombre":"Hotel Madrid","categoriaBase":"hotel","categoriaFina":"hotel","lat":40.4,"lon":-3.7,"direccion":"","telefonos":[],"correos":[],"webs":[],"redes":[],"confianza":0.9}
+{"id":"prueba-4","nombre":"Renglon cortado","categoriaBase":"rest
+{"id":"prueba-1","nombre":"Arepera Uno (repetida)","categoriaBase":"restaurant","categoriaFina":"","lat":10.48,"lon":-66.9,"direccion":"","telefonos":[],"correos":[],"webs":[],"redes":[],"confianza":0.7}
