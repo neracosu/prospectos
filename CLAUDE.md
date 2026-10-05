@@ -142,8 +142,10 @@ nichos (`hoteles`, `hoteles-estadia`).
     construida**. Etapa 2 en curso: las plantillas llevan bloques `<!--si:ve-->…<!--fin:ve-->` y
     `<!--si:co-->…<!--fin:co-->` (`renderPropuesta` deja los del país del prospecto; el verificador arma las dos
     versiones). **Un prospecto colombiano solo recibe propuesta si su arquetipo está en `PLANTILLAS_CON_COLOMBIA`**
-    (`colombia-contrato.ts`), que está VACÍA: `restaurantes-y-bares` ya tiene su versión escrita (ejemplo en
-    `~/propuestas/colombia/ejemplo-restaurantes-colombia.pdf`) y espera el visto bueno de Neri; faltan las otras seis.
+    (`colombia-contrato.ts`), que desde el 6-oct tiene seis: restaurantes, reservas, comercio, citas, hoteles y hoteles de estadía (Neri
+    aprobó el criterio: Wompi, Nequi, pesos a la TRM, factura electrónica por el proveedor del negocio). **Falta
+    `cobros-y-pagos`**: en Venezuela es validación contra bancos venezolanos y en Colombia sería otro producto, así que
+    gimnasios y educación siguen con el mensaje sin enlace. Al tocar una frase propia de un país, va en su bloque.
     `condiciones.html` y `comparar.html` ya tienen su versión Colombia (pesos a la TRM, Wompi).
   - **Tope por búsqueda en el directorio (6-oct):** cada búsqueda deja pasar como mucho `TOPE_LOTE` (300), las de mayor
     confianza entre las que **todavía no pasaron por la bandeja** (`tomarLote` + `clavesVistas`: filas de `Revision`

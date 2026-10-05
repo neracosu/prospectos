@@ -307,13 +307,13 @@
   <section class="hoja portada" aria-label="Portada">
     <header class="membrete">
       <div class="logo">NERACOSU<i>.</i></div>
-      <div class="membrete__datos">Ing. Neri Colón · Desarrollo de sistemas<br>neracosu.com · WhatsApp 0422-270 7095</div>
+      <div class="membrete__datos">Ing. Neri Colón · Desarrollo de sistemas<br>neracosu.com · WhatsApp <!--si:ve-->0422-270 7095<!--fin:ve--><!--si:co-->+58 422 270 7095<!--fin:co--></div>
     </header>
     <div class="portada__cuerpo">
       <div class="portada__textos">
         <p class="portada__tipo">Propuesta para {{nombre}}</p>
         <h1>Le pidieron algo que sí tenía.<span>Estaba en el depósito.</span></h1>
-        <p class="portada__que">Un sistema propio para {{nombre}}: el inventario se descuenta solo con cada venta y avisa antes de agotarse, el mostrador cobra en bolívares y divisas con la tasa del día, y la tienda en línea vende de noche y los domingos con el pago móvil validado contra el banco. Mis sistemas funcionan hoy en empresas de Caracas, Valencia y el exterior.</p>
+        <p class="portada__que">Un sistema propio para {{nombre}}: el inventario se descuenta solo con cada venta y avisa antes de agotarse, <!--si:ve-->el mostrador cobra en bolívares y divisas con la tasa del día, y la tienda en línea vende de noche y los domingos con el pago móvil validado contra el banco.<!--fin:ve--><!--si:co-->el mostrador cobra con cada método por separado, y la tienda en línea vende de noche y los domingos con el cobro por Wompi.<!--fin:co--> Mis sistemas funcionan hoy en empresas de Caracas, Valencia y el exterior.</p>
       </div>
       <div class="llavero" aria-hidden="true">
         <div class="llavero__aro"></div>
@@ -344,9 +344,9 @@
     <div class="carta">
       <p class="carta__lugar">Caracas, {{fecha}}</p>
       <p class="carta__destino">Estimado equipo de {{nombre}}:</p>
-      <p>En una tienda la plata no se pierde de golpe. Se va en el cliente que preguntó por algo concreto y se fue con las manos vacías, cuando el producto existía en el depósito o en la otra sucursal; en la mercancía que salió sin registrarse y al contar no está; en el precio que quedó viejo porque compró en divisas y vende en bolívares; y en las noches y domingos en que el catálogo son fotos sueltas de WhatsApp y nadie contesta.</p>
+      <p>En una tienda la plata no se pierde de golpe. Se va en el cliente que preguntó por algo concreto y se fue con las manos vacías, cuando el producto existía en el depósito o en la otra sucursal; en la mercancía que salió sin registrarse y al contar no está; en el precio que quedó viejo <!--si:ve-->porque compró en divisas y vende en bolívares;<!--fin:ve--><!--si:co-->porque compró en dólares y vende en pesos;<!--fin:co--> y en las noches y domingos en que el catálogo son fotos sueltas de WhatsApp y nadie contesta.</p>
       <p>Construí la tienda en línea que hoy vende en adastram.store, donde la dueña carga productos, confirma pagos y despacha sin tocar código, y el control de inventario que corre en un negocio de dos sedes en La Guaira, con seis tipos de movimiento, conteos físicos y traslados entre sucursales. No es una demostración: el inventario cuadra a fin de mes y la tienda vende aunque el local esté cerrado.</p>
-      <!--si:web--><p>Vi que {{nombre}} ya tiene página en internet. No le propongo otra: le propongo que muestre solo lo que hay en existencia y cobre sola, con el pago móvil validado contra el banco. El inventario y el cobro se le conectan a lo que ya tiene, igual que conecté el sistema con el punto de venta que el negocio de La Guaira ya usaba.</p><!--fin:web-->
+      <!--si:web--><p>Vi que {{nombre}} ya tiene página en internet. No le propongo otra: le propongo que muestre solo lo que hay en existencia <!--si:ve-->y cobre sola, con el pago móvil validado contra el banco.<!--fin:ve--><!--si:co-->y cobre sola, en línea por Wompi.<!--fin:co--> El inventario y el cobro se le conectan a lo que ya tiene, igual que conecté el sistema con el punto de venta que el negocio de La Guaira ya usaba.</p><!--fin:web-->
       <!--si:sinweb--><p>Esas dos piezas se juntan y se adaptan a {{nombre}} en semanas, no en meses, con su propia tienda en línea en su dominio si la quiere, y la adaptación se paga una sola vez: el código, los datos y el dominio quedan a su nombre.</p><!--fin:sinweb-->
       <p>En estas páginas encontrará la cuenta para medir su propia fuga, el recorrido de un día real, lo que cuesta cada plan y las respuestas a lo que casi todo dueño pregunta antes de decidir. Si concluye que no le hace falta, también está bien. Solo le pido 30 minutos para verlo funcionando.</p>
     </div>
@@ -358,8 +358,8 @@
     <div class="resumen">
       <h2>Resumen en un minuto</h2>
       <dl>
-        <dt>Qué es</dt><dd>Catálogo con variantes (tallas, colores, presentaciones), inventario que se descuenta solo y avisa antes de agotarse, punto de venta con cierre de turno, precios en dos monedas con la tasa del día, y tienda en línea con pago móvil validado.</dd>
-        <dt>Dónde funciona</dt><dd>En el teléfono y en la computadora, sin instalar nada. Vendiendo hoy en adastram.store; el inventario, en un negocio de dos sedes en La Guaira.</dd>
+        <dt>Qué es</dt><dd>Catálogo con variantes (tallas, colores, presentaciones), inventario que se descuenta solo y avisa antes de agotarse, punto de venta con cierre de turno, <!--si:ve-->precios en dos monedas con la tasa del día, y tienda en línea con pago móvil validado.<!--fin:ve--><!--si:co-->precios en dólares y pesos con la TRM del día, y tienda en línea con cobro por Wompi.<!--fin:co--></dd>
+        <dt>Dónde funciona</dt><dd>En el teléfono y en la computadora, sin instalar nada. Vendiendo hoy en adastram.store; <!--si:ve-->el inventario, en un negocio de dos sedes en La Guaira.</dd><!--fin:ve--><!--si:co-->el inventario, en un negocio de dos sedes en La Guaira, Venezuela.</dd><!--fin:co-->
         <dt>Qué cambia</dt><dd>Sabe qué hay, dónde está y cuánto se vendió sin contar. Nada sale del inventario sin nombre y hora. Vende de noche y los domingos sin que nadie conteste.</dd>
         <dt>Inversión</dt><dd>Desde <b>USD 2.500</b> de adaptación (50 % al aprobar, 50 % a la entrega), más USD 100 al mes de servicio. Si hoy le paga a otro sistema, <b>USD 1.000 menos</b>.<!--si:promo--> <b>40 % menos</b> hasta el 31 de diciembre.<!--fin:promo--></dd>
         <dt>Su riesgo</dt><dd>60 días de garantía; después, el soporte va en el servicio mensual. Si lo deja, se lleva el sistema y la base de datos.</dd>
@@ -393,12 +393,12 @@
       <article class="fuga">
         <h3>Solo le vende a quien pasa por la puerta</h3>
         <p>Su catálogo existe en fotos sueltas de WhatsApp. Cada consulta obliga a alguien a buscar la foto, el precio y confirmar si queda. De noche y los domingos, no vende nada.</p>
-        <p class="fuga__cierre"><b>Cómo se cierra:</b> tienda en línea con su catálogo real, tallas y colores, que muestra solo lo que hay en existencia y cobra con pago móvil validado contra el banco.</p>
+        <p class="fuga__cierre"><b>Cómo se cierra:</b> tienda en línea con su catálogo real, tallas y colores, que muestra solo lo que hay en existencia <!--si:ve-->y cobra con pago móvil validado contra el banco.</p><!--fin:ve--><!--si:co-->y cobra en línea por Wompi.</p><!--fin:co-->
       </article>
       <article class="fuga">
         <h3>Precios que quedaron viejos</h3>
-        <p>Compró en divisas y vende en bolívares. Si el precio no se mueve con la tasa, cada venta le deja menos margen del que cree, y se entera cuando toca reponer.</p>
-        <p class="fuga__cierre"><b>Cómo se cierra:</b> precio base en divisa y conversión automática con la tasa oficial del día, la misma en el local y en la tienda en línea. Solo un administrador la cambia.</p>
+        <!--si:ve--><p>Compró en divisas y vende en bolívares. Si el precio<!--fin:ve--><!--si:co--><p>Compró en dólares y vende en pesos. Si el precio<!--fin:co--> no se mueve con la tasa, cada venta le deja menos margen del que cree, y se entera cuando toca reponer.</p>
+        <p class="fuga__cierre"><b>Cómo se cierra:</b> <!--si:ve-->precio base en divisa y <!--fin:ve--><!--si:co-->precio base en dólares y <!--fin:co--><!--si:ve-->conversión automática con la tasa oficial del día, la misma<!--fin:ve--><!--si:co-->conversión automática con la TRM del día, la misma<!--fin:co--> en el local y en la tienda en línea. Solo un administrador la cambia.</p>
       </article>
     </div>
     <div class="cuenta">
@@ -425,19 +425,19 @@
       <h2 class="seccion__titulo">Así se ve un martes con el sistema.</h2>
     </div>
     <ol class="noche">
-      <li><span class="hora">08:30</span><div><h3>Llega mercancía</h3><p>Se registra la entrada con su proveedor, cantidades y costo en divisa. Cada variante (talla, color, presentación) queda con su propia existencia, para que no venda una talla que no queda.</p></div></li>
-      <li><span class="hora">10:15</span><div><h3>Una venta en mostrador</h3><p>La vendedora entra con su clave, cobra en pago móvil y efectivo en la misma compra, cada método con su referencia y su tasa congelada. El inventario se descontó solo.</p></div></li>
+      <li><span class="hora">08:30</span><div><h3>Llega mercancía</h3><p>Se registra la entrada con su proveedor, <!--si:ve-->cantidades y costo en divisa.<!--fin:ve--><!--si:co-->cantidades y costo en dólares.<!--fin:co--> Cada variante (talla, color, presentación) queda con su propia existencia, para que no venda una talla que no queda.</p></div></li>
+      <li><span class="hora">10:15</span><div><h3>Una venta en mostrador</h3><p>La vendedora entra con su clave, <!--si:ve-->cobra en pago móvil y efectivo en la misma compra, cada método con su referencia y su tasa congelada.<!--fin:ve--><!--si:co-->cobra con Nequi y efectivo en la misma compra, cada método con su referencia.<!--fin:co--> El inventario se descontó solo.</p></div></li>
       <li><span class="hora">13:00</span><div><h3>Un cliente pregunta por algo que no está a la vista</h3><p>El sistema dice que quedan 3 en el depósito y 12 en la otra sucursal. Se vende, o se pide el traslado con su registro: la mercancía en tránsito no desaparece.</p></div></li>
       <li><span class="hora">16:40</span><div><h3>Aviso de nivel bajo</h3><p>El producto que más rota bajó del mínimo que usted definió. Le llega el aviso antes de que se acabe, no cuando un cliente reclama.</p></div></li>
-      <li><span class="hora">22:30</span><div><h3>Alguien compra desde el teléfono</h3><p>En la tienda en línea ve solo lo que hay en existencia, paga por pago móvil y escribe la referencia. El sistema la contrasta contra el movimiento real del banco y confirma el pedido. Nadie tuvo que contestar.</p></div></li>
+      <li><span class="hora">22:30</span><div><h3>Alguien compra desde el teléfono</h3><p>En la tienda en línea ve solo lo que hay en existencia, <!--si:ve-->paga por pago móvil y escribe la referencia. El sistema la contrasta contra el movimiento real del banco y confirma el pedido.<!--fin:ve--><!--si:co-->paga en línea por Wompi, con tarjeta o Nequi. Wompi le confirma el pago al sistema y el pedido queda firme.<!--fin:co--> Nadie tuvo que contestar.</p></div></li>
       <li><span class="hora">Cierre</span><div><h3>Cierre de turno y arqueo</h3><p>El arqueo se calcula solo, por método de cobro y por persona. Al fin de mes, el conteo físico guiado compara lo contado con lo que dice el sistema y deja la diferencia registrada.</p></div></li>
     </ol>
     <div class="seccion">
       <p class="antetitulo">Control, no vigilancia</p>
       <div class="reglas">
-        <div class="regla"><h3>Cada quien ve lo suyo</h3><p>Quien vende cobra y consulta existencias, pero no cambia precios, ni la tasa, ni ajusta inventario sin permiso. Quién vendió, quién ajustó y quién dio un descuento queda registrado.</p></div>
+        <div class="regla"><h3>Cada quien ve lo suyo</h3><p>Quien vende cobra y consulta existencias, pero no cambia precios<!--si:ve-->, ni la tasa, ni <!--fin:ve--><!--si:co-->, ni <!--fin:co-->ajusta inventario sin permiso. Quién vendió, quién ajustó y quién dio un descuento queda registrado.</p></div>
         <div class="regla"><h3>Nada se borra</h3><p>Una venta se anula con motivo. Un ajuste de inventario lleva su tipo y su responsable. Todo deja rastro de quién y cuándo.</p></div>
-        <div class="regla"><h3>Los montos quedan congelados</h3><p>Cada cobro guarda su par en bolívares y divisa con la tasa del momento. El arqueo de ayer no cambia de número mañana.</p></div>
+        <div class="regla"><h3>Los montos quedan congelados</h3><!--si:ve--><p>Cada cobro guarda su par en bolívares y divisa con la tasa del momento. El arqueo de ayer no cambia de número mañana.</p><!--fin:ve--><!--si:co--><p>Cada cobro guarda su método, su referencia y quién lo recibió. El arqueo de ayer no cambia de número mañana.</p><!--fin:co--></div>
         <div class="regla"><h3>Un turno cerrado no se toca</h3><p>Reabrirlo exige ser administrador y dar un motivo. Así nadie carga con la culpa de otro.</p></div>
       </div>
     </div>
@@ -467,8 +467,8 @@
           <p>Tienda de ropa, carteras, perfumes y accesorios. La dueña opera todo desde el panel: carga productos, confirma pagos y despacha, sin tocar código ni depender de nadie.</p>
           <ul class="lista">
             <li>Catálogo con variantes, colecciones y control de existencias por variante.</li>
-            <li>Pago móvil en la tienda: en ese negocio el cliente sube la referencia y su captura, y la dueña confirma desde el panel. La validación automática contra el banco es la de los planes Profesional y Completo.</li>
-            <li>Cálculos de dinero en centavos enteros, para que no aparezcan diferencias de un bolívar al sumar.</li>
+            <!--si:ve--><li>Pago móvil en la tienda: en ese negocio el cliente sube la referencia y su captura, y la dueña confirma desde el panel. La validación automática contra el banco es la de los planes Profesional y Completo.</li><!--fin:ve--><!--si:co--><li>El cobro en esa tienda, que es de Venezuela, va por pago móvil confirmado desde el panel. En Colombia el cobro en línea va por Wompi.</li><!--fin:co-->
+            <li>Cálculos de dinero en centavos enteros, para que no aparezcan <!--si:ve-->diferencias de un bolívar al sumar.<!--fin:ve--><!--si:co-->diferencias de un peso al sumar.<!--fin:co--></li>
           </ul>
         </div>
       </div>
@@ -518,17 +518,17 @@
           <tr><th scope="row">Inventario que se descuenta solo con cada venta</th><td><span class="si"></span></td><td class="rec"><span class="si"></span></td><td><span class="si"></span></td></tr>
           <tr><th scope="row">Avisos de nivel bajo antes de quedarse sin nada</th><td><span class="si"></span></td><td class="rec"><span class="si"></span></td><td><span class="si"></span></td></tr>
           <tr><th scope="row">Punto de venta con cierre de turno y arqueo</th><td><span class="si"></span></td><td class="rec"><span class="si"></span></td><td><span class="si"></span></td></tr>
-          <tr><th scope="row">Precios en dos monedas con la tasa oficial del día</th><td><span class="si"></span></td><td class="rec"><span class="si"></span></td><td><span class="si"></span></td></tr>
+          <tr><!--si:ve--><th scope="row">Precios en dos monedas con la tasa oficial del día</th><!--fin:ve--><!--si:co--><th scope="row">Precios en dólares y pesos con la TRM del día</th><!--fin:co--><td><span class="si"></span></td><td class="rec"><span class="si"></span></td><td><span class="si"></span></td></tr>
           <tr class="grupo"><td colspan="4">Tienda en línea y control</td></tr>
           <tr><th scope="row">Tienda pública con carrito y pago</th><td><span class="no">—</span></td><td class="rec"><span class="si"></span></td><td><span class="si"></span></td></tr>
           <tr><th scope="row">Muestra solo lo que hay en existencia</th><td><span class="no">—</span></td><td class="rec"><span class="si"></span></td><td><span class="si"></span></td></tr>
-          <tr><th scope="row">Cobro con pago móvil validado contra el banco</th><td><span class="no">—</span></td><td class="rec"><span class="si"></span></td><td><span class="si"></span></td></tr>
+          <tr><!--si:ve--><th scope="row">Cobro con pago móvil validado contra el banco</th><!--fin:ve--><!--si:co--><th scope="row">Cobro en línea por Wompi</th><!--fin:co--><td><span class="no">—</span></td><td class="rec"><span class="si"></span></td><td><span class="si"></span></td></tr>
           <tr><th scope="row">Conteos físicos guiados con su diferencia registrada</th><td><span class="no">—</span></td><td class="rec"><span class="si"></span></td><td><span class="si"></span></td></tr>
           <tr><th scope="row">Personal con permisos y bitácora de quién hizo qué</th><td><span class="no">—</span></td><td class="rec"><span class="si"></span></td><td><span class="si"></span></td></tr>
           <tr class="grupo"><td colspan="4">Varias sucursales</td></tr>
           <tr><th scope="row">Existencias por sucursal y traslados entre ellas</th><td><span class="no">—</span></td><td class="rec"><span class="no">—</span></td><td><span class="si"></span></td></tr>
           <tr><th scope="row">Panel único que ve todas las sucursales</th><td><span class="no">—</span></td><td class="rec"><span class="no">—</span></td><td><span class="si"></span></td></tr>
-          <tr><th scope="row">Integración con máquina fiscal homologada</th><td><span class="no">—</span></td><td class="rec"><span class="no">—</span></td><td><span class="si"></span></td></tr>
+          <tr><!--si:ve--><th scope="row">Integración con máquina fiscal homologada</th><!--fin:ve--><!--si:co--><th scope="row">Conexión con su proveedor de factura electrónica</th><!--fin:co--><td><span class="no">—</span></td><td class="rec"><span class="no">—</span></td><td><span class="si"></span></td></tr>
           <tr><th scope="row">Integración con el punto de venta que ya usa</th><td><span class="no">—</span></td><td class="rec"><span class="no">—</span></td><td><span class="si"></span></td></tr>
           <tr><th scope="row">Reportes de rotación y márgenes por producto</th><td><span class="no">—</span></td><td class="rec"><span class="no">—</span></td><td><span class="si"></span></td></tr>
         </tbody>

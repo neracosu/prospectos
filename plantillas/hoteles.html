@@ -307,7 +307,7 @@
   <section class="hoja portada" aria-label="Portada">
     <header class="membrete">
       <div class="logo">NERACOSU<i>.</i></div>
-      <div class="membrete__datos">Ing. Neri Colón · Desarrollo de sistemas<br>neracosu.com · WhatsApp 0422-270 7095</div>
+      <div class="membrete__datos">Ing. Neri Colón · Desarrollo de sistemas<br>neracosu.com · WhatsApp <!--si:ve-->0422-270 7095<!--fin:ve--><!--si:co-->+58 422 270 7095<!--fin:co--></div>
     </header>
 
     <div class="portada__cuerpo">
@@ -347,7 +347,7 @@
     <div class="carta">
       <p class="carta__lugar">Caracas, {{fecha}}</p>
       <p class="carta__destino">Estimado equipo de <b data-hotel>su hotel</b>:</p>
-      <p>En un hotel de alta rotación la plata no se pierde de golpe. Se va en minutos regalados entre el cobro y la entrada al cuarto, en una tasa distinta en cada turno, en un taxi que salió de la gaveta a las tres de la mañana y nadie anotó. Nada de eso es un robo, y por eso mismo no aparece en ningún cuaderno.</p>
+      <p>En un hotel de alta rotación la plata no se pierde de golpe. Se va en minutos regalados entre el cobro y la entrada al cuarto, <!--si:ve-->en una tasa distinta en cada turno,<!--fin:ve--><!--si:co-->en una tarifa distinta según quién cobre,<!--fin:co--> en un taxi que salió de la gaveta a las tres de la mañana y nadie anotó. Nada de eso es un robo, y por eso mismo no aparece en ningún cuaderno.</p>
       <p>Construí, mano a mano con el dueño de un hotel de alta rotación en Valencia, el sistema que hoy le cierra esos huecos. No es una demostración: su personal lo usa todos los días, con plata real, y cada falla que mostró la operación quedó corregida y explicada en la pantalla de las recepcionistas.</p>
       <p>Le escribo porque ese mismo sistema se puede adaptar a su hotel en semanas, no en meses, y porque la adaptación se paga una sola vez: el código, los datos y el dominio quedan a su nombre. En estas páginas encontrará la cuenta para medir su propia fuga, el recorrido de una noche real, lo que cuesta cada plan y las respuestas a las preguntas que casi todo dueño se hace antes de decidir.</p>
       <p>Si al leerlo concluye que no le hace falta, también está bien. Lo único que le pido son 30 minutos para verlo funcionando.</p>
@@ -362,7 +362,7 @@
     <div class="resumen">
       <h2>Resumen en un minuto</h2>
       <dl>
-        <dt>Qué es</dt><dd>Mapa de habitaciones con los tiempos corriendo, check-in con cédula, caja en bolívares y divisas, turnos, tienda, limpieza, reportes y cierre del día firmado.</dd>
+        <dt>Qué es</dt><dd>Mapa de habitaciones con los tiempos corriendo, <!--si:ve-->check-in con cédula, caja en bolívares y divisas, turnos<!--fin:ve--><!--si:co-->check-in con cédula, caja por método de pago, turnos<!--fin:co-->, tienda, limpieza, reportes y cierre del día firmado.</dd>
         <dt>Dónde funciona</dt><dd>En el teléfono y en la computadora, sin instalar nada. En operación diaria en Valencia, Carabobo.</dd>
         <dt>Qué cambia</dt><dd>Cada cobro, cada salida de efectivo y cada turno quedan con nombre, hora y monto. Usted ve el día cerrado antes del desayuno.</dd>
         <dt>Inversión</dt><dd>Desde <b>USD 2.800</b> de adaptación (50 % al aprobar, 50 % a la entrega), más USD 100 al mes de hosting y soporte. Si hoy le paga a otro sistema, <b>USD 1.000 menos</b>.<!--si:promo--> <b>40 % menos</b> hasta el 31 de diciembre.<!--fin:promo--></dd>
@@ -392,9 +392,9 @@
         <p class="fuga__cierre"><b>Cómo se cierra:</b> minutos de gracia configurables. El reloj arranca cuando el huésped entra, no cuando se firma el papel.</p>
       </article>
       <article class="fuga">
-        <h3>Cada quien cobrando con la tasa que le parece</h3>
-        <p>Usted fija la tasa en la mañana y al mediodía alguien cobra con la que vio en el teléfono. Sin mala intención, pero al cerrar el mes los números no dan y no hay forma de saber dónde se torcieron.</p>
-        <p class="fuga__cierre"><b>Cómo se cierra:</b> una sola tasa, la suya, en todo el sistema y en la página web. Solo un administrador la cambia, con nombre y hora.</p>
+        <!--si:ve--><h3>Cada quien cobrando con la tasa que le parece</h3><!--fin:ve--><!--si:co--><h3>Cada quien cobrando la tarifa que le parece</h3><!--fin:co-->
+        <p><!--si:ve-->Usted fija la tasa en la mañana y al mediodía alguien cobra con la que vio en el teléfono.<!--fin:ve--><!--si:co-->Uno hace una rebaja «por esta vez» y otro cobra con la tarifa del mes pasado.<!--fin:co--> Sin mala intención, pero al cerrar el mes los números no dan y no hay forma de saber dónde se torcieron.</p>
+        <p class="fuga__cierre"><b>Cómo se cierra:</b><!--si:ve--> una sola tasa, la suya, en todo el sistema y en la página web. Solo un administrador la cambia, con nombre y hora.<!--fin:ve--><!--si:co--> las tarifas se fijan en un solo lugar para todo el sistema y la página web. Solo un administrador las cambia, con nombre y hora.<!--fin:co--></p>
       </article>
       <article class="fuga">
         <h3>El efectivo que sale sin que nadie lo apruebe</h3>
@@ -402,7 +402,7 @@
         <p class="fuga__cierre"><b>Cómo se cierra:</b> el egreso se carga en el momento, pero el día no se firma hasta que un administrador aprueba cada salida.</p>
       </article>
       <article class="fuga">
-        <h3>Pagos por pago móvil que nadie verificó</h3>
+        <!--si:ve--><h3>Pagos por pago móvil que nadie verificó</h3><!--fin:ve--><!--si:co--><h3>Transferencias y pagos por Nequi que nadie verificó</h3><!--fin:co-->
         <p>La recepcionista anota la referencia y el huésped se va. Si ese pago nunca entró al banco, se descubre días después, cuando ya no hay a quién reclamar.</p>
         <p class="fuga__cierre"><b>Cómo se cierra:</b> todo pago que no es efectivo queda pendiente hasta que un administrador lo marca contra el banco. Varios de una vez, con casillas.</p>
       </article>
@@ -435,7 +435,7 @@
 
     <ol class="noche">
       <li><span class="hora">21:10</span><div><h3>Llega una pareja sin reserva</h3><p>Recepción toca una habitación libre en el mapa y hace el check-in en una sola pantalla: cédula, foto del documento, acompañantes y cobro. Si quieren algo de la nevera, entra en la misma cuenta. Si falta un dato, el sistema dice cuál junto al botón.</p></div></li>
-      <li><span class="hora">21:14</span><div><h3>Paga mitad en efectivo y mitad por pago móvil</h3><p>El cobro se parte en dos métodos, cada uno con su moneda, su tasa congelada y su referencia. Si pagó de más, el sistema pide registrar cómo se entregó el vuelto. La captura del comprobante se adjunta con la cámara del teléfono.</p></div></li>
+      <li><span class="hora">21:14</span><div><h3><!--si:ve-->Paga mitad en efectivo y mitad por pago móvil</h3><!--fin:ve--><!--si:co-->Paga mitad en efectivo y mitad por Nequi</h3><!--fin:co--><p>El cobro se parte en dos métodos, <!--si:ve-->cada uno con su moneda, su tasa congelada y su referencia.<!--fin:ve--><!--si:co-->cada uno con su referencia.<!--fin:co--> Si pagó de más, el sistema pide registrar cómo se entregó el vuelto. La captura del comprobante se adjunta con la cámara del teléfono.</p></div></li>
       <li><span class="hora">01:05</span><div><h3>La habitación entra en «por vencer»</h3><p>El mapa la pinta distinto y suena un aviso. Al pasarse del tiempo, el tono insiste hasta que alguien se ocupa. Las horas extra se cobran por hora empezada, con la gracia que usted defina.</p></div></li>
       <li><span class="hora">01:40</span><div><h3>Salida y revisión</h3><p>El checkout suma consumos y horas extra, permite marcar daños y deja la habitación esperando limpieza hasta que la camarera la registre. Si se fue la luz y la salida se marca tarde, queda la hora real para que un administrador la apruebe.</p></div></li>
       <li><span class="hora">08:00</span><div><h3>Entrega de turno</h3><p>Quien sale cuenta el efectivo, marca lo que entrega y cuenta la nevera. Quien entra lo recibe y anota si algo no cuadra. Corregir lo declarado después exige la aprobación de un administrador.</p></div></li>
@@ -445,9 +445,9 @@
     <div class="seccion">
       <p class="antetitulo">Control, no vigilancia</p>
       <div class="reglas">
-        <div class="regla"><h3>Cada quien ve lo suyo</h3><p>Recepción cobra y atiende, pero no cambia precios, ni la tasa, ni anula un consumo. Las camareras registran su trabajo y no ven la caja.</p></div>
+        <div class="regla"><h3>Cada quien ve lo suyo</h3><p>Recepción cobra y atiende, pero no cambia precios<!--si:ve-->, ni la tasa, ni <!--fin:ve--><!--si:co-->, ni <!--fin:co-->anula un consumo. Las camareras registran su trabajo y no ven la caja.</p></div>
         <div class="regla"><h3>Nada se borra</h3><p>Una reserva se cancela con motivo. Un producto se corrige. Una cuenta se desactiva. Todo deja rastro de quién y cuándo.</p></div>
-        <div class="regla"><h3>Los montos quedan congelados</h3><p>Cada cobro guarda su par en bolívares y divisa con la tasa del momento. El arqueo de ayer no cambia de número mañana.</p></div>
+        <div class="regla"><h3>Los montos quedan congelados</h3><!--si:ve--><p>Cada cobro guarda su par en bolívares y divisa con la tasa del momento. El arqueo de ayer no cambia de número mañana.</p><!--fin:ve--><!--si:co--><p>Cada cobro guarda su método, su referencia y quién lo recibió. El arqueo de ayer no cambia de número mañana.</p><!--fin:co--></div>
         <div class="regla"><h3>Un día firmado no se toca</h3><p>Reabrirlo exige ser administrador y dar un motivo. Así nadie carga con la culpa de otro.</p></div>
       </div>
     </div>
@@ -506,7 +506,7 @@
         <h3>Quién está detrás</h3>
         <p>Ing. Neri Colón. 17 años construyendo sistemas para negocios venezolanos: gestión, cobros, logística y comercio. Trabajo directo con el dueño, sin intermediarios ni cola de soporte: quien le vende el sistema es quien lo programa y quien le contesta el WhatsApp.</p>
       </div>
-      <div class="autor__datos">neracosu.com<br>Portafolio y hoja de vida<br>WhatsApp 0422-270 7095</div>
+      <div class="autor__datos">neracosu.com<br>Portafolio y hoja de vida<br>WhatsApp <!--si:ve-->0422-270 7095<!--fin:ve--><!--si:co-->+58 422 270 7095<!--fin:co--></div>
     </div>
     <footer class="pie"><span>NERACOSU · Propuesta comercial</span><span>5 / 9</span></footer>
   </section>
@@ -540,7 +540,7 @@
           <tr><th scope="row">Servicio mensual</th><td><span class="mes">$100 / mes</span></td><td class="rec"><span class="mes">$130 / mes</span></td><td><span class="mes">$170 / mes</span></td></tr>
           <tr class="grupo"><td colspan="4">Operación</td></tr>
           <tr><th scope="row">Mapa de habitaciones con tiempos y avisos</th><td><span class="si"></span></td><td class="rec"><span class="si"></span></td><td><span class="si"></span></td></tr>
-          <tr><th scope="row">Check-in y checkout con cobro en varias monedas</th><td><span class="si"></span></td><td class="rec"><span class="si"></span></td><td><span class="si"></span></td></tr>
+          <tr><!--si:ve--><th scope="row">Check-in y checkout con cobro en varias monedas</th><!--fin:ve--><!--si:co--><th scope="row">Check-in y checkout con cobro en varios métodos</th><!--fin:co--><td><span class="si"></span></td><td class="rec"><span class="si"></span></td><td><span class="si"></span></td></tr>
           <tr><th scope="row">Caja del día y cierre firmado</th><td><span class="si"></span></td><td class="rec"><span class="si"></span></td><td><span class="si"></span></td></tr>
           <tr><th scope="row">Página de reservas propia, sin comisión</th><td><span class="si"></span></td><td class="rec"><span class="si"></span></td><td><span class="si"></span></td></tr>
           <tr><th scope="row">Ficha de clientes e historial</th><td><span class="si"></span></td><td class="rec"><span class="si"></span></td><td><span class="si"></span></td></tr>
@@ -666,7 +666,7 @@
     </ol>
 
     <dl class="contacto">
-      <div><dt>WhatsApp</dt><dd><a href="https://wa.me/584222707095?text=Hola%20Neri%2C%20le%C3%AD%20la%20propuesta%20del%20sistema%20para%20hoteles%20y%20quiero%20ver%20la%20demostraci%C3%B3n.">0422-270 7095</a></dd></div>
+      <div><dt>WhatsApp</dt><dd><a href="https://wa.me/584222707095?text=Hola%20Neri%2C%20le%C3%AD%20la%20propuesta%20del%20sistema%20para%20hoteles%20y%20quiero%20ver%20la%20demostraci%C3%B3n."><!--si:ve-->0422-270 7095<!--fin:ve--><!--si:co-->+58 422 270 7095<!--fin:co--></a></dd></div>
       <div><dt>Correo</dt><dd><a href="mailto:info@neracosu.com">info@neracosu.com</a></dd></div>
       <div><dt>Portafolio</dt><dd><a href="https://neracosu.com/para/hoteles.html">neracosu.com</a></dd></div>
     </dl>
@@ -675,7 +675,7 @@
       <div class="col">
         <p class="sub">Condiciones</p>
         <ul class="lista">
-          <li>Precios en USD, pagaderos en divisas o en bolívares a la tasa BCV del día de pago. No incluyen IVA.</li>
+          <!--si:ve--><li>Precios en USD, pagaderos en divisas o en bolívares a la tasa BCV del día de pago. No incluyen IVA.</li><!--fin:ve--><!--si:co--><li>Precios en USD, pagaderos en dólares o en pesos colombianos a la TRM del día de pago. No incluyen IVA.</li><!--fin:co-->
           <li>Mensualidad por adelantado desde el mes siguiente a la puesta en marcha.</li>
           <li>Los cambios de alcance se cotizan antes de ejecutarse.</li>
           <li>Precios vigentes hasta el {{vigencia}}.</li>
