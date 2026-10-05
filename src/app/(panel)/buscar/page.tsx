@@ -6,6 +6,8 @@ import { etiquetaOrigen } from "@/lib/revision-contrato";
 import { CIUDADES } from "@/lib/overpass-contrato";
 import { Pestanas } from "@/componentes/Pestanas";
 import { FormOverpass } from "@/componentes/FormOverpass";
+import { publicacionCargada } from "@/lib/overture";
+import { reglaDeNicho } from "@/lib/overture-contrato";
 import { FormMaps } from "@/componentes/FormMaps";
 import { FormImportar } from "@/componentes/FormImportar";
 import { Bandeja } from "@/componentes/Bandeja";
@@ -46,10 +48,11 @@ export default async function Buscar({ searchParams }: { searchParams: Promise<R
   const t = PESTANAS.some((p) => p.clave === sp.t) ? sp.t! : pedido ? "bandeja" : compartida ? "maps" : "bandeja";
   const pagina = Math.max(1, Math.trunc(Number(sp.p)) || 1);
 
-  const [nichos, lotes, lote] = await Promise.all([
+  const [nichos, lotes, lote, publicacion] = await Promise.all([
     listarNichos(),
     t === "bandeja" && !pedido ? lotesRecientes() : Promise.resolve([]),
     t === "bandeja" && pedido ? loteConDetalle(pedido, { pagina }) : Promise.resolve(null),
+    t === "osm" ? publicacionCargada() : Promise.resolve(null),
   ]);
   const porRevisar = lotes.filter((l) => l.pendientes > 0);
   const listos = lotes.filter((l) => l.pendientes === 0);
@@ -64,7 +67,13 @@ export default async function Buscar({ searchParams }: { searchParams: Promise<R
       </p>
       <Pestanas base="/buscar" activa={t} items={PESTANAS} etiqueta="Formas de buscar" />
 
-      {t === "osm" && <FormOverpass nichos={nichos} ciudades={CIUDADES.map((c) => ({ slug: c.slug, nombre: c.nombre }))} />}
+      {t === "osm" && (
+        <FormOverpass
+          nichos={nichos}
+          ciudades={CIUDADES.map((c) => ({ slug: c.slug, nombre: c.nombre }))}
+          directorio={{ publicacion, sinNicho: nichos.filter((n) => !reglaDeNicho(n.slug)).map((n) => n.id) }}
+        />
+      )}
       {t === "maps" && <FormMaps nichos={nichos} urlInicial={compartida} />}
       {t === "importar" && <FormImportar />}
 
