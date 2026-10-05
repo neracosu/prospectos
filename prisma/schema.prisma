@@ -320,3 +320,23 @@ model Correlativo {
 
   @@id([serie, anio])
 }
+
+// Directorio abierto (Overture Maps), solo Venezuela. Se regenera con scripts/cargar-overture.mts: no son
+// prospectos y nada depende de que existan. Las listas van como texto, un valor por renglon (sin Json a proposito).
+model LugarOverture {
+  id            String @id @db.VarChar(64)
+  nombre        String
+  categoriaBase String @db.VarChar(80)
+  categoriaFina String @default("") @db.VarChar(80)
+  lat           Float
+  lon           Float
+  direccion     String @default("")
+  telefonos     String @db.Text
+  correos       String @db.Text
+  webs          String @db.Text
+  redes         String @db.Text
+  confianza     Float
+  publicacion   String @db.VarChar(20)
+
+  @@index([categoriaBase])
+}

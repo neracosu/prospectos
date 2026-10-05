@@ -25,6 +25,7 @@ export async function limpiarBase(): Promise<void> {
   await prisma.cliente.deleteMany();
   await prisma.revision.deleteMany();
   await prisma.busquedaOsm.deleteMany();
+  await prisma.lugarOverture.deleteMany();
   await prisma.prospecto.deleteMany();
   await prisma.nicho.deleteMany();
   await prisma.usuario.deleteMany();
