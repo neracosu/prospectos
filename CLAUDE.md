@@ -61,7 +61,13 @@ nichos (`hoteles`, `hoteles-estadia`).
   nombre largo). **Texto corrido justificado con silabeo** (regla de Neri, 27-sep): bloque `:where(...)` al final del
   `<style>` de `base/cabecera.html`, `hoteles.html` y `hoteles-estadia.html`; toda plantilla nueva lo lleva.
   Cifras y precios **solo** los de `neracosu.com/para/<arquetipo>`; `citas-y-servicios` no lleva
-  precio (diagnóstico $250). Los mensajes de todos los nichos mandan `{enlace}`. La ficha tiene «PDF»
+  precio (diagnóstico $250). Los mensajes de todos los nichos mandan `{enlace}`. **Fecha y vigencia las pone el panel** (5-oct): `{{fecha}}` es el día
+  de Caracas del primer envío (o el de hoy si aún no se envió) y `{{vigencia}}` son 30 días más (`fechaDePropuesta`,
+  `DIAS_VIGENCIA`); no escribir fechas a mano en una plantilla. El verificador las prueba con una fecha larga fija.
+  El correo de las propuestas es `info@neracosu.com`. El pago único se llama «adaptación e instalación» (no
+  «desarrollo») salvo donde de verdad se construye (citas, calendario de estadía), y **la demostración es con datos de
+  ejemplo**: no se promete cargar el menú, los productos o los espacios del prospecto. `scripts/ajustar-mensajes.mts`
+  corrige frases de los mensajes en la base sin pisar lo editado en Ajustes. La ficha tiene «PDF»
   (`/p/<código>/pdf`, caché por hash); `scripts/generar-propuestas.mts --primeros N` los deja listos para la cola.
 
 - **Pieza 2 (Buscador e importación) en producción:** `/buscar` con pestañas `?t=osm|maps|importar|bandeja`
