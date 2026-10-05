@@ -420,6 +420,19 @@ Google** (bloquea la IP compartida con Adastram); el portal del cliente **no mue
 los recibos son «recibo de pago», **nunca «factura»**; el acceso del cliente es **por cliente, no por
 proyecto**.
 
+## Cómo se vende (decisión de Neri, 6-oct-2026)
+
+**No se vende «una plataforma»: se vende lo que el dueño deja de hacer a mano, y lo primero que se muestra es el bot
+de WhatsApp que atiende, vende y cobra, conectado a su plataforma.** La plataforma se cuenta después, como lo que
+hace que el bot diga cosas ciertas. «Automatización» sola es una palabra gastada: lo que distingue es *conectado*.
+
+- **Solo se pone el bot al frente donde opera de verdad.** Hoy es un hotel de La Guaira (Hotel VIP): consulta lo que
+  hay libre, toma la reserva y cobra el anticipo. El de Terrazas está en pausa. Por eso el giro empezó por
+  `hoteles-estadia` (propuesta, mensajes y `/para/hoteles`); los demás nichos siguen como estaban.
+- El bot actual corre con un proveedor externo; el servicio propio está solo diseñado (`~/bot-whatsapp/DISENO.md`).
+- **Sin resolver:** cómo entra el bot en los planes (hoy en estadía va en Profesional y Completo y su consumo «se
+  estima aparte») y qué cuesta al mes. No usar el bot de un cliente como demostración: hace falta una copia aparte.
+
 ## Reglas que no se negocian
 
 - **Este directorio es el docroot público del subdominio.** Hasta que exista el proxy a Next, el
