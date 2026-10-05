@@ -97,6 +97,17 @@ nichos (`hoteles`, `hoteles-estadia`).
     `CIUDADES` de `src/lib/overpass-contrato.ts`. Un nicho sin `etiquetaOsm` no se puede buscar en el mapa
     (lo llena `scripts/sembrar-nichos.mjs`). `PROSPECTOS_OVERPASS_ESPERA_MS` solo se respeta fuera de
     producción.
+  - **Directorio abierto (Overture Maps, 5-oct):** segundo botón de la pestaña «Mapa», mismo nicho y ciudad. Lee la
+    tabla `LugarOverture` (solo Venezuela, confianza ≥ 0,7): **el panel no sale a internet**, por eso responde al
+    momento. Se llena a mano: `python3 scripts/extraer-overture.py <publicación>` (única salida a la red; deja
+    `~/overture/ve-<publicación>.jsonl`) y luego `scripts/cargar-overture.mts <archivo> --aplicar` con el env
+    cargado, que reemplaza la tabla en una transacción y **se niega si lo nuevo es menos de la mitad** de lo que hay.
+    Overture publica una vez al mes. Reglas en `src/lib/overture-contrato.ts`: de nicho a categorías (`REGLAS_NICHO`;
+    `hoteles` y `cosmeticos` no tienen: botón apagado), la ciudad **por distancia y no por nombre** (un lugar en el
+    solape de dos radios es de la de centro más cercano), la fuente de cada dato es la página de Facebook del negocio
+    y **sin Facebook ni web el lugar no entra**. Al agregar un nicho a `sembrar-nichos.mjs`, el test de los 19 slugs
+    obliga a ponerlo en `REGLAS_NICHO` o en `SIN_EQUIVALENCIA`. Recorrido: `scripts/verificar-flujo-overture.mts`
+    (⚠️ solo contra el clon y la base de tests, con `LugarOverture` vacía).
   - **Segundo cron dentro de la app:** `src/instrumentation.ts` → `limpiarLotesViejos(30)`, a la misma hora
     que las mensualidades; deja `[revision] N lotes viejos limpiados` (si no aparece tras un
     `pm2 restart`, no arrancó). Es lo único que borra algo en toda la app: filas de `Revision` ya

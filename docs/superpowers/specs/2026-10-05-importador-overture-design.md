@@ -1,6 +1,6 @@
 # Importador de Overture Maps (Venezuela) — diseño
 
-**Fecha:** 2026-10-05 · **Dueño:** Neri Colón · **Estado:** propuesta, pendiente de aprobación.
+**Fecha:** 2026-10-05 · **Dueño:** Neri Colón · **Estado:** implementada en la rama `overture` (5-oct); pendiente de despliegue.
 Extiende la pieza 2 (`2026-09-16-buscador-importacion-design.md`). No cambia la bandeja ni la clave de duplicado.
 
 ## Qué resuelve
@@ -202,8 +202,14 @@ aporta nace descartado, lo que ya está pendiente en otro lote también.
 
 1. Confirmar la licencia de la fuente `meta` dentro de Overture (el campo `sources[].license` de cada fila) y
    dejarla anotada en este spec.
+   **Hecho el 5-oct** sobre `2026-09-23.1` (Venezuela, confianza ≥ 0,7): `meta` 19.567 filas con
+   `CDLA-Permissive-2.0`; `Microsoft`, `PinMeTo` y la capa `Overture` igual; `Foursquare` 817 con `Apache-2.0`;
+   `AllThePlaces` 289 con `CC0-1.0`. Todas permiten el uso comercial.
 2. Probar a mano 20 teléfonos de una ciudad para saber cuántos siguen vivos. Si son menos de la mitad, se
    habla con Neri antes de desplegar.
+   **Muestra entregada a Neri el 5-oct** (10 restaurantes y 10 clínicas de Caracas); resultado pendiente.
+   Carga de ensayo: 20.524 lugares; en las 22 ciudades del panel y los 17 nichos con equivalencia salen 5.879
+   fichas con teléfono o correo, 3.278 de ellas con WhatsApp.
 
 ## Lo que no entra
 
