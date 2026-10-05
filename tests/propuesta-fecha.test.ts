@@ -23,3 +23,17 @@ describe.runIf(DB_HABILITADA)("fecha de la propuesta", () => {
     expect(await fechaDePropuesta(p.id)).toBe("2026-09-10");
   });
 });
+
+import { leerPlantillaPara } from "@/lib/propuesta";
+
+describe.runIf(DB_HABILITADA)("plantilla segun el pais", () => {
+  it("cobros y pagos tiene plantilla propia para Colombia; los demas arquetipos usan la misma con sus bloques", async () => {
+    const ve = (await leerPlantillaPara("cobros-y-pagos", "VE"))!;
+    const co = (await leerPlantillaPara("cobros-y-pagos", "CO"))!;
+    expect(ve).toContain("C2P");
+    expect(co).toContain("Wompi");
+    expect(co).not.toContain("C2P");
+    expect(await leerPlantillaPara("hoteles", "CO")).toBe(await leerPlantillaPara("hoteles", "VE"));
+    expect(await leerPlantillaPara("no-existe", "CO")).toBeNull();
+  });
+});

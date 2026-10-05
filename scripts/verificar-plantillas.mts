@@ -14,7 +14,8 @@ const pg = await b.newPage();
 let fallas = 0;
 for (const slug of slugs) {
   const plantilla = readFileSync(path.join(DIR, `${slug}.html`), "utf8");
-  const paises = plantilla.includes("<!--si:co-->") ? (["VE", "CO"] as const) : (["VE"] as const);
+  // Una plantilla <slug>-co es solo de Colombia; las demas se arman para los dos paises si traen bloques si:co.
+  const paises = slug.endsWith("-co") ? (["CO"] as const) : plantilla.includes("<!--si:co-->") ? (["VE", "CO"] as const) : (["VE"] as const);
   for (const pais of paises) for (const conWeb of [true, false]) {
     const html = renderPropuesta(plantilla, "Restaurante El Ejemplo Largo de Nombre C.A.", "#", { ciudad: "Valencia", rubro: "restaurantes y bares", conWeb, fecha: "2026-11-20", hoy: "2026-11-20", pais });
     await pg.setContent(html, { waitUntil: "networkidle" });

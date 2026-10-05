@@ -10,7 +10,7 @@ export const MENSAJE_CO_SEGUIMIENTO =
 // Etapa 2: los arquetipos cuya plantilla ya tiene sus bloques <!--si:co--> revisados y aprobados por Neri. Solo los
 // prospectos colombianos de esos nichos reciben el enlace a la propuesta; los demas, el mensaje sin enlace.
 // VACIA a proposito hasta que Neri apruebe la primera (restaurantes-y-bares esta escrita, falta su visto bueno).
-export const PLANTILLAS_CON_COLOMBIA: string[] = ["restaurantes-y-bares", "reservas", "comercio-y-tienda", "citas-y-servicios", "hoteles", "hoteles-estadia"];
+export const PLANTILLAS_CON_COLOMBIA: string[] = ["restaurantes-y-bares", "reservas", "comercio-y-tienda", "citas-y-servicios", "hoteles", "hoteles-estadia", "cobros-y-pagos"];
 
 export const MENSAJE_CO_INICIAL_CON_PROPUESTA =
   "Buenas, equipo de {nombre}. Soy Neri Colón, desarrollador de sistemas. Mis sistemas funcionan hoy en empresas de Venezuela y el exterior, y estoy empezando a trabajar con negocios de {ciudad}. Para {rubro} tengo un sistema propio que se adapta a su operación y queda a su nombre, con el cobro en línea integrado a Wompi. Le preparé una propuesta de 9 páginas para {nombre}: {enlace} {promo} ¿Le parece si lo conversamos 30 minutos?";

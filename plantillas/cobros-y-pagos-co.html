@@ -1,0 +1,658 @@
+<title>Propuesta NERACOSU para {{nombre}}</title>
+<meta name="description" content="Propuesta comercial de NERACOSU para negocios que cobran mensualidades en Colombia (gimnasios, academias, institutos): mensualidad generada sola, recordatorio con enlace de pago por Wompi y control de quién está al día.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&family=Source+Sans+3:wght@400;600;700&display=swap">
+<style>
+  :root {
+    --papel: #ffffff;
+    --mesa: #e3e6e4;
+    --tinta: #1a1d1c;
+    --tinta-2: #3c4240;
+    --gris: #687170;
+    --regla: #d0d6d3;
+    --sello: #1f5a45;
+    --llave: #93661c;
+    --fondo-suave: #f1f4f2;
+    --verde-marca: #5ed29c;
+    --serif: "Source Serif 4", Georgia, "Times New Roman", serif;
+    --sans: "Source Sans 3", "Segoe UI", Arial, sans-serif;
+  }
+  /* Documento impreso: un solo aspecto en ambos temas, a proposito */
+  html, body { background: var(--mesa); color: var(--tinta); }
+  body {
+    margin: 0;
+    font-family: var(--sans);
+    font-size: 10.5pt;
+    line-height: 1.5;
+    padding-block: 28px;
+    padding-inline: 16px;
+    -webkit-font-smoothing: antialiased;
+  }
+  * { box-sizing: border-box; }
+  h1, h2, h3 { font-family: var(--serif); font-weight: 600; margin: 0; text-wrap: balance; }
+  p { margin: 0; }
+  ul, ol { margin: 0; padding: 0; }
+  b, strong { font-weight: 600; color: var(--tinta); }
+  a { color: var(--sello); }
+
+  .documento { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; justify-items: center; }
+  .documento > * { min-width: 0; }
+  .hoja {
+    width: 210mm; max-width: 100%; min-height: 297mm;
+    background: var(--papel);
+    padding: 15mm 19mm 13mm;
+    box-shadow: 0 1px 3px rgba(26, 29, 28, .10), 0 10px 28px rgba(26, 29, 28, .10);
+    display: flex; flex-direction: column; gap: 5mm;
+  }
+  .hoja > * { flex-shrink: 0; }
+
+  /* ---------- membrete y pie ---------- */
+  .membrete {
+    display: flex; justify-content: space-between; align-items: flex-end; gap: 12px;
+    padding-bottom: 3mm; border-bottom: 1.5px solid var(--tinta);
+  }
+  .logo { font-family: var(--sans); font-weight: 700; font-size: 13pt; letter-spacing: .06em; color: var(--tinta); }
+  .logo i { font-style: normal; color: var(--verde-marca); }
+  .membrete__datos { text-align: right; font-size: 7.8pt; color: var(--gris); line-height: 1.4; }
+  .pie {
+    margin-top: auto; display: flex; justify-content: space-between; gap: 12px;
+    font-size: 7.8pt; color: var(--gris); padding-top: 2.5mm; border-top: 1px solid var(--regla);
+  }
+
+  /* ---------- tipografia de seccion ---------- */
+  .seccion { display: grid; gap: 3mm; }
+  .antetitulo { font-size: 7.8pt; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--llave); }
+  .seccion__titulo { font-size: 17pt; line-height: 1.18; }
+  .sub { font-size: 11.5pt; font-family: var(--serif); font-weight: 600; }
+  .parrafo { color: var(--tinta-2); max-width: 74ch; }
+  .nota { font-size: 8.3pt; color: var(--gris); }
+
+  /* ---------- portada ---------- */
+  .portada__cuerpo { margin-top: 22mm; display: grid; grid-template-columns: minmax(0, 1fr) 42mm; gap: 8mm; align-items: start; }
+  .portada__textos { display: grid; gap: 6mm; }
+  .portada__tipo { font-size: 9pt; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--sello); }
+  .portada h1 { font-size: 40pt; line-height: 1.04; font-weight: 700; letter-spacing: -.005em; }
+  .portada h1 span { display: block; color: var(--tinta-2); font-weight: 400; font-style: italic; font-size: 26pt; margin-top: 3mm; }
+  .portada__que { font-family: var(--serif); font-size: 14pt; line-height: 1.35; color: var(--tinta-2); max-width: 34ch; padding-top: 5mm; border-top: 1px solid var(--regla); }
+
+  /* el llavero de habitacion: el objeto que todo recepcionista entrega */
+  .llavero { position: relative; margin-top: 6mm; justify-self: end; width: 36mm; }
+  .llavero__aro { width: 15mm; height: 15mm; border: 1.6mm solid var(--llave); border-radius: 50%; margin: 0 auto -3mm; position: relative; z-index: 1; }
+  .llavero__placa {
+    background: var(--sello); color: #fff; border-radius: 18mm 18mm 5mm 5mm;
+    padding: 9mm 3mm 7mm; text-align: center; display: grid; gap: 1.5mm;
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  }
+  .llavero__agujero { width: 5mm; height: 5mm; border-radius: 50%; background: var(--papel); margin: -4mm auto 1mm; }
+  .llavero__hab { font-family: var(--serif); font-size: 30pt; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+  .llavero__rot { font-size: 6.8pt; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: rgba(255,255,255,.82); }
+  .llavero__hotel { font-size: 7.5pt; color: rgba(255,255,255,.9); border-top: 1px solid rgba(255,255,255,.3); padding-top: 1.5mm; overflow-wrap: anywhere; line-height: 1.25; }
+
+  .portada__ficha { margin: auto 0 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-top: 1.5px solid var(--tinta); }
+  .portada__ficha div { padding: 3.3mm 0; border-bottom: 1px solid var(--regla); display: grid; gap: .8mm; }
+  .portada__ficha div:nth-child(odd) { padding-right: 6mm; }
+  .portada__ficha dt { font-size: 7.5pt; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--gris); }
+  .portada__ficha dd { margin: 0; font-size: 10pt; line-height: 1.4; }
+  .portada__ficha dd small { display: block; color: var(--gris); font-size: 8.8pt; }
+
+  /* ---------- carta ---------- */
+  .carta { display: grid; gap: 2.8mm; color: var(--tinta-2); }
+  .carta__lugar { text-align: right; }
+  .carta__destino { color: var(--tinta); }
+  .resumen { border: 1.5px solid var(--tinta); padding: 4.5mm 6mm; display: grid; gap: 3mm; }
+  .resumen h2 { font-size: 12.5pt; }
+  .resumen dl { display: grid; grid-template-columns: 34mm 1fr; gap: 1.6mm 5mm; margin: 0; }
+  .resumen dt { font-size: 9pt; font-weight: 700; color: var(--gris); padding-top: .4mm; }
+  .resumen dd { margin: 0; font-size: 9.8pt; color: var(--tinta); }
+  .firma-carta { display: grid; gap: .5mm; }
+  .firma-carta__linea { width: 58mm; height: 10mm; border-bottom: 1px solid var(--tinta); margin-bottom: 1.5mm; }
+
+  /* ---------- fugas ---------- */
+  .fugas { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4mm 8mm; }
+  .fuga { display: grid; gap: 1.4mm; align-content: start; padding-top: 3mm; border-top: 1.5px solid var(--tinta); }
+  .fuga h3 { font-size: 11.5pt; line-height: 1.25; }
+  .fuga p { color: var(--tinta-2); font-size: 9.4pt; }
+  .fuga__cierre { font-size: 9pt; color: var(--tinta); background: var(--fondo-suave); padding: 2mm 3mm; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .fuga__cierre b { color: var(--sello); }
+
+  .cuenta { border: 1px dashed var(--gris); padding: 4.5mm 5.5mm; display: grid; gap: 3mm; }
+  .cuenta h3 { font-size: 12pt; }
+  .cuenta__filas { display: grid; gap: 2.4mm; }
+  .cuenta__fila { display: grid; grid-template-columns: 7mm minmax(0, 1fr) 40mm; gap: 3mm; align-items: end; font-size: 10pt; }
+  .cuenta__fila span:first-child { font-family: var(--serif); font-weight: 700; color: var(--sello); }
+  .blanco { display: block; border-bottom: 1px solid var(--tinta); height: 6mm; }
+  .cuenta__ejemplo { font-size: 8.8pt; color: var(--tinta-2); border-top: 1px solid var(--regla); padding-top: 2.5mm; }
+
+  /* ---------- noche ---------- */
+  .noche { list-style: none; display: grid; }
+  .noche li { display: grid; grid-template-columns: 17mm minmax(0, 1fr); gap: 4mm; padding: 2.4mm 0; border-bottom: 1px solid var(--regla); }
+  .noche li:first-child { border-top: 1.5px solid var(--tinta); }
+  .hora { font-family: var(--serif); font-weight: 700; font-size: 12pt; color: var(--llave); font-variant-numeric: tabular-nums; line-height: 1.3; }
+  .noche h3 { font-size: 10.5pt; font-family: var(--sans); font-weight: 700; }
+  .noche p { color: var(--tinta-2); font-size: 9.3pt; }
+
+  .reglas { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 3mm 8mm; }
+  .regla { display: grid; gap: .8mm; }
+  .regla h3 { font-size: 10.5pt; }
+  .regla p { font-size: 9.2pt; color: var(--tinta-2); }
+
+  /* ---------- prueba ---------- */
+  .cifras { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-top: 1.5px solid var(--tinta); border-bottom: 1px solid var(--regla); }
+  .cifra { padding: 3.5mm 3mm 3.5mm 0; display: grid; gap: .8mm; align-content: start; }
+  .cifra + .cifra { padding-left: 3mm; border-left: 1px solid var(--regla); }
+  .cifra b { font-family: var(--serif); font-size: 22pt; line-height: 1; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .cifra span { font-size: 8.4pt; color: var(--tinta-2); line-height: 1.3; }
+
+  .caso { display: grid; grid-template-columns: 38mm minmax(0, 1fr); gap: 6mm; padding: 3.5mm 0; border-bottom: 1px solid var(--regla); }
+  .caso__rotulo { display: grid; gap: .8mm; align-content: start; }
+  .caso__rotulo b { font-family: var(--serif); font-size: 11.5pt; }
+  .caso__rotulo span { font-size: 8.4pt; color: var(--gris); }
+  .caso__cuerpo { display: grid; gap: 2mm; color: var(--tinta-2); font-size: 9.5pt; }
+
+  .lista { display: grid; gap: 1.4mm; list-style: none; }
+  .lista li { position: relative; padding-left: 4.5mm; color: var(--tinta-2); }
+  .lista li::before { content: ""; position: absolute; left: 0; top: .62em; width: 1.6mm; height: 1.6mm; background: var(--sello); }
+
+  .aprendido { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5mm; }
+  .aprendido div { display: grid; gap: 1mm; align-content: start; padding-top: 2.5mm; border-top: 1px solid var(--tinta); }
+  .aprendido i { font-family: var(--serif); font-size: 9.6pt; color: var(--tinta); }
+  .aprendido p { font-size: 8.9pt; color: var(--tinta-2); }
+
+  .autor { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6mm; align-items: end; border: 1.5px solid var(--tinta); padding: 4.5mm 6mm; }
+  .autor h3 { font-size: 12.5pt; }
+  .autor p { color: var(--tinta-2); font-size: 9.5pt; margin-top: 1.5mm; }
+  .autor__datos { font-size: 9pt; color: var(--tinta-2); text-align: right; line-height: 1.55; }
+
+  /* ---------- planes ---------- */
+  .tabla-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 9.3pt; font-variant-numeric: tabular-nums; }
+  th, td { padding: 1.8mm 2.4mm; text-align: left; vertical-align: top; border-bottom: 1px solid var(--regla); }
+  thead th { font-size: 7.6pt; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--gris); border-bottom: 1.5px solid var(--tinta); vertical-align: bottom; }
+  .planes th, .planes td { padding: 1.15mm 2.4mm; }
+  .planes th[scope="row"] { font-weight: 400; color: var(--tinta-2); width: 46%; }
+  .planes td { text-align: center; width: 18%; }
+  .planes thead th { text-align: center; }
+  .planes thead th:first-child { text-align: left; }
+  .planes .nombre-plan { display: block; font-family: var(--serif); font-size: 12pt; letter-spacing: 0; text-transform: none; color: var(--tinta); }
+  .planes .precio { font-family: var(--serif); font-size: 15pt; font-weight: 700; color: var(--tinta); line-height: 1.1; }
+  .planes .mes { font-size: 8.6pt; color: var(--gris); }
+  .rec { background: var(--fondo-suave); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .marca-rec { display: inline-block; margin-bottom: 1mm; font-size: 6.8pt; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: #fff; background: var(--sello); padding: .6mm 1.8mm; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .si::before { content: "●"; color: var(--tinta); font-size: 8pt; }
+  .rec .si::before { color: var(--sello); }
+  .no { color: var(--regla); }
+  .planes tr.grupo td { font-size: 7.6pt; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--sello); padding-top: 2mm; border-bottom: 1px solid var(--tinta); text-align: left; background: none; }
+
+  .dos-col { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4mm 9mm; }
+  .col { display: grid; gap: 2mm; align-content: start; }
+  .destacado { border-left: 1.2mm solid var(--llave); padding: 2.5mm 0 2.5mm 4mm; display: grid; gap: 1mm; }
+  .destacado b { font-family: var(--serif); font-size: 11pt; }
+  .destacado p { font-size: 9.3pt; color: var(--tinta-2); }
+
+  .comparar td:first-child, .comparar th:first-child { width: 50%; }
+  .comparar td { color: var(--tinta-2); font-size: 9pt; }
+
+  .preguntas { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 3.2mm 8mm; }
+  .pregunta { display: grid; gap: .8mm; align-content: start; }
+  .pregunta h3 { font-size: 10.3pt; }
+  .pregunta p { color: var(--tinta-2); font-size: 9.2pt; }
+
+  .pasos { list-style: none; counter-reset: paso; display: grid; }
+  .pasos li { counter-increment: paso; display: grid; grid-template-columns: 8mm 1fr; gap: 2mm; padding: 2.4mm 0; border-bottom: 1px solid var(--regla); color: var(--tinta-2); }
+  .pasos li:first-child { border-top: 1.5px solid var(--tinta); }
+  .pasos li::before { content: counter(paso) "."; font-family: var(--serif); font-weight: 700; font-size: 11.5pt; color: var(--sello); line-height: 1.25; }
+
+  .contacto { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1.5px solid var(--tinta); border-bottom: 1px solid var(--regla); }
+  .contacto div { padding: 3.5mm 3mm 3.5mm 0; display: grid; gap: .8mm; }
+  .contacto div + div { padding-left: 3mm; border-left: 1px solid var(--regla); }
+  .contacto dt { font-size: 7.5pt; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--gris); }
+  .contacto dd { margin: 0; font-family: var(--serif); font-size: 12pt; font-weight: 600; overflow-wrap: anywhere; }
+  .contacto a { color: var(--tinta); text-decoration: none; }
+
+  .eleccion { display: flex; flex-wrap: wrap; gap: 2.5mm 7mm; align-items: center; font-size: 9.8pt; }
+  .caja { display: inline-block; width: 3.6mm; height: 3.6mm; border: 1.2px solid var(--tinta); vertical-align: -.6mm; margin-right: 2mm; }
+  .firmas { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12mm; }
+  .firma { display: grid; gap: .5mm; font-size: 9pt; color: var(--tinta-2); }
+  .firma__linea { height: 14mm; border-bottom: 1px solid var(--tinta); margin-bottom: 1.5mm; }
+
+  /* ---------- barra de descarga (solo pantalla) ---------- */
+  .barra {
+    position: sticky; top: calc(12px + env(safe-area-inset-top, 0px)); z-index: 5;
+    width: 210mm; max-width: 100%;
+    display: flex; justify-content: space-between; align-items: center; gap: 12px 20px;
+    background: var(--tinta); color: #fff; border-radius: 10px; padding: 12px 12px 12px 20px;
+    box-shadow: 0 8px 22px rgba(26, 29, 28, .25);
+  }
+  .barra__info { display: grid; gap: 2px; min-width: 0; flex: 1 1 auto; }
+  .barra__info .logo { color: #fff; font-size: 13px; }
+  .barra__info span { font-size: 12.5px; color: rgba(255,255,255,.7); }
+  .barra__accion { display: flex; align-items: center; gap: 12px; flex: 0 0 auto; }
+  .boton {
+    font: 600 15px/1 var(--sans); background: #fff; color: var(--tinta); border: 0; border-radius: 7px;
+    padding: 12px 18px; cursor: pointer; display: inline-flex; gap: 10px; align-items: center; white-space: nowrap;
+  }
+  .boton:hover { background: #e6ece9; }
+  .boton:focus-visible { outline: 3px solid var(--verde-marca); outline-offset: 2px; }
+  .boton:disabled { opacity: .7; cursor: progress; }
+  .boton svg { width: 18px; height: 18px; }
+  .aviso { font-size: 12.5px; color: rgba(255,255,255,.85); }
+  .aviso:empty { display: none; }
+
+  @media screen and (max-width: 820px) {
+    body { font-size: 15px; }
+    .hoja { min-height: 0; padding: 26px 20px 28px; gap: 20px; }
+    .portada__cuerpo { margin-top: 20px; grid-template-columns: 1fr; }
+    .llavero { justify-self: start; }
+    .portada h1 { font-size: 44px; }
+    .portada h1 span { font-size: 28px; }
+    .portada__que { font-size: 19px; }
+    .portada__ficha { margin-top: 28px; }
+    .portada__ficha, .dos-col, .firmas, .fugas, .reglas, .preguntas, .aprendido, .contacto, .autor { grid-template-columns: 1fr; }
+    .portada__ficha div:nth-child(odd) { padding-right: 0; }
+    .contacto div + div { padding-left: 0; border-left: 0; }
+    .autor__datos { text-align: left; }
+    .cifras { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .cifra + .cifra { padding-left: 0; border-left: 0; }
+    .caso { grid-template-columns: 1fr; gap: 8px; }
+    .cuenta__fila { grid-template-columns: 24px minmax(0, 1fr); }
+    .cuenta__fila .blanco { grid-column: 2; }
+    .resumen { padding: 16px; }
+    .resumen dl { grid-template-columns: 1fr; gap: 2px; }
+    .resumen dd { margin-bottom: 10px; }
+    .membrete { flex-wrap: wrap; }
+    .membrete__datos { text-align: left; }
+    table { font-size: 13px; }
+    .fuga p, .noche p, .regla p, .pregunta p, .nota, .caso__cuerpo, .aprendido p { font-size: 14px; }
+    .barra { top: calc(8px + env(safe-area-inset-top, 0px)); padding: 12px; flex-wrap: wrap; }
+    .barra__info { flex-basis: 100%; }
+    .barra__accion, .boton { width: 100%; justify-content: center; }
+  }
+
+  @page { size: A4; margin: 0; }
+  @media print {
+    html, body { background: var(--papel); }
+    body { padding: 0; }
+    .documento { display: block; }
+    .hoja { width: 210mm; height: 296.5mm; min-height: 0; box-shadow: none; overflow: hidden; break-after: page; }
+    .hoja:last-child { break-after: auto; }
+    .barra { display: none; }
+    .tabla-wrap { overflow: visible; }
+  }
+  /* texto corrido justificado, con silabeo en espanol (regla de Neri, 2026-09-27). :where() lo deja sin
+     especificidad: cualquier alineacion explicita (fecha de la carta a la derecha, centrados) sigue ganando */
+  :where(.parrafo, .portada__que, .carta p, .resumen dd, .regla p, .fuga p, .noche p, .aprendido p,
+    .destacado p, .pregunta p, .pasos li > *, .lista li, .caso__cuerpo, .autor p, .cuenta__ejemplo, .nota, .fuente) {
+    text-align: justify; hyphens: auto; -webkit-hyphens: auto;
+  }
+</style>
+
+<div class="documento">
+
+  <div class="barra" role="region" aria-label="Descarga">
+    <div class="barra__info">
+      <div class="logo">NERACOSU<i>.</i></div>
+      <span>Propuesta para <b style="color:#fff">{{nombre}}</b> · 9 hojas A4</span>
+    </div>
+    <div class="barra__accion">
+      <span class="aviso" id="aviso-descarga" role="status"></span>
+      <button class="boton" id="descargar-pdf" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v12m0 0-5-5m5 5 5-5M4 19h16"/></svg>
+        Descargar PDF
+      </button>
+    </div>
+  </div>
+
+  <!-- ===================== 1 · PORTADA ===================== -->
+  <section class="hoja portada" aria-label="Portada">
+    <header class="membrete">
+      <div class="logo">NERACOSU<i>.</i></div>
+      <div class="membrete__datos">Ing. Neri Colón · Desarrollo de sistemas<br>neracosu.com · WhatsApp +58 422 270 7095</div>
+    </header>
+    <div class="portada__cuerpo">
+      <div class="portada__textos">
+        <p class="portada__tipo">Propuesta para {{nombre}}</p>
+        <h1>Alguien está mirando capturas<span>para saber si le pagaron.</span></h1>
+        <p class="portada__que">Un sistema de mensualidades propio para {{nombre}}: genera el cobro de cada alumno o socio, le manda el recordatorio con su enlace de pago y lo marca al día cuando el pago se confirma por Wompi, sin que nadie revise capturas. Mis sistemas cobran hoy en tres negocios de La Guaira, Venezuela, y en una plataforma propia de validación de pagos.</p>
+      </div>
+      <div class="llavero" aria-hidden="true">
+        <div class="llavero__aro"></div>
+        <div class="llavero__placa">
+          <div class="llavero__agujero"></div>
+          <span class="llavero__rot">Mensualidad</span>
+          <span class="llavero__hab">✓</span>
+          <span class="llavero__rot">Validada · 21:14</span>
+          <span class="llavero__hotel">{{nombre}}</span>
+        </div>
+      </div>
+    </div>
+    <dl class="portada__ficha">
+      <div><dt>Preparada para</dt><dd>{{nombre}}<small>{{ciudad}} · {{rubro}}</small></dd></div>
+      <div><dt>Preparada por</dt><dd>Ing. Neri Colón<small>NERACOSU · 17 años desarrollando sistemas</small></dd></div>
+      <div><dt>Fecha</dt><dd>{{fecha}}<small>Precios vigentes hasta el {{vigencia}}</small></dd></div>
+      <div><dt>Referencias verificables</dt><dd>armorpay.net · tres negocios en La Guaira<small>hotel, complejo deportivo y sport bar</small></dd></div>
+    </dl>
+    <footer class="pie"><span>NERACOSU · Propuesta comercial</span><span>1 / 9</span></footer>
+  </section>
+
+  <!-- ===================== 2 · CARTA ===================== -->
+  <section class="hoja" aria-label="Carta y resumen">
+    <header class="membrete">
+      <div class="logo">NERACOSU<i>.</i></div>
+      <div class="membrete__datos">Carta de presentación</div>
+    </header>
+    <div class="carta">
+      <p class="carta__lugar">Caracas, {{fecha}}</p>
+      <p class="carta__destino">Estimado equipo de {{nombre}}:</p>
+      <p>En un negocio que cobra mensualidades la plata no se pierde de golpe. Se va en la captura editada que nadie detectó, en la misma transferencia presentada dos veces, en el descuento que alguien dio y nadie anotó, en el que dejó de pagar hace dos meses y sigue entrando, y en las horas de una persona que abre el banco en otra pestaña para saber si un pago entró. Nada de eso aparece en ninguna nómina, pero se paga igual.</p>
+      <p>Construí ArmorPay, una plataforma de validación de pagos donde varios comercios confirman en segundos que un pago llegó a su cuenta, y los cobros que hoy operan en tres negocios distintos de La Guaira, en Venezuela, con once métodos conviviendo en una sola caja. El dinero nunca pasa por mí: va del cliente a su cuenta; el sistema solo confirma que llegó. Por eso no hay comisión.</p>
+      <!--si:web--><p>Vi que {{nombre}} ya tiene página en internet. No le propongo otra: le propongo que cada alumno o socio pague su mensualidad desde un enlace, por Wompi, y que la lista de quién está al día se lleve sola.</p><!--fin:web-->
+      <!--si:sinweb--><p>No hace falta que tenga un sistema: se parte de la lista de alumnos o socios que lleve hoy, aunque sea una hoja de cálculo. En Colombia el cobro en línea va por Wompi, con la cuenta que el negocio abre a su nombre: el dinero le llega directo a usted.</p><!--fin:sinweb-->
+      <p>En estas páginas encontrará la cuenta para medir su propia fuga, el recorrido de un mes real, lo que cuesta cada plan y las respuestas a las preguntas que casi todo dueño se hace antes de decidir. Si al leerlo concluye que no le hace falta, también está bien. Lo único que le pido son 30 minutos para conversarlo.</p>
+    </div>
+    <div class="firma-carta">
+      <div class="firma-carta__linea"></div>
+      <b>Ing. Neri Colón</b>
+      <span class="nota">NERACOSU · neracosu.com · info@neracosu.com</span>
+    </div>
+    <div class="resumen">
+      <h2>Resumen en un minuto</h2>
+      <dl>
+        <dt>Qué es</dt><dd>Mensualidad generada sola para cada alumno o socio, recordatorio automático por WhatsApp con su enlace de pago, cobro en línea por Wompi (tarjeta o Nequi) que se confirma solo, y lista de quién está al día.</dd>
+        <dt>Dónde funciona</dt><dd>En el teléfono y en la computadora, sin instalar nada. Los cobros operan hoy en tres negocios de La Guaira, Venezuela; la conexión con Wompi se hace para usted.</dd>
+        <dt>Qué cambia</dt><dd>Nadie revisa capturas de los pagos en línea. El que no pagó no figura como al día. La mensualidad se recuerda sola, antes de vencer.</dd>
+        <dt>Inversión</dt><dd>Desde <b>USD 2.400</b> de adaptación (50 % al aprobar, 50 % a la entrega), más USD 100 al mes de servicio.<!--si:promo--> <b>40 % menos</b> hasta el 31 de diciembre.<!--fin:promo--></dd>
+        <dt>Su riesgo</dt><dd>60 días de garantía; después, el soporte va en el servicio mensual. Si lo deja, se lleva el sistema y la base de datos.</dd>
+        <dt>Siguiente paso</dt><dd>Una conversación de 30 minutos, por videollamada, viendo cómo cobra hoy y los cobros que ya operan.</dd>
+      </dl>
+    </div>
+    <footer class="pie"><span>NERACOSU · Propuesta comercial</span><span>2 / 9</span></footer>
+  </section>
+
+  <!-- ===================== 3 · FUGAS ===================== -->
+  <section class="hoja" aria-label="Lo que cuesta no tener control">
+    <header class="membrete">
+      <div class="logo">NERACOSU<i>.</i></div>
+      <div class="membrete__datos">Lo que cuesta no tener control</div>
+    </header>
+    <div class="seccion">
+      <p class="antetitulo">Cuatro fugas que solo aparecen al cerrar</p>
+      <h2 class="seccion__titulo">La fuga cara no es el tiempo: es el pago que se dio por bueno y nunca entró.</h2>
+    </div>
+    <div class="fugas">
+      <article class="fuga">
+        <h3>La captura editada que nadie detecta</h3>
+        <p>Una imagen se retoca en treinta segundos. Quien recibe está apurado, ve el logo del banco y el monto correcto, y da por pagada la mensualidad. El pago nunca entró y se entera al cuadrar, si es que cuadra.</p>
+        <p class="fuga__cierre"><b>Cómo se cierra:</b> el pago en línea lo confirma Wompi directamente al sistema, sin imagen de por medio. Lo que llegue por transferencia o en efectivo queda pendiente hasta que un administrador lo confirme.</p>
+      </article>
+      <article class="fuga">
+        <h3>La misma referencia usada dos veces</h3>
+        <p>Un pago real, presentado por dos personas o en dos meses distintos. Con verificación manual y turnos separados es prácticamente indetectable.</p>
+        <p class="fuga__cierre"><b>Cómo se cierra:</b> cada referencia se marca como consumida al usarse. Un segundo intento con la misma referencia se rechaza aunque el pago exista de verdad.</p>
+      </article>
+      <article class="fuga">
+        <h3>El descuento que nadie anotó</h3>
+        <p>Alguien rebajó una mensualidad «por este mes» y al siguiente nadie recuerda si era para siempre. Sin registro, cada quien cobra lo que cree.</p>
+        <p class="fuga__cierre"><b>Cómo se cierra:</b> cada descuento queda con quién lo dio y cuándo. El monto de cada mensualidad sale del sistema, no de la memoria de nadie.</p>
+      </article>
+      <article class="fuga">
+        <h3>El que dejó de pagar y sigue entrando</h3>
+        <p>Nadie llamó a recordarle la mensualidad, nadie revisó la lista, y lleva dos meses usando el servicio. Cobrarle atrasado es una conversación incómoda que casi siempre termina en descuento.</p>
+        <p class="fuga__cierre"><b>Cómo se cierra:</b> recordatorio automático antes de vencer, con el enlace de cobro en el mismo mensaje; y una lista de quién está al día que no depende de la memoria de nadie.</p>
+      </article>
+    </div>
+    <div class="cuenta">
+      <h3>Haga la cuenta de verificar a mano con sus propios números</h3>
+      <div class="cuenta__filas">
+        <div class="cuenta__fila"><span>A</span><span>Pagos por día que alguien confirma mirando el banco</span><span class="blanco"></span></div>
+        <div class="cuenta__fila"><span>B</span><span>Minutos por verificación (abrir el banco, buscar, cotejar)</span><span class="blanco"></span></div>
+        <div class="cuenta__fila"><span>C</span><span>Lo que cuesta una hora de la persona que lo hace, en USD</span><span class="blanco"></span></div>
+        <div class="cuenta__fila"><span>=</span><span><b>A × B ÷ 60 × 30 × C</b> &nbsp;es lo que paga cada mes por un sueldo escondido</span><span class="blanco"></span></div>
+      </div>
+      <p class="cuenta__ejemplo">Ejemplo, no son sus números: 40 pagos al día, 3 minutos cada uno y USD 1 la hora son 60 horas al mes mirando el banco en vez de atender: <b>USD 60</b> al mes en tiempo, y no incluye lo que se pierde cuando la verificación sale mal.</p>
+    </div>
+    <footer class="pie"><span>NERACOSU · Propuesta comercial</span><span>3 / 9</span></footer>
+  </section>
+
+  <!-- ===================== 4 · UNA NOCHE ===================== -->
+  <section class="hoja" aria-label="Una noche cualquiera">
+    <header class="membrete">
+      <div class="logo">NERACOSU<i>.</i></div>
+      <div class="membrete__datos">Cómo se trabaja con el sistema</div>
+    </header>
+    <div class="seccion">
+      <p class="antetitulo">Un mes cualquiera</p>
+      <h2 class="seccion__titulo">Así se cobra una mensualidad.</h2>
+    </div>
+    <ol class="noche">
+      <li><span class="hora">Día 1</span><div><h3>Se genera la mensualidad</h3><p>El sistema arma el cobro del mes de cada alumno o socio con su monto y su fecha de vencimiento. Nadie hace una lista a mano.</p></div></li>
+      <li><span class="hora">Día 3</span><div><h3>Recordatorio automático</h3><p>Antes de vencer, cada persona recibe por WhatsApp el recordatorio con el enlace de cobro. Paga en línea por Wompi, con tarjeta o Nequi, o en efectivo en la sede.</p></div></li>
+      <li><span class="hora">21:14</span><div><h3>Alguien paga desde el teléfono</h3><p>Abre el enlace, paga por Wompi y Wompi le confirma el pago al sistema. En segundos queda al día. Nadie del negocio tuvo que despertarse.</p></div></li>
+      <li><span class="hora">21:15</span><div><h3>El pago queda atado a su mensualidad</h3><p>Cada pago queda con su comprobante de Wompi y la mensualidad que cubre. Una transferencia registrada a mano no se puede usar dos veces.</p></div></li>
+      <li><span class="hora">Día 10</span><div><h3>Los que no pagaron</h3><p>La lista de quién está al día y quién no se actualiza sola. Un segundo recordatorio sale a los vencidos con el mismo enlace, sin llamadas incómodas.</p></div></li>
+      <li><span class="hora">Cierre</span><div><h3>Conciliación y arqueo</h3><p>Cada cobro queda separado por método y por persona. El arqueo de ayer no cambia mañana.</p></div></li>
+    </ol>
+    <div class="seccion">
+      <p class="antetitulo">Control, no vigilancia</p>
+      <div class="reglas">
+        <div class="regla"><h3>Cada quien ve lo suyo</h3><p>Quien atiende registra cobros en efectivo, pero no cambia precios ni marca como pagado lo que no se confirmó.</p></div>
+        <div class="regla"><h3>Nada se borra</h3><p>Un cobro se anula con motivo. Un descuento queda con quién lo dio. Todo deja rastro de quién y cuándo.</p></div>
+        <div class="regla"><h3>Los montos quedan congelados</h3><p>Cada cobro guarda su método, su referencia y quién lo recibió. El arqueo de ayer no cambia de número mañana.</p></div>
+        <div class="regla"><h3>Si el pago en línea falla, no se traba</h3><p>El cobro queda pendiente y la persona puede reintentar o pagar en la sede; un administrador lo confirma. Nunca se da por bueno solo.</p></div>
+      </div>
+    </div>
+    <footer class="pie"><span>NERACOSU · Propuesta comercial</span><span>4 / 9</span></footer>
+  </section>
+
+  <!-- ===================== 5 · PRUEBA ===================== -->
+  <section class="hoja" aria-label="Está operando hoy">
+    <header class="membrete">
+      <div class="logo">NERACOSU<i>.</i></div>
+      <div class="membrete__datos">No es una promesa</div>
+    </header>
+    <div class="seccion">
+      <p class="antetitulo">Está operando hoy</p>
+      <h2 class="seccion__titulo">Los cobros operan hoy en Venezuela. La conexión con Wompi se hace para usted.</h2>
+    </div>
+    <div class="cifras">
+      <div class="cifra"><b>11</b><span>métodos de cobro conviviendo en una sola caja</span></div>
+      <div class="cifra"><b>3</b><span>negocios cobrando con esto en producción</span></div>
+      <div class="cifra"><b>2</b><span>bancos integrados para validación automática</span></div>
+      <div class="cifra"><b>0</b><span>capturas revisadas a mano</span></div>
+    </div>
+    <div>
+      <div class="caso">
+        <div class="caso__rotulo"><b>ArmorPay</b><span>Plataforma de validación de pagos · <a href="https://armorpay.net">armorpay.net</a></span></div>
+        <div class="caso__cuerpo">
+          <p>Una plataforma donde varios comercios distintos confirman en segundos que un pago llegó a su cuenta, con control por caja, turnos y cierre. Cada comercio ve solo lo suyo.</p>
+          <ul class="lista">
+            <li>Dos bancos integrados: cada pago queda registrado con el banco que lo recibió.</li>
+            <li>Nunca se custodia ni se mueve dinero: el pago va del cliente a la cuenta del comercio; la plataforma solo confirma que llegó.</li>
+          </ul>
+        </div>
+      </div>
+      <div class="caso">
+        <div class="caso__rotulo"><b>Tres negocios en La Guaira</b><span>hotelería, deporte y gastronomía</span></div>
+        <div class="caso__cuerpo">
+          <p>Los mismos patrones de cobro, adaptados a tres operaciones distintas del mismo grupo: un hotel, un complejo deportivo y un sport bar.</p>
+          <ul class="lista">
+            <li>Hotel VIP La Guaira: once métodos de cobro en una sola caja, incluyendo verificación de USDT en cadena.</li>
+            <li>Terrazas VIP Sport Park: nueve métodos de pago con control contra fraude en cada uno.</li>
+            <li>VIP Play Sport Bar: cobro dividido entre varios métodos en la misma cuenta, en dos sedes.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <footer class="pie"><span>NERACOSU · Propuesta comercial</span><span>5 / 9</span></footer>
+  </section>
+
+  <!-- ===================== 6 · PLANES ===================== -->
+  <section class="hoja" aria-label="Inversión">
+    <header class="membrete">
+      <div class="logo">NERACOSU<i>.</i></div>
+      <div class="membrete__datos">Inversión</div>
+    </header>
+    <div class="seccion">
+      <p class="antetitulo">La adaptación se paga una vez; el servicio, cada mes</p>
+      <h2 class="seccion__titulo">Tres planes según cuántos alumnos o socios tiene.</h2>
+      <p class="parrafo">El sistema se adapta a su negocio y queda a su nombre. Yo no cobro comisión por pago: la mensualidad paga que alguien lo sostenga. Wompi cobra su propia tarifa por transacción, que usted acuerda directamente con ellos. Son precios de apertura; cuando tenga los primeros casos de este rubro, suben.</p>
+    </div>
+      <div class="tabla-wrap">
+        <table class="planes">
+          <thead>
+            <tr>
+              <th scope="col">Plan</th>
+              <th scope="col"><span class="nombre-plan">Esencial</span>hasta 150 alumnos</th>
+              <th scope="col" class="rec"><span class="marca-rec">El que recomiendo</span><span class="nombre-plan">Profesional</span>hasta 500</th>
+              <th scope="col"><span class="nombre-plan">Completo</span>más de 500 o varias sedes</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><th scope="row">Adaptación e instalación, pago único</th><td><span class="precio">$2.400</span></td><td class="rec"><span class="precio">$3.800</span></td><td><span class="precio">$5.700</span></td></tr>
+            <!--si:promo--><tr><th scope="row">Con el 40 % de temporada, hasta el 31 de diciembre</th><td><span class="precio">$1.440</span></td><td class="rec"><span class="precio">$2.280</span></td><td><span class="precio">$3.420</span></td></tr><!--fin:promo-->
+            <tr><th scope="row">Servicio mensual</th><td><span class="mes">$100 / mes</span></td><td class="rec"><span class="mes">$130 / mes</span></td><td><span class="mes">$170 / mes</span></td></tr>
+            <tr class="grupo"><td colspan="4">Mensualidades</td></tr>
+            <tr><th scope="row">Mensualidad generada sola cada mes</th><td><span class="si"></span></td><td class="rec"><span class="si"></span></td><td><span class="si"></span></td></tr>
+            <tr><th scope="row">Recordatorio por WhatsApp con el enlace de pago</th><td><span class="si"></span></td><td class="rec"><span class="si"></span></td><td><span class="si"></span></td></tr>
+            <tr><th scope="row">Cobro en línea por Wompi, confirmado solo</th><td><span class="si"></span></td><td class="rec"><span class="si"></span></td><td><span class="si"></span></td></tr>
+            <tr><th scope="row">Lista de quién está al día y quién no</th><td><span class="si"></span></td><td class="rec"><span class="si"></span></td><td><span class="si"></span></td></tr>
+            <tr><th scope="row">Efectivo y transferencias registrados con control</th><td><span class="si"></span></td><td class="rec"><span class="si"></span></td><td><span class="si"></span></td></tr>
+            <tr class="grupo"><td colspan="4">Operación</td></tr>
+            <tr><th scope="row">Personal con PIN y permisos</th><td><span class="no">—</span></td><td class="rec"><span class="si"></span></td><td><span class="si"></span></td></tr>
+            <tr><th scope="row">Caja por método de pago y cierre del día</th><td><span class="no">—</span></td><td class="rec"><span class="si"></span></td><td><span class="si"></span></td></tr>
+            <tr><th scope="row">Varias sedes en un solo sistema</th><td><span class="no">—</span></td><td class="rec"><span class="no">—</span></td><td><span class="si"></span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    <footer class="pie"><span>NERACOSU · Propuesta comercial · Precios en USD, no incluyen IVA</span><span>6 / 9</span></footer>
+  </section>
+
+  <!-- ===================== 7 · QUE RECIBE ===================== -->
+  <section class="hoja" aria-label="Qué recibe">
+    <header class="membrete">
+      <div class="logo">NERACOSU<i>.</i></div>
+      <div class="membrete__datos">Qué recibe</div>
+    </header>
+    <div class="dos-col">
+      <div class="destacado"><b>¿Ya tiene un sistema de gestión?</b><p>Dígamelo en la conversación: si se puede conectar, el cobro se le monta encima y su gente no cambia de pantalla.</p></div>
+      <div class="destacado"><b>¿Prefiere empezar pequeño?</b><p>Diagnóstico técnico de su operación por <b>USD 250</b>, entregado en una semana. Si después contrata, se descuenta completo.</p></div>
+    </div>
+    <div class="seccion">
+      <p class="antetitulo">Qué recibe</p>
+      <h2 class="seccion__titulo">El pago único trae la puesta en marcha completa, y la mensualidad lo mantiene andando.</h2>
+    </div>
+    <div class="dos-col">
+      <div class="col">
+        <p class="sub">Siempre incluido</p>
+        <ul class="lista">
+          <li>Integración con el sistema o la lista que ya usa, antes de encender nada</li>
+          <li>Conexión con su cuenta de Wompi y prueba con pagos reales de bajo monto</li>
+          <li>Capacitación de quien cobra y visita guiada dentro del sistema</li>
+          <li>60 días de garantía sobre cualquier falla de funcionamiento</li>
+        </ul>
+      </div>
+      <div class="col">
+        <p class="sub">Qué cubre la mensualidad</p>
+        <ul class="lista">
+          <li>Hosting, dominio, HTTPS y respaldos automáticos diarios</li>
+          <li>Soporte por WhatsApp en horario laboral; lo crítico, el mismo día</li>
+          <li>Actualizaciones de seguridad y mejoras menores</li>
+          <li>Ninguna comisión mía por cobro: el dinero va del cliente a su cuenta</li>
+        </ul>
+      </div>
+    </div>
+    <div class="seccion">
+      <p class="antetitulo">La diferencia que importa</p>
+      <h2 class="seccion__titulo">Un sistema alquilado y uno propio pueden costar parecido al mes. Lo que cambia es qué le queda el día que deja de pagar.</h2>
+    </div>
+    <div class="tabla-wrap">
+      <table class="comparar">
+        <thead><tr><th scope="col">Alquilado: paga el permiso de uso</th><th scope="col">Propio: paga que alguien lo sostenga</th></tr></thead>
+        <tbody>
+          <tr><td>El día que deja de pagar, se apaga.</td><td>El día que deja de pagar, sigue siendo suyo: lo hospeda por unos USD 25 al mes.</td></tr>
+          <tr><td>Sus clientes y su histórico viven en el servidor de otro.</td><td>Recibe el código y la base de datos, con su dominio. Mientras paga el servicio, yo los hospedo.</td></tr>
+          <!--si:ve--><tr><td>Cobra en dólares y la tasa, el pago móvil y el Zelle son problema suyo.</td><td>Cobra en bolívares y divisas con su tasa, y valida cada pago contra el banco.</td></tr><!--fin:ve--><!--si:co--><tr><td>Muchos cobran una comisión propia por cada venta, encima de la del medio de pago.</td><td>El cobro en línea va por Wompi directo a su cuenta. Yo no cobro comisión por venta.</td></tr><!--fin:co-->
+          <tr><td>Lo que le falta entra en la cola de un producto hecho para miles.</td><td>Lo que le falta se conversa y se construye para su operación.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="nota">Con todas las letras: Wompi cobra su tarifa por transacción, como cualquier medio de pago en línea. Lo que compra aquí es el control de sus mensualidades y la propiedad de lo que pagó.</p>
+    <footer class="pie"><span>NERACOSU · Propuesta comercial</span><span>7 / 9</span></footer>
+  </section>
+
+  <!-- ===================== 8 · PREGUNTAS Y SIGUIENTE PASO ===================== -->
+  <section class="hoja" aria-label="Preguntas frecuentes">
+    <header class="membrete">
+      <div class="logo">NERACOSU<i>.</i></div>
+      <div class="membrete__datos">Preguntas frecuentes</div>
+    </header>
+    <div class="seccion">
+      <p class="antetitulo">Las preguntas que casi todo dueño se hace</p>
+      <div class="preguntas">
+        <div class="pregunta"><h3>¿Tengo que cambiar de sistema?</h3><p>No necesariamente. Si ya usa uno y se puede conectar, el cobro se le monta encima; si lleva una hoja de cálculo, se parte de esa lista.</p></div>
+        <div class="pregunta"><h3>¿El dinero pasa por ustedes?</h3><p>Nunca. El pago va del cliente a su cuenta por Wompi; el sistema solo recibe la confirmación. Yo no cobro comisión ni retengo nada.</p></div>
+        <div class="pregunta"><h3>¿Qué necesito para cobrar por Wompi?</h3><p>Una cuenta de Wompi a nombre del negocio, que usted abre con su cuenta Bancolombia. La conexión la hago yo y las llaves quedan en su poder.</p></div>
+        <div class="pregunta"><h3>¿Y si NERACOSU desaparece?</h3><p>El código y los datos son suyos desde el primer día. Cualquier programador puede continuarlo; nada queda encerrado conmigo.</p></div>
+        <div class="pregunta"><h3>¿Por qué cuesta esto y no diez veces más?</h3><p>Porque los cobros y las mensualidades ya están escritos y operando: no paga que los invente, paga que los adapte a su negocio y los conecte a Wompi. A eso se suman 17 años de oficio y herramientas actuales que hacen el mismo trabajo en menos horas.</p></div>
+        <div class="pregunta"><h3>¿Cuánto tarda?</h3><p>Semanas, no meses, porque ya existe y se conecta. El plazo exacto queda por escrito antes de empezar, según el alcance.</p></div>
+      </div>
+    </div>
+    <div class="destacado"><b>Si después de la demostración no le convence, no pierde nada.</b><p>La reunión no tiene costo y no se firma nada en ella. Y si del diagnóstico sale que con lo que tiene le alcanza, se lo digo ahí mismo.</p></div>
+    <footer class="pie"><span>NERACOSU · Propuesta comercial</span><span>8 / 9</span></footer>
+  </section>
+
+  <!-- ===================== 9 · SIGUIENTE PASO ===================== -->
+  <section class="hoja" aria-label="Siguiente paso">
+    <header class="membrete">
+      <div class="logo">NERACOSU<i>.</i></div>
+      <div class="membrete__datos">Siguiente paso</div>
+    </header>
+    <div class="seccion">
+      <p class="antetitulo">Sin compromiso</p>
+      <h2 class="seccion__titulo">Treinta minutos para ver el sistema funcionando.</h2>
+      <p class="parrafo">No hace falta decidir nada hoy. El primer paso es ver el sistema real funcionando y salir de la reunión sabiendo qué plan le conviene, o si no le conviene ninguno.</p>
+    </div>
+    <ol class="pasos">
+      <li><span><b>Escríbame por WhatsApp</b> con el nombre del negocio y cómo cobra hoy las mensualidades. Le respondo el mismo día.</span></li>
+      <li><span><b>Conversación de 30 minutos</b> viendo los cobros que ya operan, el recordatorio y la lista de quién está al día.</span></li>
+      <li><span><b>Propuesta con su plan</b> y la fecha de entrega por escrito.</span></li>
+      <li><span><b>Arranque</b> con el 50 % al aprobar; el otro 50 % contra entrega, con el sistema cobrando de verdad.</span></li>
+    </ol>
+    <dl class="contacto">
+      <div><dt>WhatsApp</dt><dd><a href="https://wa.me/584222707095?text=Hola%20Neri%2C%20le%C3%AD%20la%20propuesta%20de%20mensualidades%20y%20quiero%20conversar.">+58 422 270 7095</a></dd></div>
+      <div><dt>Correo</dt><dd><a href="mailto:info@neracosu.com">info@neracosu.com</a></dd></div>
+      <div><dt>Portafolio</dt><dd><a href="https://neracosu.com/para/cobros-y-pagos.html">neracosu.com</a></dd></div>
+    </dl>
+
+    <div class="dos-col">
+      <div class="col">
+        <p class="sub">Condiciones</p>
+        <ul class="lista">
+          <li>Precios en USD, pagaderos en dólares o en pesos colombianos a la TRM del día de pago. No incluyen IVA.</li>
+          <li>Mensualidad por adelantado desde el mes siguiente a la puesta en marcha.</li>
+          <li>Los cambios de alcance se cotizan antes de ejecutarse.</li>
+          <li>Condiciones vigentes hasta el {{vigencia}}.</li>
+        </ul>
+      </div>
+      <div class="col">
+        <p class="sub">Lo que queda a su nombre</p>
+        <ul class="lista">
+          <li>El código del sistema y su base de datos</li>
+          <li>Su cuenta de Wompi y sus llaves</li>
+          <li>Sus clientes, su histórico y sus reportes</li>
+          <li>La libertad de cambiar de proveedor cuando quiera</li>
+        </ul>
+      </div>
+    </div>
+    <div class="seccion">
+      <p class="sub">Aceptación</p>
+      <p class="eleccion"><span><span class="caja"></span>Diagnóstico · $250</span><span><span class="caja"></span>Esencial · $2.400</span><span><span class="caja"></span>Profesional · $3.800</span><span><span class="caja"></span>Completo · $5.700</span></p>
+      <div class="firmas">
+        <div class="firma"><div class="firma__linea"></div><b>Por {{nombre}}</b><span>Nombre, cargo y fecha</span></div>
+        <div class="firma"><div class="firma__linea"></div><b>Ing. Neri Colón</b><span>NERACOSU</span></div>
+      </div>
+    </div>
+    <footer class="pie"><span>NERACOSU · Propuesta comercial</span><span>9 / 9</span></footer>
+  </section>
+</div>

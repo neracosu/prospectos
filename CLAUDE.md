@@ -143,9 +143,10 @@ nichos (`hoteles`, `hoteles-estadia`).
     `<!--si:co-->…<!--fin:co-->` (`renderPropuesta` deja los del país del prospecto; el verificador arma las dos
     versiones). **Un prospecto colombiano solo recibe propuesta si su arquetipo está en `PLANTILLAS_CON_COLOMBIA`**
     (`colombia-contrato.ts`), que desde el 6-oct tiene seis: restaurantes, reservas, comercio, citas, hoteles y hoteles de estadía (Neri
-    aprobó el criterio: Wompi, Nequi, pesos a la TRM, factura electrónica por el proveedor del negocio). **Falta
-    `cobros-y-pagos`**: en Venezuela es validación contra bancos venezolanos y en Colombia sería otro producto, así que
-    gimnasios y educación siguen con el mensaje sin enlace. Al tocar una frase propia de un país, va en su bloque.
+    aprobó el criterio: Wompi, Nequi, pesos a la TRM, factura electrónica por el proveedor del negocio). **`cobros-y-pagos` tiene plantilla propia para Colombia**
+    (`plantillas/base/cobros-y-pagos-co.cuerpo.html` → `cobros-y-pagos-co.html`): en Venezuela es validación contra
+    bancos venezolanos y allá es otro producto, mensualidades cobradas por Wompi con mensualidad de servicio.
+    `leerPlantillaPara(slug, pais)` busca primero `<slug>-co.html`. Nació de la venezolana y se mantiene aparte. Al tocar una frase propia de un país, va en su bloque.
     `condiciones.html` y `comparar.html` ya tienen su versión Colombia (pesos a la TRM, Wompi).
   - **Tope por búsqueda en el directorio (6-oct):** cada búsqueda deja pasar como mucho `TOPE_LOTE` (300), las de mayor
     confianza entre las que **todavía no pasaron por la bandeja** (`tomarLote` + `clavesVistas`: filas de `Revision`

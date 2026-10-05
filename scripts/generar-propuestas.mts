@@ -5,7 +5,7 @@
 // Uso (env cargado): npx tsx scripts/generar-propuestas.mts [--primeros 100]
 import { paisDeCiudad } from "../src/lib/overpass-contrato";
 import { prisma } from "../src/lib/db";
-import { leerPlantilla, generarPdf, hashDe, rutaPdf, fechaDePropuesta } from "../src/lib/propuesta";
+import { leerPlantillaPara, generarPdf, hashDe, rutaPdf, fechaDePropuesta } from "../src/lib/propuesta";
 import { renderPropuesta } from "../src/lib/propuesta-contrato";
 import { stat } from "node:fs/promises";
 const i = process.argv.indexOf("--primeros");
@@ -18,9 +18,11 @@ const t0 = Date.now();
 for (const p of filas) {
   const slug = p.nicho.plantillaPropuesta;
   if (!slug) { sinPlantilla++; continue; }
-  if (!plantillas.has(slug)) plantillas.set(slug, await leerPlantilla(slug));
-  const plantilla = plantillas.get(slug); if (!plantilla) { sinPlantilla++; continue; }
-  const html = renderPropuesta(plantilla, p.nombre, "#", { ciudad: p.ciudad, rubro: p.nicho.nombre.toLowerCase(), conWeb: !!p.web, fecha: await fechaDePropuesta(p.id), pais: paisDeCiudad(p.ciudad) });
+  const pais = paisDeCiudad(p.ciudad);
+  const llave = `${slug}|${pais}`;
+  if (!plantillas.has(llave)) plantillas.set(llave, await leerPlantillaPara(slug, pais));
+  const plantilla = plantillas.get(llave); if (!plantilla) { sinPlantilla++; continue; }
+  const html = renderPropuesta(plantilla, p.nombre, "#", { ciudad: p.ciudad, rubro: p.nicho.nombre.toLowerCase(), conWeb: !!p.web, fecha: await fechaDePropuesta(p.id), pais });
   const hash = hashDe(html);
   try { await stat(rutaPdf(p.codigo, hash)); existian++; continue; } catch {}
   try { await generarPdf(p.codigo, html, hash); hechos++; }

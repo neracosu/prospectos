@@ -62,3 +62,14 @@ export async function fechaDePropuesta(prospectoId: number): Promise<string> {
   });
   return hoyCaracas(primero?.creadoEn ?? new Date());
 }
+
+// La plantilla de un arquetipo para un pais. Casi todas son una sola, con bloques <!--si:ve--> / <!--si:co-->; un
+// arquetipo que en Colombia es OTRO producto (cobros y pagos: alla son mensualidades por Wompi) tiene la suya en
+// plantillas/<slug>-co.html, y esa manda.
+export async function leerPlantillaPara(slug: string, pais: "VE" | "CO"): Promise<string | null> {
+  if (pais === "CO") {
+    const propia = await leerPlantilla(`${slug}-co`);
+    if (propia) return propia;
+  }
+  return leerPlantilla(slug);
+}

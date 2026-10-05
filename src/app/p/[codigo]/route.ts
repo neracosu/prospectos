@@ -6,7 +6,7 @@ import { COOKIE_SESION } from "@/lib/sesion";
 import { COOKIE_CLIENTE } from "@/lib/sesion-cliente";
 import { permitirIntento } from "@/lib/rate-limit";
 import { ipCliente } from "@/lib/ip";
-import { leerPlantilla, fechaDePropuesta } from "@/lib/propuesta";
+import { leerPlantillaPara, fechaDePropuesta } from "@/lib/propuesta";
 import { renderPropuesta } from "@/lib/propuesta-contrato";
 import { CODIGO_VALIDO } from "@/lib/codigo";
 
@@ -36,7 +36,7 @@ async function encontrarProspecto(codigo: string) {
   if (!CODIGO_VALIDO.test(codigo)) return null;
   const p = await prisma.prospecto.findUnique({ where: { codigo }, select: { id: true, nombre: true, ciudad: true, web: true, nicho: { select: { plantillaPropuesta: true, nombre: true } } } });
   if (!p || !p.nicho.plantillaPropuesta) return null;
-  const plantilla = await leerPlantilla(p.nicho.plantillaPropuesta);
+  const plantilla = await leerPlantillaPara(p.nicho.plantillaPropuesta, paisDeCiudad(p.ciudad));
   if (!plantilla) return null;
   // Lo unico del prospecto que sale a la propuesta publica: nombre, ciudad, rubro y si tiene web. Nada de contacto.
   return { id: p.id, nombre: p.nombre, plantilla, extra: { ciudad: p.ciudad, rubro: p.nicho.nombre.toLowerCase(), conWeb: !!p.web, fecha: await fechaDePropuesta(p.id), pais: paisDeCiudad(p.ciudad) } };
