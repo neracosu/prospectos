@@ -73,7 +73,15 @@ nichos (`hoteles`, `hoteles-estadia`).
   que `renderPropuesta` deja mientras el día de Caracas no pase de `PROMO_HASTA` (`propuesta-contrato.ts`): fila de
   precios con el descuento y gancho en el resumen. La meta que dio: al menos 10 negocios pagando USD 100 a 130 al mes
   de aquí a diciembre. En la web vive en `~/build-para/precios.py` (`PROMO_PCT`, `PROMO_HASTA`) y en `body-index.html`;
-  se esconde sola al vencer, pero **en enero hay que quitarla de las fuentes** y de las plantillas. La ficha tiene «PDF»
+  se esconde sola al vencer, pero **en enero hay que quitarla de las fuentes** y de las plantillas.
+  **Todos los nichos llevan precio cerrado desde el 5-oct** (decisión de Neri: «cada nicho ya debería ir con un precio
+  o 3 precios definidos»). `citas-y-servicios`: 2.400 / 3.800 / 5.700 por cantidad de profesionales (hasta 3, de 4 a
+  10, más de 10 o varias sedes). `hoteles-estadia`: 2.800 / 4.300 / 6.600 por habitaciones (hasta 15, 16 a 40, más de
+  40); la «página conectada» sigue cotizándose tras el diagnóstico. Sistema completo de gimnasios (dentro de
+  `cobros-y-pagos`): 2.400 / 3.800 / 5.700 por alumnos (hasta 150, hasta 500, más). Mensualidad 100 / 130 / 170 en los
+  tres. Las dos propuestas siguen diciendo qué existe y qué se construye (agenda por profesional, calendario de
+  noches), con precio que no se mueve y plazo por escrito. **Lo que más arriba y más abajo en este archivo dice
+  «sin precio cerrado» o «no lleva tabla de precios» para citas y estadía ya no rige.** La ficha tiene «PDF»
   (`/p/<código>/pdf`, caché por hash); `scripts/generar-propuestas.mts --primeros N` los deja listos para la cola.
 
 - **Pieza 2 (Buscador e importación) en producción:** `/buscar` con pestañas `?t=osm|maps|importar|bandeja`
