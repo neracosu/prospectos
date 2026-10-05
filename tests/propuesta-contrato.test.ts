@@ -39,6 +39,20 @@ describe("renderPropuesta", () => {
     expect(viejo).toContain("Bar Uno en su ciudad, su negocio.");
   });
 
+  it("pone la fecha de la propuesta y una vigencia de 30 dias, escritas en largo", () => {
+    const p = '<title>x</title><style></style><div class="documento"><p>Caracas, {{fecha}}. Vigente hasta el {{vigencia}}. {{fecha}}</p></div>';
+    expect(renderPropuesta(p, "Bar Uno", "/p/x/pdf", { fecha: "2026-10-05" })).toContain("Caracas, 5 de octubre de 2026. Vigente hasta el 4 de noviembre de 2026. 5 de octubre de 2026");
+    // cruza el fin de ano
+    expect(renderPropuesta(p, "Bar Uno", "/p/x/pdf", { fecha: "2026-12-15" })).toContain("15 de diciembre de 2026. Vigente hasta el 14 de enero de 2027");
+  });
+  it("sin fecha, o con una fecha que no lo es, usa el dia de hoy en Caracas y no deja el token a la vista", () => {
+    const p = '<title>x</title><style></style><div class="documento"><p>[{{fecha}}|{{vigencia}}]</p></div>';
+    for (const extra of [{}, { fecha: "ayer" }, { fecha: "2026-13-40" }]) {
+      const html = renderPropuesta(p, "Bar Uno", "/p/x/pdf", extra);
+      expect(html).not.toContain("{{");
+      expect(html).toMatch(/\[\d{1,2} de [a-z]+ de \d{4}\|\d{1,2} de [a-z]+ de \d{4}\]/);
+    }
+  });
   it("revienta si la plantilla no tiene los marcadores esperados", () => {
     expect(() => renderPropuesta("<html><body>sin nada util</body></html>", "X", "/p/x/pdf")).toThrow(
       "PLANTILLA_SIN_MARCADORES",

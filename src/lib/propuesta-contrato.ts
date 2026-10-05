@@ -3,6 +3,8 @@
 // el cuerpo), como la lee pdf.cjs. Aqui se envuelve en un documento completo y se
 // personaliza igual que alla: data-nombre en .documento, que el script de la
 // plantilla reparte a cada [data-hotel].
+import { esFechaIso, hoyCaracas, sumarDias } from "@/lib/fecha-caracas";
+
 export function nombreSeguro(nombre: string): string {
   return nombre.replace(/[&"<>]/g, "").trim().slice(0, 60);
 }
@@ -57,7 +59,18 @@ const SCRIPT_DESCARGA = `
 // Los tokens {{nombre}} {{ciudad}} {{rubro}} se rellenan escapados en el servidor; los bloques
 // <!--si:web-->…<!--fin:web--> y <!--si:sinweb-->…<!--fin:sinweb--> se dejan o se quitan segun el prospecto tenga
 // web publicada: a quien ya tiene pagina no se le propone «una pagina», se le propone conectarla.
-export type ExtraPropuesta = { ciudad?: string; rubro?: string; conWeb?: boolean };
+// {{fecha}} y {{vigencia}} (5-oct-2026): la fecha iba escrita a mano en cada plantilla y la de hoteles salio dos
+// semanas con los precios vencidos. `fecha` es el dia de Caracas (YYYY-MM-DD) del primer envio, o el de hoy si
+// todavia no se envio; la vigencia son 30 dias desde ahi.
+export type ExtraPropuesta = { ciudad?: string; rubro?: string; conWeb?: boolean; fecha?: string };
+
+export const DIAS_VIGENCIA = 30;
+const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+// "2026-10-05" -> "5 de octubre de 2026"
+export function fechaLarga(iso: string): string {
+  const [a, m, d] = iso.split("-").map(Number);
+  return `${d} de ${MESES[m - 1]} de ${a}`;
+}
 
 const escapar = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 function bloque(html: string, nombre: string, dejar: boolean): string {
@@ -70,11 +83,14 @@ export function renderPropuesta(plantilla: string, nombre: string, urlPdf: strin
     throw new Error("PLANTILLA_SIN_MARCADORES");
   }
   const n = nombreSeguro(nombre);
+  const fecha = extra.fecha && esFechaIso(extra.fecha) ? extra.fecha : hoyCaracas();
   let cuerpo = plantilla.replace('<div class="documento">', `<div class="documento" data-nombre="${n}">`);
   cuerpo = cuerpo
     .replace(/\{\{nombre\}\}/g, escapar(n) || "su negocio")
     .replace(/\{\{ciudad\}\}/g, escapar((extra.ciudad ?? "").trim().slice(0, 80)) || "su ciudad")
-    .replace(/\{\{rubro\}\}/g, escapar((extra.rubro ?? "").trim().slice(0, 60)) || "su negocio");
+    .replace(/\{\{rubro\}\}/g, escapar((extra.rubro ?? "").trim().slice(0, 60)) || "su negocio")
+    .replace(/\{\{fecha\}\}/g, fechaLarga(fecha))
+    .replace(/\{\{vigencia\}\}/g, fechaLarga(sumarDias(fecha, DIAS_VIGENCIA)));
   cuerpo = bloque(bloque(cuerpo, "web", extra.conWeb === true), "sinweb", extra.conWeb === false);
   cuerpo = cuerpo.replace(
     /<button class="boton" id="descargar-pdf"[^>]*>([\s\S]*?)<\/button>/,

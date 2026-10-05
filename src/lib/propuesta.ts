@@ -1,5 +1,7 @@
 // src/lib/propuesta.ts
 import { createHash } from "node:crypto";
+import { hoyCaracas } from "@/lib/fecha-caracas";
+import { prisma } from "@/lib/db";
 import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import { conTurnoGlobal, imprimirPdf, escribirAtomico } from "@/lib/pdf";
@@ -50,4 +52,13 @@ async function generarUnaVez(salida: string, html: string): Promise<string> {
     await escribirAtomico(salida, await imprimirPdf(html));
     return salida;
   });
+}
+
+// La fecha que lleva impresa la propuesta: el dia de Caracas en que se envio por PRIMERA vez (asi la vigencia de
+// 30 dias no se corre con cada reenvio ni con cada apertura) o, si todavia no se envio, el de hoy.
+export async function fechaDePropuesta(prospectoId: number): Promise<string> {
+  const primero = await prisma.evento.findFirst({
+    where: { prospectoId, tipo: "enviado" }, orderBy: { creadoEn: "asc" }, select: { creadoEn: true },
+  });
+  return hoyCaracas(primero?.creadoEn ?? new Date());
 }

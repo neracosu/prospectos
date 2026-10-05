@@ -5,7 +5,7 @@ import { COOKIE_SESION } from "@/lib/sesion";
 import { COOKIE_CLIENTE } from "@/lib/sesion-cliente";
 import { permitirIntento } from "@/lib/rate-limit";
 import { ipCliente } from "@/lib/ip";
-import { leerPlantilla } from "@/lib/propuesta";
+import { leerPlantilla, fechaDePropuesta } from "@/lib/propuesta";
 import { renderPropuesta } from "@/lib/propuesta-contrato";
 import { CODIGO_VALIDO } from "@/lib/codigo";
 
@@ -38,7 +38,7 @@ async function encontrarProspecto(codigo: string) {
   const plantilla = await leerPlantilla(p.nicho.plantillaPropuesta);
   if (!plantilla) return null;
   // Lo unico del prospecto que sale a la propuesta publica: nombre, ciudad, rubro y si tiene web. Nada de contacto.
-  return { id: p.id, nombre: p.nombre, plantilla, extra: { ciudad: p.ciudad, rubro: p.nicho.nombre.toLowerCase(), conWeb: !!p.web } };
+  return { id: p.id, nombre: p.nombre, plantilla, extra: { ciudad: p.ciudad, rubro: p.nicho.nombre.toLowerCase(), conWeb: !!p.web, fecha: await fechaDePropuesta(p.id) } };
 }
 
 // Deja un Evento "abierto", salvo que quien abre tenga sesion (Neri revisando
