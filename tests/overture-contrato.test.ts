@@ -105,6 +105,20 @@ describe("overture: de lugar a prospecto", () => {
     expect(uno({ redes: "", webs: "" })).toEqual([]);
     expect(uno({ redes: "https://twitter.com/arepera", webs: "" })).toEqual([]);
   });
+  it("un telefono escrito en las redes no se vuelve un Facebook inventado ni sirve de fuente", () => {
+    // Overture trae 41 valores asi en `socials`: sin esto el lugar entraba con una pagina que no existe como fuente.
+    expect(uno({ redes: "+58 414-7589235", webs: "" })).toEqual([]);
+    const [e] = uno({ redes: "+58 414-7589235\ncarstoyotave", webs: "https://cars.com.ve/" });
+    expect(e).toMatchObject({ facebook: "", instagram: "", fuentes: ["https://cars.com.ve/"] });
+  });
+  it("solo va a WhatsApp un movil venezolano exacto: ni un numero de otro pais ni uno con digitos de mas", () => {
+    for (const malo of ["+14165551234", "+58241600850006", "+5842465395222", "+582124141234567"]) {
+      expect([malo, uno({ telefonos: malo })[0].whatsapp]).toEqual([malo, ""]);
+    }
+    for (const bueno of ["+584141234567", "+58 414-123.45.67", "0414 1234567", "584141234567", "(0414) 123-4567"]) {
+      expect([bueno, uno({ telefonos: bueno })[0].whatsapp]).toEqual([bueno, "584141234567"]);
+    }
+  });
   it("una web de mas de 191 caracteres o sin http no se toma", () => {
     expect(uno({ webs: `https://x.com/${"a".repeat(200)}\nhttps://corta.com/` })[0].web).toBe("https://corta.com/");
     expect(uno({ webs: "areperacentral.com.ve" })[0].web).toBe("");

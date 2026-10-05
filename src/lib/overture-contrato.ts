@@ -90,6 +90,11 @@ function primerCorreo(lista: string[]): string {
   return "";
 }
 
+// normalizarCelular busca el patron en cualquier parte del texto: de "+14165551234" (un numero de Canada) o de un
+// fijo con digitos de mas saca un movil venezolano que no existe. Aqui el numero entero tiene que ser el movil.
+const MOVIL_EXACTO = /^(?:\+?58)?0?4(?:12|14|16|24|26|22)\d{7}$/;
+const movilExacto = (t: string): string => (MOVIL_EXACTO.test(t.replace(/[\s().-]/g, "")) ? normalizarCelular(t) : "");
+
 const MAX_WEB = 191; // TOPES.texto: una web mas larga dejaria la fila marcada como error por un dato secundario
 
 // Mismo contrato que prospectosDesdeOverpass. La fuente de cada dato es la pagina de Facebook del negocio (de ahi
@@ -104,7 +109,9 @@ export function prospectosDesdeOverture(
   for (const l of [...lugares].sort((a, b) => b.confianza - a.confianza)) {
     if (!coincideNicho(regla, l)) continue;
     if (ciudadDeLugar(l.lat, l.lon)?.slug !== c.slug) continue;
-    const redes = lineas(l.redes);
+    // Solo URL: Overture a veces trae un telefono o un usuario suelto en las redes, y normalizarRed los tomaria por
+    // un usuario ("facebook.com/+58 414-…"), que ademas quedaria como fuente de toda la fila.
+    const redes = lineas(l.redes).filter((r) => /^https?:\/\//i.test(r));
     const facebook = redes.map((r) => normalizarRed(r, "facebook")).find(Boolean) ?? "";
     const instagram = redes.map((r) => normalizarRed(r, "instagram")).find(Boolean) ?? "";
     const web = lineas(l.webs).find((w) => /^https?:\/\//i.test(w) && w.length <= MAX_WEB) ?? "";
@@ -112,7 +119,7 @@ export function prospectosDesdeOverture(
     if (!fuente) continue;
     const telefonos = lineas(l.telefonos);
     const telefono = telefonos[0] ?? "";
-    const whatsapp = telefonos.map(normalizarCelular).find(Boolean) ?? "";
+    const whatsapp = telefonos.map(movilExacto).find(Boolean) ?? "";
     const email = primerCorreo(lineas(l.correos));
     if (op.soloContactables && !telefono && !whatsapp && !email) continue;
     const entrada: EntradaValidada = {

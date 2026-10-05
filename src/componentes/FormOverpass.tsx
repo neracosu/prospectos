@@ -51,6 +51,10 @@ export function FormOverpass({
       ? "Este nicho no está en el directorio."
       : "";
 
+  // La etiqueta sale de `pendiente`, no solo de `enVuelo`: si la accion lanza (se cae la senal a mitad de los 90 s),
+  // la transicion termina sola y el boton no puede quedarse diciendo «Consultando…».
+  const consultando = pendiente ? enVuelo : null;
+
   return (
     <>
       <form
@@ -139,16 +143,16 @@ export function FormOverpass({
           </p>
         )}
         <button className="boton boton--primario" disabled={pendiente} type="submit" name="fuente" value="osm">
-          {enVuelo === "osm" ? "Consultando…" : "Buscar en OpenStreetMap"}
+          {consultando === "osm" ? "Consultando…" : "Buscar en OpenStreetMap"}
         </button>
         <p className="suave" role="status" aria-live="polite">
-          {enVuelo === "osm"
+          {consultando === "osm"
             ? "Consultando OpenStreetMap: puede tardar hasta minuto y medio. No cierres esta pantalla."
             : "El resultado se guarda 7 días: la misma ciudad con el mismo nicho no se vuelve a consultar."}
         </p>
         <div className="fila-botones fila-botones--secundarias">
           <button className="boton" disabled={pendiente || Boolean(motivoSinDirectorio)} type="submit" name="fuente" value="directorio">
-            {enVuelo === "directorio" ? "Buscando…" : "Buscar en el directorio abierto"}
+            {consultando === "directorio" ? "Buscando…" : "Buscar en el directorio abierto"}
           </button>
         </div>
         <label className="campo" style={{ marginTop: 10 }}>

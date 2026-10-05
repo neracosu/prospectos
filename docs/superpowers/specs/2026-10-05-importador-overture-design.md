@@ -46,7 +46,8 @@ No se agrega una quinta pestaña: no cabe a 390 px, y así los selectores (que d
 «Directorio del 23/09/2026».
 
 El resultado es el `ResumenLote` de siempre, con «Se consultó: <nicho> · <ciudad> · Directorio abierto».
-En la bandeja y en la ficha el origen se lee **«Directorio abierto»**.
+En la bandeja el origen se lee **«Directorio abierto»** (la ficha del prospecto no muestra el origen de ninguna
+fuente; no se agregó).
 
 Casos sin resultado, cada uno con su mensaje:
 
