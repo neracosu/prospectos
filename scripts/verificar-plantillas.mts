@@ -15,7 +15,7 @@ let fallas = 0;
 for (const slug of slugs) {
   const plantilla = readFileSync(path.join(DIR, `${slug}.html`), "utf8");
   for (const conWeb of [true, false]) {
-    const html = renderPropuesta(plantilla, "Restaurante El Ejemplo Largo de Nombre C.A.", "#", { ciudad: "Valencia", rubro: "restaurantes y bares", conWeb });
+    const html = renderPropuesta(plantilla, "Restaurante El Ejemplo Largo de Nombre C.A.", "#", { ciudad: "Valencia", rubro: "restaurantes y bares", conWeb, fecha: "2026-11-20" });
     await pg.setContent(html, { waitUntil: "networkidle" });
     await pg.evaluate(async () => { await (document as Document & { fonts: FontFaceSet }).fonts.ready; });
     await pg.emulateMedia({ media: "print" });

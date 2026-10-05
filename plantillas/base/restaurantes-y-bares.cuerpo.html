@@ -33,7 +33,7 @@
     <dl class="portada__ficha">
       <div><dt>Preparada para</dt><dd>{{nombre}}<small>{{ciudad}} · {{rubro}}</small></dd></div>
       <div><dt>Preparada por</dt><dd>Ing. Neri Colón<small>NERACOSU · 17 años desarrollando sistemas</small></dd></div>
-      <div><dt>Fecha</dt><dd>Septiembre de 2026<small>Precios vigentes hasta el 31 de octubre de 2026</small></dd></div>
+      <div><dt>Fecha</dt><dd>{{fecha}}<small>Precios vigentes hasta el {{vigencia}}</small></dd></div>
       <div><dt>Referencia verificable</dt><dd>Dos locales en La Guaira<small>vipplaysportbar.com · visita a pedido</small></dd></div>
     </dl>
     <footer class="pie"><span>NERACOSU · Propuesta comercial</span><span>1 / 9</span></footer>
@@ -46,18 +46,18 @@
       <div class="membrete__datos">Carta de presentación</div>
     </header>
     <div class="carta">
-      <p class="carta__lugar">Caracas, septiembre de 2026</p>
+      <p class="carta__lugar">Caracas, {{fecha}}</p>
       <p class="carta__destino">Estimado equipo de {{nombre}}:</p>
       <p>En un restaurante la plata no se pierde de golpe. Se va en el plato que salió mal y hubo que rehacer, en la cerveza que se sirvió y nunca se cargó, en la mesa que tardó catorce minutos en cerrarse mientras había gente en la puerta, y en el cierre de caja donde falta plata y nadie puede probar nada. Nada de eso aparece en el reporte, y por eso a fin de mes no cuadra.</p>
       <p>Construí el sistema que hoy corre en dos locales distintos de La Guaira, un sport bar y una churuata, sobre la misma base: el mesero toma el pedido en la tablet, la cocina lo ve al instante, la cuenta se divide en segundos y el arqueo se calcula solo, por método de cobro y por persona. No es una demostración: opera todas las noches con clientes esperando y la cocina llena.</p>
       <!--si:web--><p>Vi que {{nombre}} ya tiene página en internet. No le propongo otra: lo que le propongo es lo que pasa adentro del local, y lo que ya tiene se conecta, igual que conecté el sistema con el punto de venta que esos dos locales ya usaban.</p><!--fin:web-->
-      <!--si:sinweb--><p>Ese mismo sistema se adapta a {{nombre}} en semanas, no en meses, y se paga una sola vez: el código, los datos y el dominio quedan a su nombre.</p><!--fin:sinweb-->
+      <!--si:sinweb--><p>Ese mismo sistema se adapta a {{nombre}} en semanas, no en meses, y la adaptación se paga una sola vez: el código, los datos y el dominio quedan a su nombre.</p><!--fin:sinweb-->
       <p>En estas páginas encontrará la cuenta para medir su propia fuga, el recorrido de una noche real, lo que cuesta cada plan y las respuestas a las preguntas que casi todo dueño se hace antes de decidir. Si al leerlo concluye que no le hace falta, también está bien. Lo único que le pido son 30 minutos para verlo funcionando.</p>
     </div>
     <div class="firma-carta">
       <div class="firma-carta__linea"></div>
       <b>Ing. Neri Colón</b>
-      <span class="nota">NERACOSU · neracosu.com · neracosu@gmail.com</span>
+      <span class="nota">NERACOSU · neracosu.com · info@neracosu.com</span>
     </div>
     <div class="resumen">
       <h2>Resumen en un minuto</h2>
@@ -65,8 +65,8 @@
         <dt>Qué es</dt><dd>Comandas del salón a la pantalla de cocina, mesas con cuenta viva, cobro junto o dividido en varios métodos y monedas, cierre de turno con arqueo por persona, inventario que se descuenta solo.</dd>
         <dt>Dónde funciona</dt><dd>En tablets, teléfonos y computadora, sin instalar nada. En operación en dos locales de La Guaira.</dd>
         <dt>Qué cambia</dt><dd>Lo que no se carga no sale de cocina. Cada cobro, anulación y descuento queda con nombre y hora. Usted ve la noche cerrada antes de dormir.</dd>
-        <dt>Inversión</dt><dd>Desde <b>USD 2.500</b> en un solo pago, más USD 100 al mes de servicio. Si hoy le paga a otro sistema, <b>USD 1.000 menos</b>.</dd>
-        <dt>Su riesgo</dt><dd>60 días de garantía sobre cualquier falla. Si deja la mensualidad, se lleva el sistema y la base de datos.</dd>
+        <dt>Inversión</dt><dd>Desde <b>USD 2.500</b> de adaptación, mitad al aprobar y mitad a la entrega, más USD 100 al mes de servicio. Si hoy le paga a otro sistema, <b>USD 1.000 menos</b>.</dd>
+        <dt>Su riesgo</dt><dd>60 días de garantía; después, el soporte va en el servicio mensual. Si lo deja, se lleva el sistema y la base de datos.</dd>
         <dt>Siguiente paso</dt><dd>Una demostración de 30 minutos con el sistema real, por videollamada o en su local.</dd>
       </dl>
     </div>
@@ -160,7 +160,7 @@
     </div>
     <div class="cifras">
       <div class="cifra"><b>2</b><span>sedes operando con el mismo sistema</span></div>
-      <div class="cifra"><b>160</b><span>rutas de API sosteniendo la operación</span></div>
+      <div class="cifra"><b>160</b><span>funciones del sistema sosteniendo la operación</span></div>
       <div class="cifra"><b>26</b><span>códigos mapeados contra el punto de venta que ya usaban</span></div>
       <div class="cifra"><b>0</b><span>comandas transcritas a mano</span></div>
     </div>
@@ -195,9 +195,9 @@
       <div class="membrete__datos">Inversión</div>
     </header>
     <div class="seccion">
-      <p class="antetitulo">Se paga una vez y el sistema es suyo</p>
+      <p class="antetitulo">La adaptación se paga una vez; el servicio, cada mes</p>
       <h2 class="seccion__titulo">Tres planes según el tamaño del local.</h2>
-      <p class="parrafo">El desarrollo se paga una vez. La mensualidad paga que alguien lo sostenga, no el permiso de usarlo. Son precios de apertura: estoy abriendo este rubro y quiero los primeros casos para mostrar; cuando los tenga, suben.</p>
+      <p class="parrafo">La adaptación se paga una vez. La mensualidad paga que alguien lo sostenga, no el permiso de usarlo. Son precios de apertura: estoy abriendo este rubro y quiero los primeros casos para mostrar; cuando los tenga, suben.</p>
     </div>
     <div class="tabla-wrap">
       <table class="planes">
@@ -206,11 +206,11 @@
             <th scope="col">Plan</th>
             <th scope="col"><span class="nombre-plan">Esencial</span>un local, salón</th>
             <th scope="col" class="rec"><span class="marca-rec">El que recomiendo</span><span class="nombre-plan">Profesional</span>+ delivery y POS</th>
-            <th scope="col"><span class="nombre-plan">Completo</span>multi-sede y fiscal</th>
+            <th scope="col"><span class="nombre-plan">Completo</span>varias sedes y fiscal</th>
           </tr>
         </thead>
         <tbody>
-          <tr><th scope="row">Desarrollo, pago único</th><td><span class="precio">$2.500</span></td><td class="rec"><span class="precio">$4.000</span></td><td><span class="precio">$6.200</span></td></tr>
+          <tr><th scope="row">Adaptación e instalación, pago único</th><td><span class="precio">$2.500</span></td><td class="rec"><span class="precio">$4.000</span></td><td><span class="precio">$6.200</span></td></tr>
           <tr><th scope="row">Servicio mensual</th><td><span class="mes">$100 / mes</span></td><td class="rec"><span class="mes">$130 / mes</span></td><td><span class="mes">$170 / mes</span></td></tr>
           <tr class="grupo"><td colspan="4">Operación</td></tr>
           <tr><th scope="row">Comandas del salón a la pantalla de cocina</th><td><span class="si"></span></td><td class="rec"><span class="si"></span></td><td><span class="si"></span></td></tr>

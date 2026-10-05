@@ -329,7 +329,7 @@
     <dl class="portada__ficha">
       <div><dt>Preparada para</dt><dd>{{nombre}}<small>{{ciudad}} · {{rubro}}</small></dd></div>
       <div><dt>Preparada por</dt><dd>Ing. Neri Colón<small>NERACOSU · 17 años desarrollando sistemas</small></dd></div>
-      <div><dt>Fecha</dt><dd>Septiembre de 2026<small>Precios vigentes hasta el 31 de octubre de 2026</small></dd></div>
+      <div><dt>Fecha</dt><dd>{{fecha}}<small>Precios vigentes hasta el {{vigencia}}</small></dd></div>
       <div><dt>Referencias verificables</dt><dd>Dos complejos en La Guaira<small>terrazasvip.com · bowlinglaguaira.com</small></dd></div>
     </dl>
     <footer class="pie"><span>NERACOSU · Propuesta comercial</span><span>1 / 9</span></footer>
@@ -342,18 +342,18 @@
       <div class="membrete__datos">Carta de presentación</div>
     </header>
     <div class="carta">
-      <p class="carta__lugar">Caracas, septiembre de 2026</p>
+      <p class="carta__lugar">Caracas, {{fecha}}</p>
       <p class="carta__destino">Estimado equipo de {{nombre}}:</p>
       <p>Las reservas no llegan en horario de oficina. Llegan un domingo a las nueve de la noche, cuando la persona que contesta ya se fue. Quien quiere reservar un sábado ya decidió gastar: si no le responden en minutos, busca otra opción y no vuelve. Y la que sí se anotó, en la libreta o en el chat, a veces se anota dos veces para el mismo cupo, o se aparta con la promesa de pagar «mañana» y ese día no aparece nadie.</p>
       <p>Construí el sistema que hoy reserva en dos complejos de La Guaira, un parque deportivo con canchas y eventos y un bowling con cumpleaños y eventos corporativos: el cliente ve la disponibilidad real, aparta el cupo mientras paga, el anticipo se valida contra el banco y la reserva queda firme sola. No es una demostración: cierra reservas de madrugada, sin nadie del otro lado.</p>
       <!--si:web--><p>Vi que {{nombre}} ya tiene página en internet. No le propongo otra: le propongo que esa página reserve y cobre de verdad. El motor de reservas se le conecta a lo que ya tiene, igual que conecté el sistema con el punto de venta que esos complejos ya usaban.</p><!--fin:web-->
-      <!--si:sinweb--><p>Ese mismo sistema se adapta a {{nombre}} en semanas, no en meses, con su propia página de reservas en su dominio, y se paga una sola vez: el código, los datos y el dominio quedan a su nombre.</p><!--fin:sinweb-->
+      <!--si:sinweb--><p>Ese mismo sistema se adapta a {{nombre}} en semanas, no en meses, con su propia página de reservas en su dominio, y la adaptación se paga una sola vez: el código, los datos y el dominio quedan a su nombre.</p><!--fin:sinweb-->
       <p>En estas páginas encontrará la cuenta para medir su propia fuga, el recorrido de una noche real, lo que cuesta cada plan y las respuestas a las preguntas que casi todo dueño se hace antes de decidir. Si al leerlo concluye que no le hace falta, también está bien. Lo único que le pido son 30 minutos para verlo funcionando.</p>
     </div>
     <div class="firma-carta">
       <div class="firma-carta__linea"></div>
       <b>Ing. Neri Colón</b>
-      <span class="nota">NERACOSU · neracosu.com · neracosu@gmail.com</span>
+      <span class="nota">NERACOSU · neracosu.com · info@neracosu.com</span>
     </div>
     <div class="resumen">
       <h2>Resumen en un minuto</h2>
@@ -361,8 +361,8 @@
         <dt>Qué es</dt><dd>Calendario con disponibilidad real y bloqueos, reserva con el cupo apartado mientras el cliente paga, anticipo validado contra el banco, cotizador de eventos, ficha de clientes y un solo calendario para todo.</dd>
         <dt>Dónde funciona</dt><dd>En el teléfono y en la computadora, sin instalar nada. Reservando hoy en dos complejos de La Guaira.</dd>
         <dt>Qué cambia</dt><dd>Ningún cupo se vende dos veces ni se aparta sin anticipo. Las reservas de la madrugada se cierran solas. El calendario y los reportes están al día en el momento, no el lunes.</dd>
-        <dt>Inversión</dt><dd>Desde <b>USD 2.400</b> en un solo pago, más USD 100 al mes de servicio. Si hoy le paga a otro sistema, <b>USD 1.000 menos</b>.</dd>
-        <dt>Su riesgo</dt><dd>60 días de garantía sobre cualquier falla. Si deja la mensualidad, se lleva el sistema y la base de datos.</dd>
+        <dt>Inversión</dt><dd>Desde <b>USD 2.400</b> de adaptación, mitad al aprobar y mitad a la entrega, más USD 100 al mes de servicio. Si hoy le paga a otro sistema, <b>USD 1.000 menos</b>.</dd>
+        <dt>Su riesgo</dt><dd>60 días de garantía; después, el soporte va en el servicio mensual. Si lo deja, se lleva el sistema y la base de datos.</dd>
         <dt>Siguiente paso</dt><dd>Una demostración de 30 minutos con el sistema real, por videollamada o en su sede.</dd>
       </dl>
     </div>
@@ -457,8 +457,8 @@
     </div>
     <div class="cifras">
       <div class="cifra"><b>2</b><span>complejos reservando con esto en producción</span></div>
-      <div class="cifra"><b>260</b><span>rutas de API en el sistema más grande</span></div>
-      <div class="cifra"><b>53</b><span>modelos de datos sosteniendo la operación</span></div>
+      <div class="cifra"><b>260</b><span>funciones en el sistema más grande</span></div>
+      <div class="cifra"><b>53</b><span>tipos de registro sosteniendo la operación</span></div>
       <div class="cifra"><b>24/7</b><span>reservas cerradas sin nadie contestando</span></div>
     </div>
     <div>
@@ -467,8 +467,8 @@
         <div class="caso__cuerpo">
           <p>Complejo deportivo con canchas, eventos, shows, restaurante y punto de venta. El sistema más grande que mantengo.</p>
           <ul class="lista">
-            <li>260 rutas de API y 53 modelos de datos sosteniendo reservas, eventos, pagos y personal.</li>
-            <li>Bot de atención conectado por API, con su propia llave y su propio registro de llamadas: consulta disponibilidad, cotiza, reserva y valida el pago.</li>
+            <li>260 funciones y 53 tipos de registro sosteniendo reservas, eventos, pagos y personal.</li>
+            <li>Bot de atención conectado al sistema, con acceso propio y registro de cada consulta: consulta disponibilidad, cotiza, reserva y valida el pago.</li>
             <li>Integración con el punto de venta del complejo: 26 códigos mapeados.</li>
           </ul>
         </div>
@@ -476,7 +476,7 @@
       <div class="caso">
         <div class="caso__rotulo"><b>Bowling Park La Guaira</b><span>La Guaira · <a href="https://bowlinglaguaira.com">bowlinglaguaira.com</a></span></div>
         <div class="caso__cuerpo">
-          <p>Pistas de bowling con reservas, eventos corporativos y cumpleaños. Cuarenta fases de trabajo iterativo con el negocio operando todo el tiempo.</p>
+          <p>Pistas de bowling con reservas, eventos corporativos y cumpleaños. Cuarenta etapas de mejora, con el negocio operando todo el tiempo.</p>
           <ul class="lista">
             <li>Reserva paso a paso pensada para el teléfono, con botones grandes y pocos pasos.</li>
             <li>Cotizador de eventos con brazaletes por tipo y un tablero donde el equipo ve en qué va cada cotización.</li>
@@ -496,9 +496,9 @@
       <div class="membrete__datos">Inversión</div>
     </header>
     <div class="seccion">
-      <p class="antetitulo">Se paga una vez y el sistema es suyo</p>
+      <p class="antetitulo">La adaptación se paga una vez; el servicio, cada mes</p>
       <h2 class="seccion__titulo">Tres planes según cuántos espacios maneja.</h2>
-      <p class="parrafo">El desarrollo se paga una vez. La mensualidad paga que alguien lo sostenga, no el permiso de usarlo. Son precios de apertura: estoy abriendo este rubro y quiero los primeros casos para mostrar; cuando los tenga, suben.</p>
+      <p class="parrafo">La adaptación se paga una vez. La mensualidad paga que alguien lo sostenga, no el permiso de usarlo. Son precios de apertura: estoy abriendo este rubro y quiero los primeros casos para mostrar; cuando los tenga, suben.</p>
     </div>
     <div class="tabla-wrap">
       <table class="planes">
@@ -511,7 +511,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr><th scope="row">Desarrollo, pago único</th><td><span class="precio">$2.400</span></td><td class="rec"><span class="precio">$3.800</span></td><td><span class="precio">$5.700</span></td></tr>
+          <tr><th scope="row">Adaptación e instalación, pago único</th><td><span class="precio">$2.400</span></td><td class="rec"><span class="precio">$3.800</span></td><td><span class="precio">$5.700</span></td></tr>
           <tr><th scope="row">Servicio mensual</th><td><span class="mes">$100 / mes</span></td><td class="rec"><span class="mes">$130 / mes</span></td><td><span class="mes">$170 / mes</span></td></tr>
           <tr class="grupo"><td colspan="4">Reservas</td></tr>
           <tr><th scope="row">Calendario con disponibilidad real y bloqueos</th><td><span class="si"></span></td><td class="rec"><span class="si"></span></td><td><span class="si"></span></td></tr>
@@ -528,7 +528,7 @@
           <tr class="grupo"><td colspan="4">Taquilla y atención automática</td></tr>
           <tr><th scope="row">Venta de entradas con aforo y códigos QR en la puerta</th><td><span class="no">—</span></td><td class="rec"><span class="no">—</span></td><td><span class="si"></span></td></tr>
           <tr><th scope="row">Bot conectado por API que reserva y cobra de verdad</th><td><span class="no">—</span></td><td class="rec"><span class="no">—</span></td><td><span class="si"></span></td></tr>
-          <tr><th scope="row">Horarios que cruzan la medianoche sin romperse</th><td><span class="no">—</span></td><td class="rec"><span class="no">—</span></td><td><span class="si"></span></td></tr>
+          <tr><th scope="row">Horarios que pasan de la medianoche</th><td><span class="no">—</span></td><td class="rec"><span class="no">—</span></td><td><span class="si"></span></td></tr>
           <tr><th scope="row">Reportes por rango de días y método de cobro</th><td><span class="no">—</span></td><td class="rec"><span class="no">—</span></td><td><span class="si"></span></td></tr>
         </tbody>
       </table>
@@ -548,7 +548,7 @@
     </div>
     <div class="seccion">
       <p class="antetitulo">Qué recibe</p>
-      <h2 class="seccion__titulo">El desarrollo trae la puesta en marcha completa, y la mensualidad lo mantiene andando.</h2>
+      <h2 class="seccion__titulo">El pago único trae la puesta en marcha completa, y la mensualidad lo mantiene andando.</h2>
     </div>
     <div class="dos-col">
       <div class="col">
@@ -579,7 +579,7 @@
         <thead><tr><th scope="col">Alquilado: paga el permiso de uso</th><th scope="col">Propio: paga que alguien lo sostenga</th></tr></thead>
         <tbody>
           <tr><td>El día que deja de pagar, se apaga.</td><td>El día que deja de pagar, sigue siendo suyo: lo hospeda por unos USD 25 al mes.</td></tr>
-          <tr><td>Sus clientes y su histórico viven en el servidor de otro.</td><td>El código y la base de datos están en su servidor, con su dominio.</td></tr>
+          <tr><td>Sus clientes y su histórico viven en el servidor de otro.</td><td>Recibe el código y la base de datos, con su dominio. Mientras paga el servicio, yo los hospedo.</td></tr>
           <tr><td>Cobra en dólares y la tasa, el pago móvil y el Zelle son problema suyo.</td><td>Cobra en bolívares y divisas con su tasa, y valida cada pago contra el banco.</td></tr>
           <tr><td>Lo que le falta entra en la cola de un producto hecho para miles.</td><td>Lo que le falta se conversa y se construye para su operación.</td></tr>
         </tbody>
@@ -599,7 +599,7 @@
       <p class="antetitulo">Las preguntas que casi todo dueño se hace</p>
       <div class="preguntas">
         <div class="pregunta"><h3>¿Puedo seguir recibiendo reservas por WhatsApp?</h3><p>Sí. Las que lleguen por chat se cargan en el mismo calendario desde el mostrador, y en el plan Completo un bot conectado al sistema las cierra solo.</p></div>
-        <div class="pregunta"><h3>¿Y si el cliente paga y el banco no responde?</h3><p>La validación degrada a confirmación manual: la reserva queda apartada y usted la confirma desde el panel cuando el pago aparezca.</p></div>
+        <div class="pregunta"><h3>¿Y si el cliente paga y el banco no responde?</h3><p>La validación pasa a confirmación manual: la reserva queda apartada y usted la confirma desde el panel cuando el pago aparezca.</p></div>
         <div class="pregunta"><h3>¿Y si mi personal no aprende a usarlo?</h3><p>Se diseñó para el teléfono, con botones grandes y pocos pasos. Trae capacitación incluida y una visita guiada dentro de cada pantalla.</p></div>
         <div class="pregunta"><h3>¿Y si NERACOSU desaparece?</h3><p>El código, la base de datos y el dominio son suyos desde el primer día. Cualquier programador puede continuarlo; nada queda encerrado conmigo.</p></div>
         <div class="pregunta"><h3>¿Por qué cuesta esto y no diez veces más?</h3><p>Porque el sistema ya está escrito y reservando en dos complejos: no paga que lo invente, paga que lo adapte a sus espacios. A eso se suman 17 años de oficio y herramientas actuales que hacen el mismo trabajo en menos horas.</p></div>
@@ -629,7 +629,7 @@
     </ol>
     <dl class="contacto">
       <div><dt>WhatsApp</dt><dd><a href="https://wa.me/584222707095?text=Hola%20Neri%2C%20le%C3%AD%20la%20propuesta%20del%20sistema%20de%20reservas%20y%20quiero%20ver%20la%20demostraci%C3%B3n.">0422-270 7095</a></dd></div>
-      <div><dt>Correo</dt><dd><a href="mailto:neracosu@gmail.com">neracosu@gmail.com</a></dd></div>
+      <div><dt>Correo</dt><dd><a href="mailto:info@neracosu.com">info@neracosu.com</a></dd></div>
       <div><dt>Portafolio</dt><dd><a href="https://neracosu.com/para/reservas.html">neracosu.com</a></dd></div>
     </dl>
 
@@ -640,7 +640,7 @@
           <li>Precios en USD, pagaderos en divisas o en bolívares a la tasa BCV del día de pago. No incluyen IVA.</li>
           <li>Mensualidad por adelantado desde el mes siguiente a la puesta en marcha.</li>
           <li>Los cambios de alcance se cotizan antes de ejecutarse.</li>
-          <li>Condiciones vigentes hasta el 31 de octubre de 2026.</li>
+          <li>Condiciones vigentes hasta el {{vigencia}}.</li>
         </ul>
       </div>
       <div class="col">

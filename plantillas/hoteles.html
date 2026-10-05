@@ -312,7 +312,7 @@
 
     <div class="portada__cuerpo">
       <div class="portada__textos">
-        <p class="portada__tipo">Propuesta para hoteles y posadas</p>
+        <p class="portada__tipo">Propuesta para hoteles de alta rotación</p>
         <h1>Su hotel factura toda la noche.<span>Usted se entera al día siguiente.</span></h1>
         <p class="portada__que">Un sistema propio para ver, desde el teléfono, cada habitación, cada cobro y cada turno de <b data-hotel>su hotel</b>. Mis sistemas funcionan hoy en empresas de Caracas, Valencia y el exterior; el de hoteles, en operación diaria en Valencia.</p>
       </div>
@@ -329,9 +329,9 @@
     </div>
 
     <dl class="portada__ficha">
-      <div><dt>Preparada para</dt><dd data-hotel-ficha>Dueños y gerentes de hoteles y posadas<small>Hoteles urbanos, de paso y posadas de 8 a 80 habitaciones</small></dd></div>
+      <div><dt>Preparada para</dt><dd data-hotel-ficha>Dueños y gerentes de hoteles de alta rotación<small>Hoteles de paso y de alta rotación, de 8 a 80 habitaciones</small></dd></div>
       <div><dt>Preparada por</dt><dd>Ing. Neri Colón<small>NERACOSU · 17 años desarrollando sistemas</small></dd></div>
-      <div><dt>Fecha</dt><dd>15 de septiembre de 2026<small>Precios vigentes hasta el 31 de octubre de 2026</small></dd></div>
+      <div><dt>Fecha</dt><dd>{{fecha}}<small>Precios vigentes hasta el {{vigencia}}</small></dd></div>
       <div><dt>Referencia verificable</dt><dd>Hotel en operación en Valencia<small>Llamada con el dueño o visita, a pedido</small></dd></div>
     </dl>
     <footer class="pie"><span>NERACOSU · Propuesta comercial</span><span>1 / 9</span></footer>
@@ -345,18 +345,18 @@
     </header>
 
     <div class="carta">
-      <p class="carta__lugar">Caracas, 15 de septiembre de 2026</p>
+      <p class="carta__lugar">Caracas, {{fecha}}</p>
       <p class="carta__destino">Estimado equipo de <b data-hotel>su hotel</b>:</p>
       <p>En un hotel de alta rotación la plata no se pierde de golpe. Se va en minutos regalados entre el cobro y la entrada al cuarto, en una tasa distinta en cada turno, en un taxi que salió de la gaveta a las tres de la mañana y nadie anotó. Nada de eso es un robo, y por eso mismo no aparece en ningún cuaderno.</p>
       <p>Construí, mano a mano con el dueño de un hotel de alta rotación en Valencia, el sistema que hoy le cierra esos huecos. No es una demostración: su personal lo usa todos los días, con plata real, y cada falla que mostró la operación quedó corregida y explicada en la pantalla de las recepcionistas.</p>
-      <p>Le escribo porque ese mismo sistema se puede adaptar a su hotel en semanas, no en meses, y porque se paga una sola vez: el código, los datos y el dominio quedan a su nombre. En estas páginas encontrará la cuenta para medir su propia fuga, el recorrido de una noche real, lo que cuesta cada plan y las respuestas a las preguntas que casi todo dueño se hace antes de decidir.</p>
+      <p>Le escribo porque ese mismo sistema se puede adaptar a su hotel en semanas, no en meses, y porque la adaptación se paga una sola vez: el código, los datos y el dominio quedan a su nombre. En estas páginas encontrará la cuenta para medir su propia fuga, el recorrido de una noche real, lo que cuesta cada plan y las respuestas a las preguntas que casi todo dueño se hace antes de decidir.</p>
       <p>Si al leerlo concluye que no le hace falta, también está bien. Lo único que le pido son 30 minutos para verlo funcionando.</p>
     </div>
 
     <div class="firma-carta">
       <div class="firma-carta__linea"></div>
       <b>Ing. Neri Colón</b>
-      <span class="nota">NERACOSU · neracosu.com · neracosu@gmail.com</span>
+      <span class="nota">NERACOSU · neracosu.com · info@neracosu.com</span>
     </div>
 
     <div class="resumen">
@@ -365,8 +365,8 @@
         <dt>Qué es</dt><dd>Mapa de habitaciones con los tiempos corriendo, check-in con cédula, caja en bolívares y divisas, turnos, tienda, limpieza, reportes y cierre del día firmado.</dd>
         <dt>Dónde funciona</dt><dd>En el teléfono y en la computadora, sin instalar nada. En operación diaria en Valencia, Carabobo.</dd>
         <dt>Qué cambia</dt><dd>Cada cobro, cada salida de efectivo y cada turno quedan con nombre, hora y monto. Usted ve el día cerrado antes del desayuno.</dd>
-        <dt>Inversión</dt><dd>Desde <b>USD 2.800</b> en un solo pago, más USD 100 al mes de hosting y soporte. Si hoy le paga a otro sistema, <b>USD 1.000 menos</b>.</dd>
-        <dt>Su riesgo</dt><dd>60 días de garantía sobre cualquier falla. Si deja la mensualidad, se lleva el sistema y la base de datos.</dd>
+        <dt>Inversión</dt><dd>Desde <b>USD 2.800</b> de adaptación, mitad al aprobar y mitad a la entrega, más USD 100 al mes de hosting y soporte. Si hoy le paga a otro sistema, <b>USD 1.000 menos</b>.</dd>
+        <dt>Su riesgo</dt><dd>60 días de garantía; después, el soporte va en el servicio mensual. Si lo deja, se lleva el sistema y la base de datos.</dd>
         <dt>Siguiente paso</dt><dd>Una demostración de 30 minutos con el sistema real, por videollamada o en su hotel.</dd>
       </dl>
     </div>
@@ -519,9 +519,9 @@
     </header>
 
     <div class="seccion">
-      <p class="antetitulo">Se paga una vez y el sistema es suyo</p>
+      <p class="antetitulo">La adaptación se paga una vez; el servicio, cada mes</p>
       <h2 class="seccion__titulo">Tres planes según el tamaño del hotel.</h2>
-      <p class="parrafo">El desarrollo se paga una vez. La mensualidad paga que alguien lo sostenga, no el permiso de usarlo.</p>
+      <p class="parrafo">La adaptación se paga una vez. La mensualidad paga que alguien lo sostenga, no el permiso de usarlo.</p>
     </div>
 
     <div class="tabla-wrap">
@@ -535,7 +535,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr><th scope="row">Desarrollo, pago único</th><td><span class="precio">$2.800</span></td><td class="rec"><span class="precio">$4.300</span></td><td><span class="precio">$6.600</span></td></tr>
+          <tr><th scope="row">Adaptación e instalación, pago único</th><td><span class="precio">$2.800</span></td><td class="rec"><span class="precio">$4.300</span></td><td><span class="precio">$6.600</span></td></tr>
           <tr><th scope="row">Servicio mensual</th><td><span class="mes">$100 / mes</span></td><td class="rec"><span class="mes">$130 / mes</span></td><td><span class="mes">$170 / mes</span></td></tr>
           <tr class="grupo"><td colspan="4">Operación</td></tr>
           <tr><th scope="row">Mapa de habitaciones con tiempos y avisos</th><td><span class="si"></span></td><td class="rec"><span class="si"></span></td><td><span class="si"></span></td></tr>
@@ -576,7 +576,7 @@
 
     <div class="seccion">
       <p class="antetitulo">Qué recibe</p>
-      <h2 class="seccion__titulo">El desarrollo trae la puesta en marcha completa, y la mensualidad lo mantiene andando.</h2>
+      <h2 class="seccion__titulo">El pago único trae la puesta en marcha completa, y la mensualidad lo mantiene andando.</h2>
     </div>
     <div class="dos-col">
       <div class="col">
@@ -609,8 +609,8 @@
         <thead><tr><th scope="col">Alquilado: paga el permiso de uso</th><th scope="col">Propio: paga que alguien lo sostenga</th></tr></thead>
         <tbody>
           <tr><td>El día que deja de pagar, se apaga.</td><td>El día que deja de pagar, sigue siendo suyo: lo hospeda por unos USD 25 al mes.</td></tr>
-          <tr><td>Sus clientes y su histórico viven en el servidor de otro.</td><td>El código y la base de datos están en su servidor, con su dominio.</td></tr>
-          <tr><td>El precio lo fija el proveedor y puede cambiar.</td><td>El precio del desarrollo se fija una vez y no se mueve.</td></tr>
+          <tr><td>Sus clientes y su histórico viven en el servidor de otro.</td><td>Recibe el código y la base de datos, con su dominio. Mientras paga el servicio, yo los hospedo.</td></tr>
+          <tr><td>El precio lo fija el proveedor y puede cambiar.</td><td>El precio de la adaptación se fija por escrito y no se mueve.</td></tr>
           <tr><td>Lo que le falta entra en la cola de un producto hecho para miles.</td><td>Lo que le falta se conversa y se construye para su operación.</td></tr>
         </tbody>
       </table>
@@ -631,12 +631,12 @@
       <div class="preguntas">
         <div class="pregunta"><h3>¿Y si mi personal no aprende a usarlo?</h3><p>Se diseñó con recepcionistas reales, en el teléfono. Trae una visita guiada dentro de cada pantalla, capacitación incluida y un historial de mejoras escrito sin términos técnicos.</p></div>
         <div class="pregunta"><h3>¿Qué pasa si se va el internet o la luz?</h3><p>Funciona con los datos del teléfono. Si se marca una salida tarde por un corte, se registra la hora real y un administrador la aprueba: el cobro no se pierde.</p></div>
-        <div class="pregunta"><h3>¿Mis datos y las cédulas de mis huéspedes?</h3><p>Viven en su servidor, con respaldo diario. Cada persona ve solo lo que su permiso le abre, y quien no maneja clientes ve las cédulas tapadas.</p></div>
+        <div class="pregunta"><h3>¿Mis datos y las cédulas de mis huéspedes?</h3><p>Viven en el servidor de su sistema, con respaldo diario. La base de datos es suya. Cada persona ve solo lo que su permiso le abre, y quien no maneja clientes ve las cédulas tapadas.</p></div>
         <div class="pregunta"><h3>¿Y si NERACOSU desaparece?</h3><p>El código, la base de datos y el dominio son suyos desde el primer día. Cualquier programador puede continuarlo; nada queda encerrado conmigo.</p></div>
         <div class="pregunta"><h3>¿Tengo que dejar mi sistema de un día para otro?</h3><p>No. Primero se migran sus clientes y su histórico, se prueba con su personal y solo después se hace el cambio. Así se hizo en el hotel de Valencia.</p></div>
         <div class="pregunta"><h3>¿Por qué cuesta esto y no diez veces más?</h3><p>Porque el sistema ya está escrito y probado en un hotel real: no paga que lo invente, paga que lo adapte a su operación. A eso se suman 17 años de oficio y herramientas de trabajo actuales que hacen el mismo trabajo en menos horas.</p></div>
         <div class="pregunta"><h3>¿Puedo empezar con un plan y subir después?</h3><p>Sí. Si empieza con Esencial y más adelante quiere turnos o tienda, paga solo la diferencia entre los planes. Lo ya construido no se vuelve a cobrar.</p></div>
-        <div class="pregunta"><h3>¿Sirve para una posada o un hotel pequeño?</h3><p>Sí. El sistema funciona hoy en un hotel de alta rotación en Valencia, Carabobo. El plan Esencial está pensado para hoteles de hasta 15 habitaciones.</p></div>
+        <div class="pregunta"><h3>¿Sirve para un hotel pequeño?</h3><p>Sí: el plan Esencial está pensado para hoteles de hasta 15 habitaciones. Si el suyo es una posada o un hotel que vende por noche, le corresponde otra propuesta; pídamela.</p></div>
         <div class="pregunta"><h3>¿Cuánto tarda?</h3><p>Semanas, no meses, porque el sistema ya existe y se adapta. El plazo exacto queda por escrito antes de empezar, según su plan y lo que haya que migrar.</p></div>
       </div>
     </div>
@@ -666,7 +666,7 @@
 
     <dl class="contacto">
       <div><dt>WhatsApp</dt><dd><a href="https://wa.me/584222707095?text=Hola%20Neri%2C%20le%C3%AD%20la%20propuesta%20del%20sistema%20para%20hoteles%20y%20quiero%20ver%20la%20demostraci%C3%B3n.">0422-270 7095</a></dd></div>
-      <div><dt>Correo</dt><dd><a href="mailto:neracosu@gmail.com">neracosu@gmail.com</a></dd></div>
+      <div><dt>Correo</dt><dd><a href="mailto:info@neracosu.com">info@neracosu.com</a></dd></div>
       <div><dt>Portafolio</dt><dd><a href="https://neracosu.com/para/hoteles.html">neracosu.com</a></dd></div>
     </dl>
 
@@ -677,7 +677,7 @@
           <li>Precios en USD, pagaderos en divisas o en bolívares a la tasa BCV del día de pago. No incluyen IVA.</li>
           <li>Mensualidad por adelantado desde el mes siguiente a la puesta en marcha.</li>
           <li>Los cambios de alcance se cotizan antes de ejecutarse.</li>
-          <li>Precios vigentes hasta el 31 de octubre de 2026.</li>
+          <li>Precios vigentes hasta el {{vigencia}}.</li>
         </ul>
       </div>
       <div class="col">

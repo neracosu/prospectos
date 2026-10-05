@@ -33,7 +33,7 @@
     <dl class="portada__ficha">
       <div><dt>Preparada para</dt><dd>{{nombre}}<small>{{ciudad}} · {{rubro}}</small></dd></div>
       <div><dt>Preparada por</dt><dd>Ing. Neri Colón<small>NERACOSU · 17 años desarrollando sistemas</small></dd></div>
-      <div><dt>Fecha</dt><dd>Septiembre de 2026<small>Precios vigentes hasta el 31 de octubre de 2026</small></dd></div>
+      <div><dt>Fecha</dt><dd>{{fecha}}<small>Precios vigentes hasta el {{vigencia}}</small></dd></div>
       <div><dt>Referencias verificables</dt><dd>Tienda en línea y un negocio de dos sedes<small>adastram.store · La Guaira, a pedido</small></dd></div>
     </dl>
     <footer class="pie"><span>NERACOSU · Propuesta comercial</span><span>1 / 9</span></footer>
@@ -46,18 +46,18 @@
       <div class="membrete__datos">Carta de presentación</div>
     </header>
     <div class="carta">
-      <p class="carta__lugar">Caracas, septiembre de 2026</p>
+      <p class="carta__lugar">Caracas, {{fecha}}</p>
       <p class="carta__destino">Estimado equipo de {{nombre}}:</p>
       <p>En una tienda la plata no se pierde de golpe. Se va en el cliente que preguntó por algo concreto y se fue con las manos vacías, cuando el producto existía en el depósito o en la otra sucursal; en la mercancía que salió sin registrarse y al contar no está; en el precio que quedó viejo porque compró en divisas y vende en bolívares; y en las noches y domingos en que el catálogo son fotos sueltas de WhatsApp y nadie contesta.</p>
       <p>Construí la tienda en línea que hoy vende en adastram.store, donde la dueña carga productos, confirma pagos y despacha sin tocar código, y el control de inventario que corre en un negocio de dos sedes en La Guaira, con seis tipos de movimiento, conteos físicos y traslados entre sucursales. No es una demostración: el inventario cuadra a fin de mes y la tienda vende aunque el local esté cerrado.</p>
       <!--si:web--><p>Vi que {{nombre}} ya tiene página en internet. No le propongo otra: le propongo que muestre solo lo que hay en existencia y cobre sola, con el pago móvil validado contra el banco. El inventario y el cobro se le conectan a lo que ya tiene, igual que conecté el sistema con el punto de venta que el negocio de La Guaira ya usaba.</p><!--fin:web-->
-      <!--si:sinweb--><p>Ese mismo sistema se adapta a {{nombre}} en semanas, no en meses, con su propia tienda en línea en su dominio si la quiere, y se paga una sola vez: el código, los datos y el dominio quedan a su nombre.</p><!--fin:sinweb-->
+      <!--si:sinweb--><p>Esas dos piezas se juntan y se adaptan a {{nombre}} en semanas, no en meses, con su propia tienda en línea en su dominio si la quiere, y la adaptación se paga una sola vez: el código, los datos y el dominio quedan a su nombre.</p><!--fin:sinweb-->
       <p>En estas páginas encontrará la cuenta para medir su propia fuga, el recorrido de una noche real, lo que cuesta cada plan y las respuestas a las preguntas que casi todo dueño se hace antes de decidir. Si al leerlo concluye que no le hace falta, también está bien. Lo único que le pido son 30 minutos para verlo funcionando.</p>
     </div>
     <div class="firma-carta">
       <div class="firma-carta__linea"></div>
       <b>Ing. Neri Colón</b>
-      <span class="nota">NERACOSU · neracosu.com · neracosu@gmail.com</span>
+      <span class="nota">NERACOSU · neracosu.com · info@neracosu.com</span>
     </div>
     <div class="resumen">
       <h2>Resumen en un minuto</h2>
@@ -65,8 +65,8 @@
         <dt>Qué es</dt><dd>Catálogo con variantes (tallas, colores, presentaciones), inventario que se descuenta solo y avisa antes de agotarse, punto de venta con cierre de turno, precios en dos monedas con la tasa del día, y tienda en línea con pago móvil validado.</dd>
         <dt>Dónde funciona</dt><dd>En el teléfono y en la computadora, sin instalar nada. Vendiendo hoy en adastram.store; el inventario, en un negocio de dos sedes en La Guaira.</dd>
         <dt>Qué cambia</dt><dd>Sabe qué hay, dónde está y cuánto se vendió sin contar. Nada sale del inventario sin nombre y hora. Vende de noche y los domingos sin que nadie conteste.</dd>
-        <dt>Inversión</dt><dd>Desde <b>USD 2.500</b> en un solo pago, más USD 100 al mes de servicio. Si hoy le paga a otro sistema, <b>USD 1.000 menos</b>.</dd>
-        <dt>Su riesgo</dt><dd>60 días de garantía sobre cualquier falla. Si deja la mensualidad, se lleva el sistema y la base de datos.</dd>
+        <dt>Inversión</dt><dd>Desde <b>USD 2.500</b> de adaptación, mitad al aprobar y mitad a la entrega, más USD 100 al mes de servicio. Si hoy le paga a otro sistema, <b>USD 1.000 menos</b>.</dd>
+        <dt>Su riesgo</dt><dd>60 días de garantía; después, el soporte va en el servicio mensual. Si lo deja, se lleva el sistema y la base de datos.</dd>
         <dt>Siguiente paso</dt><dd>Una demostración de 30 minutos con el sistema real, por videollamada o en su local.</dd>
       </dl>
     </div>
@@ -126,7 +126,7 @@
     </header>
     <div class="seccion">
       <p class="antetitulo">Un día cualquiera</p>
-      <h2 class="seccion__titulo">Así se ve un martes con el sistema, tal como quedó construido.</h2>
+      <h2 class="seccion__titulo">Así se ve un martes con el sistema.</h2>
     </div>
     <ol class="noche">
       <li><span class="hora">08:30</span><div><h3>Llega mercancía</h3><p>Se registra la entrada con su proveedor, cantidades y costo en divisa. Cada variante (talla, color, presentación) queda con su propia existencia, para que no venda una talla que no queda.</p></div></li>
@@ -171,7 +171,7 @@
           <p>Tienda de ropa, carteras, perfumes y accesorios. La dueña opera todo desde el panel: carga productos, confirma pagos y despacha, sin tocar código ni depender de nadie.</p>
           <ul class="lista">
             <li>Catálogo con variantes, colecciones y control de existencias por variante.</li>
-            <li>Checkout con pago móvil: el cliente sube la referencia y su captura, y la dueña confirma desde el panel.</li>
+            <li>Pago móvil en la tienda: en ese negocio el cliente sube la referencia y su captura, y la dueña confirma desde el panel. La validación automática contra el banco es la de los planes Profesional y Completo.</li>
             <li>Cálculos de dinero en centavos enteros, para que no aparezcan diferencias de un bolívar al sumar.</li>
           </ul>
         </div>
@@ -199,9 +199,9 @@
       <div class="membrete__datos">Inversión</div>
     </header>
     <div class="seccion">
-      <p class="antetitulo">Se paga una vez y el sistema es suyo</p>
+      <p class="antetitulo">La adaptación se paga una vez; el servicio, cada mes</p>
       <h2 class="seccion__titulo">Tres planes según el tamaño del negocio.</h2>
-      <p class="parrafo">El desarrollo se paga una vez, sin comisión por venta. La mensualidad paga que alguien lo sostenga, no el permiso de usarlo. Son precios de apertura: estoy abriendo este rubro y quiero los primeros casos para mostrar; cuando los tenga, suben.</p>
+      <p class="parrafo">La adaptación se paga una vez, sin comisión por venta. La mensualidad paga que alguien lo sostenga, no el permiso de usarlo. Son precios de apertura: estoy abriendo este rubro y quiero los primeros casos para mostrar; cuando los tenga, suben.</p>
     </div>
     <div class="tabla-wrap">
       <table class="planes">
@@ -214,7 +214,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr><th scope="row">Desarrollo, pago único</th><td><span class="precio">$2.500</span></td><td class="rec"><span class="precio">$4.000</span></td><td><span class="precio">$6.200</span></td></tr>
+          <tr><th scope="row">Adaptación e instalación, pago único</th><td><span class="precio">$2.500</span></td><td class="rec"><span class="precio">$4.000</span></td><td><span class="precio">$6.200</span></td></tr>
           <tr><th scope="row">Servicio mensual</th><td><span class="mes">$100 / mes</span></td><td class="rec"><span class="mes">$130 / mes</span></td><td><span class="mes">$170 / mes</span></td></tr>
           <tr class="grupo"><td colspan="4">Inventario y mostrador</td></tr>
           <tr><th scope="row">Catálogo con variantes: tallas, colores, presentaciones</th><td><span class="si"></span></td><td class="rec"><span class="si"></span></td><td><span class="si"></span></td></tr>
@@ -223,7 +223,7 @@
           <tr><th scope="row">Punto de venta con cierre de turno y arqueo</th><td><span class="si"></span></td><td class="rec"><span class="si"></span></td><td><span class="si"></span></td></tr>
           <tr><th scope="row">Precios en dos monedas con la tasa oficial del día</th><td><span class="si"></span></td><td class="rec"><span class="si"></span></td><td><span class="si"></span></td></tr>
           <tr class="grupo"><td colspan="4">Tienda en línea y control</td></tr>
-          <tr><th scope="row">Tienda pública con carrito y checkout</th><td><span class="no">—</span></td><td class="rec"><span class="si"></span></td><td><span class="si"></span></td></tr>
+          <tr><th scope="row">Tienda pública con carrito y pago</th><td><span class="no">—</span></td><td class="rec"><span class="si"></span></td><td><span class="si"></span></td></tr>
           <tr><th scope="row">Muestra solo lo que hay en existencia</th><td><span class="no">—</span></td><td class="rec"><span class="si"></span></td><td><span class="si"></span></td></tr>
           <tr><th scope="row">Cobro con pago móvil validado contra el banco</th><td><span class="no">—</span></td><td class="rec"><span class="si"></span></td><td><span class="si"></span></td></tr>
           <tr><th scope="row">Conteos físicos guiados con su diferencia registrada</th><td><span class="no">—</span></td><td class="rec"><span class="si"></span></td><td><span class="si"></span></td></tr>
@@ -269,7 +269,7 @@
         <div class="pregunta"><h3>¿Sirve para varias sucursales?</h3><p>Sí. El plan Completo lleva existencias por sucursal, traslados con su registro y un panel que las ve todas. Es lo que corre en el negocio de dos sedes.</p></div>
         <div class="pregunta"><h3>¿Y si mi personal no aprende a usarlo?</h3><p>Se diseñó con vendedoras reales, en el teléfono y el mostrador. Trae capacitación incluida y una visita guiada dentro de cada pantalla.</p></div>
         <div class="pregunta"><h3>¿Y si NERACOSU desaparece?</h3><p>El código, la base de datos y el dominio son suyos desde el primer día. Cualquier programador puede continuarlo; nada queda encerrado conmigo.</p></div>
-        <div class="pregunta"><h3>¿Por qué cuesta esto y no diez veces más?</h3><p>Porque el sistema ya está escrito y vendiendo: no paga que lo invente, paga que lo adapte a su tienda. A eso se suman 17 años de oficio y herramientas actuales que hacen el mismo trabajo en menos horas.</p></div>
+        <div class="pregunta"><h3>¿Por qué cuesta esto y no diez veces más?</h3><p>Porque las piezas ya están escritas y funcionando: no paga que lo invente, paga que lo adapte a su tienda. A eso se suman 17 años de oficio y herramientas actuales que hacen el mismo trabajo en menos horas.</p></div>
         <div class="pregunta"><h3>¿Cuánto tarda?</h3><p>Semanas, no meses, porque el sistema ya existe y se adapta. El plazo exacto queda por escrito antes de empezar, según su plan y lo que haya que migrar.</p></div>
       </div>
     </div>
