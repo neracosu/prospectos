@@ -63,6 +63,14 @@ describe("renderPropuesta", () => {
     // sin decirle el dia usa el de hoy en Caracas: nunca deja el marcador a la vista
     expect(renderPropuesta(p, "Bar", "/p/x/pdf")).not.toContain("<!--si:promo-->");
   });
+  it("deja los bloques del pais del prospecto y quita los del otro; sin decirlo es Venezuela", () => {
+    const p = '<title>x</title><style></style><div class="documento"><p>A<!--si:ve--> pago móvil<!--fin:ve--><!--si:co--> Wompi<!--fin:co-->B</p></div>';
+    expect(renderPropuesta(p, "Bar", "/p/x/pdf")).toContain("<p>A pago móvilB</p>");
+    expect(renderPropuesta(p, "Bar", "/p/x/pdf", { pais: "VE" })).toContain("<p>A pago móvilB</p>");
+    const co = renderPropuesta(p, "Bar", "/p/x/pdf", { pais: "CO" });
+    expect(co).toContain("<p>A WompiB</p>");
+    expect(co).not.toContain("si:");
+  });
   it("revienta si la plantilla no tiene los marcadores esperados", () => {
     expect(() => renderPropuesta("<html><body>sin nada util</body></html>", "X", "/p/x/pdf")).toThrow(
       "PLANTILLA_SIN_MARCADORES",

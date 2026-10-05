@@ -79,3 +79,23 @@ describe("mensajes para prospectos de Colombia", () => {
     expect(m).not.toContain("  ");
   });
 });
+
+import { mensajeColombia } from "@/lib/colombia-contrato";
+
+describe("que se le manda a un prospecto de Colombia segun su nicho tenga o no propuesta en version Colombia", () => {
+  it("sin version Colombia: mensaje sin enlace y sin propuesta", () => {
+    const m = mensajeColombia("hoteles", "inicial", ["restaurantes-y-bares"]);
+    expect(m.conPropuesta).toBe(false);
+    expect(m.base).not.toContain("{enlace}");
+  });
+  it("con version Colombia: el primer mensaje y el seguimiento llevan el enlace", () => {
+    for (const tipo of ["inicial", "seguimiento"] as const) {
+      const m = mensajeColombia("restaurantes-y-bares", tipo, ["restaurantes-y-bares"]);
+      expect([tipo, m.conPropuesta, m.base.includes("{enlace}"), /bol[ií]var|pago m[oó]vil/i.test(m.base)]).toEqual([tipo, true, true, false]);
+    }
+    expect(mensajeColombia("restaurantes-y-bares", "inicial", ["restaurantes-y-bares"]).base).toContain("{promo}");
+  });
+  it("un nicho sin plantilla nunca tiene propuesta", () => {
+    expect(mensajeColombia("", "inicial", [""]).conPropuesta).toBe(false);
+  });
+});
