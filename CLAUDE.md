@@ -139,7 +139,12 @@ nichos (`hoteles`, `hoteles-estadia`).
     se le manda la propuesta ni el mensaje del nicho**: lleva el de `src/lib/colombia-contrato.ts` (plataforma con
     cobro integrado a Wompi, sin enlace). Mismos precios en USD y misma promoción. Lo que se ofrece allá, dicho por
     Neri: integración con Wompi, con el registro del lado del cliente si tiene Bancolombia; **la integración no está
-    construida**. Etapa 2 pendiente: propuestas en versión Colombia.
+    construida**. Etapa 2 en curso: las plantillas llevan bloques `<!--si:ve-->…<!--fin:ve-->` y
+    `<!--si:co-->…<!--fin:co-->` (`renderPropuesta` deja los del país del prospecto; el verificador arma las dos
+    versiones). **Un prospecto colombiano solo recibe propuesta si su arquetipo está en `PLANTILLAS_CON_COLOMBIA`**
+    (`colombia-contrato.ts`), que está VACÍA: `restaurantes-y-bares` ya tiene su versión escrita (ejemplo en
+    `~/propuestas/colombia/ejemplo-restaurantes-colombia.pdf`) y espera el visto bueno de Neri; faltan las otras seis.
+    `condiciones.html` y `comparar.html` ya tienen su versión Colombia (pesos a la TRM, Wompi).
   - **Tope por búsqueda en el directorio (6-oct):** cada búsqueda deja pasar como mucho `TOPE_LOTE` (300), las de mayor
     confianza entre las que **todavía no pasaron por la bandeja** (`tomarLote` + `clavesVistas`: filas de `Revision`
     de origen `overture` con cualquier decisión y prospectos que entraron por ahí). Buscar otra vez trae las

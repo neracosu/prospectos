@@ -14,8 +14,9 @@ const pg = await b.newPage();
 let fallas = 0;
 for (const slug of slugs) {
   const plantilla = readFileSync(path.join(DIR, `${slug}.html`), "utf8");
-  for (const conWeb of [true, false]) {
-    const html = renderPropuesta(plantilla, "Restaurante El Ejemplo Largo de Nombre C.A.", "#", { ciudad: "Valencia", rubro: "restaurantes y bares", conWeb, fecha: "2026-11-20", hoy: "2026-11-20" });
+  const paises = plantilla.includes("<!--si:co-->") ? (["VE", "CO"] as const) : (["VE"] as const);
+  for (const pais of paises) for (const conWeb of [true, false]) {
+    const html = renderPropuesta(plantilla, "Restaurante El Ejemplo Largo de Nombre C.A.", "#", { ciudad: "Valencia", rubro: "restaurantes y bares", conWeb, fecha: "2026-11-20", hoy: "2026-11-20", pais });
     await pg.setContent(html, { waitUntil: "networkidle" });
     await pg.evaluate(async () => { await (document as Document & { fonts: FontFaceSet }).fonts.ready; });
     await pg.emulateMedia({ media: "print" });
@@ -24,7 +25,7 @@ for (const slug of slugs) {
     const hojas = await pg.$$eval(".hoja", (hs) => hs.length);
     const estado = sobras.length || tokens ? "FALLA" : "ok";
     if (estado === "FALLA") fallas++;
-    console.log(`${estado.padEnd(6)} ${slug.padEnd(24)} web=${conWeb ? "si" : "no"} hojas ${hojas}${sobras.length ? `  desbordadas (hoja, px): ${JSON.stringify(sobras)}` : ""}${tokens ? `  tokens sin rellenar: ${tokens}` : ""}`);
+    console.log(`${estado.padEnd(6)} ${slug.padEnd(24)} ${pais} web=${conWeb ? "si" : "no"} hojas ${hojas}${sobras.length ? `  desbordadas (hoja, px): ${JSON.stringify(sobras)}` : ""}${tokens ? `  tokens sin rellenar: ${tokens}` : ""}`);
   }
 }
 await b.close();

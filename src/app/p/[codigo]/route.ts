@@ -1,3 +1,4 @@
+import { paisDeCiudad } from "@/lib/overpass-contrato";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/db";
 import { verificarToken, verificarTokenCliente } from "@/lib/auth";
@@ -38,7 +39,7 @@ async function encontrarProspecto(codigo: string) {
   const plantilla = await leerPlantilla(p.nicho.plantillaPropuesta);
   if (!plantilla) return null;
   // Lo unico del prospecto que sale a la propuesta publica: nombre, ciudad, rubro y si tiene web. Nada de contacto.
-  return { id: p.id, nombre: p.nombre, plantilla, extra: { ciudad: p.ciudad, rubro: p.nicho.nombre.toLowerCase(), conWeb: !!p.web, fecha: await fechaDePropuesta(p.id) } };
+  return { id: p.id, nombre: p.nombre, plantilla, extra: { ciudad: p.ciudad, rubro: p.nicho.nombre.toLowerCase(), conWeb: !!p.web, fecha: await fechaDePropuesta(p.id), pais: paisDeCiudad(p.ciudad) } };
 }
 
 // Deja un Evento "abierto", salvo que quien abre tenga sesion (Neri revisando

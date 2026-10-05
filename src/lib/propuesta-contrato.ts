@@ -71,7 +71,9 @@ export const PROMO_HASTA = "2026-12-31";
 export function fraseDePromo(hoy: string): string {
   return hoy <= PROMO_HASTA ? "Hasta el 31 de diciembre hay 40 % de descuento en el pago único." : "";
 }
-export type ExtraPropuesta = { ciudad?: string; rubro?: string; conWeb?: boolean; fecha?: string; hoy?: string };
+// <!--si:ve-->…<!--fin:ve--> y <!--si:co-->…<!--fin:co--> (6-oct-2026): lo que solo vale en un pais (pago movil y tasa
+// del dia en Venezuela; Wompi y pesos en Colombia). Se deja el del pais del prospecto; sin decirlo es Venezuela.
+export type ExtraPropuesta = { ciudad?: string; rubro?: string; conWeb?: boolean; fecha?: string; hoy?: string; pais?: "VE" | "CO" };
 
 export const DIAS_VIGENCIA = 30;
 const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
@@ -103,6 +105,7 @@ export function renderPropuesta(plantilla: string, nombre: string, urlPdf: strin
     .replace(/\{\{vigencia\}\}/g, fechaLarga(sumarDias(fecha, DIAS_VIGENCIA)));
   cuerpo = bloque(bloque(cuerpo, "web", extra.conWeb === true), "sinweb", extra.conWeb === false);
   cuerpo = bloque(cuerpo, "promo", hoy <= PROMO_HASTA);
+  cuerpo = bloque(bloque(cuerpo, "ve", extra.pais !== "CO"), "co", extra.pais === "CO");
   cuerpo = cuerpo.replace(
     /<button class="boton" id="descargar-pdf"[^>]*>([\s\S]*?)<\/button>/,
     `<a class="boton" id="descargar-pdf" href="${urlPdf}">$1</a>`,

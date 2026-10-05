@@ -3,6 +3,7 @@
 // /p/<codigo>/pdf (~/prospectos-archivos/propuestas/<codigo>-<hash>.pdf). Chromium de a uno. Lo que ya existe no
 // se regenera. Si no se corre, el PDF igual se genera al primer toque en la ficha: esto solo lo deja listo.
 // Uso (env cargado): npx tsx scripts/generar-propuestas.mts [--primeros 100]
+import { paisDeCiudad } from "../src/lib/overpass-contrato";
 import { prisma } from "../src/lib/db";
 import { leerPlantilla, generarPdf, hashDe, rutaPdf, fechaDePropuesta } from "../src/lib/propuesta";
 import { renderPropuesta } from "../src/lib/propuesta-contrato";
@@ -19,7 +20,7 @@ for (const p of filas) {
   if (!slug) { sinPlantilla++; continue; }
   if (!plantillas.has(slug)) plantillas.set(slug, await leerPlantilla(slug));
   const plantilla = plantillas.get(slug); if (!plantilla) { sinPlantilla++; continue; }
-  const html = renderPropuesta(plantilla, p.nombre, "#", { ciudad: p.ciudad, rubro: p.nicho.nombre.toLowerCase(), conWeb: !!p.web, fecha: await fechaDePropuesta(p.id) });
+  const html = renderPropuesta(plantilla, p.nombre, "#", { ciudad: p.ciudad, rubro: p.nicho.nombre.toLowerCase(), conWeb: !!p.web, fecha: await fechaDePropuesta(p.id), pais: paisDeCiudad(p.ciudad) });
   const hash = hashDe(html);
   try { await stat(rutaPdf(p.codigo, hash)); existian++; continue; } catch {}
   try { await generarPdf(p.codigo, html, hash); hechos++; }

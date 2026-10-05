@@ -1,3 +1,4 @@
+import { paisDeCiudad } from "@/lib/overpass-contrato";
 import { readFile } from "node:fs/promises";
 import { prisma } from "@/lib/db";
 import { permitirIntento } from "@/lib/rate-limit";
@@ -35,7 +36,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ codigo: string
   const plantilla = await leerPlantilla(p.nicho.plantillaPropuesta);
   if (!plantilla) return new Response("No encontrado", { status: 404 });
   try {
-    const html = renderPropuesta(plantilla, p.nombre, "#", { ciudad: p.ciudad, rubro: p.nicho.nombre.toLowerCase(), conWeb: !!p.web, fecha: await fechaDePropuesta(p.id) });
+    const html = renderPropuesta(plantilla, p.nombre, "#", { ciudad: p.ciudad, rubro: p.nicho.nombre.toLowerCase(), conWeb: !!p.web, fecha: await fechaDePropuesta(p.id), pais: paisDeCiudad(p.ciudad) });
     const ruta = await generarPdf(codigo, html, hashDe(html));
     const bytes = await readFile(ruta);
     const nombreArchivo = `Propuesta-NERACOSU-${saneado(p.nombre) || "Propuesta"}.pdf`;
