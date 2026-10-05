@@ -56,3 +56,26 @@ describe("mensaje del prospecto con el gancho de la temporada", () => {
     expect(mensajeDeProspecto("Hola, {nombre}: {enlace}", { nombre: "Bar", enlace: "", promo: "x" })).toBe("Hola, Bar:");
   });
 });
+
+import { MENSAJE_CO_INICIAL, MENSAJE_CO_SEGUIMIENTO } from "@/lib/colombia-contrato";
+
+describe("mensajes para prospectos de Colombia", () => {
+  it("hablan de Wompi y no de lo que solo existe en Venezuela, y no mandan la propuesta venezolana", () => {
+    for (const m of [MENSAJE_CO_INICIAL, MENSAJE_CO_SEGUIMIENTO]) {
+      expect(m).toContain("{nombre}");
+      expect(m).not.toContain("{enlace}");
+      expect(m).not.toMatch(/bol[ií]var|pago m[oó]vil|BCV|tasa del d[ií]a|Caracas|Valencia/i);
+    }
+    expect(MENSAJE_CO_INICIAL).toContain("Wompi");
+    expect(MENSAJE_CO_INICIAL).toContain("{promo}");
+  });
+  it("se arma con el nombre, la ciudad y el rubro, y el gancho de la temporada", () => {
+    const m = mensajeDeProspecto(MENSAJE_CO_INICIAL, { nombre: "Café Tinto", enlace: "", promo: fraseDePromo("2026-10-05"), ciudad: "Cali", rubro: "restaurantes y bares" });
+    expect(m).toContain("equipo de Café Tinto");
+    expect(m).toContain("Cali");
+    expect(m).toContain("restaurantes y bares");
+    expect(m).toContain("40 % de descuento");
+    expect(m).not.toMatch(/\{[a-z]+\}/);
+    expect(m).not.toContain("  ");
+  });
+});

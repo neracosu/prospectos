@@ -11,7 +11,7 @@ const caracas = ciudadPorSlug("caracas")!;
 const lugar = (extra: Partial<LugarOverture> = {}): LugarOverture => ({
   id: "a1", nombre: "Arepera Central", categoriaBase: "restaurant", categoriaFina: "venezuelan_restaurant",
   lat: 10.4806, lon: -66.9036, direccion: "Av. Urdaneta", telefonos: "+584141234567", correos: "arepera@gmail.com",
-  webs: "", redes: "https://www.facebook.com/106177705403485", confianza: 0.9, publicacion: "2026-09-23.1", ...extra,
+  webs: "", redes: "https://www.facebook.com/106177705403485", confianza: 0.9, publicacion: "2026-09-23.1", pais: "VE", ...extra,
 });
 const uno = (extra: Partial<LugarOverture> = {}, nicho = "restaurantes-y-bares", soloContactables = true) =>
   prospectosDesdeOverture([lugar(extra)], caracas, nicho, { soloContactables });
@@ -148,7 +148,7 @@ describe("overture: carga", () => {
     expect(validarLugar(crudo(), "2026-09-23.1")).toEqual({
       id: "08f2a", nombre: "Arepera Central", categoriaBase: "restaurant", categoriaFina: "venezuelan_restaurant",
       lat: 10.48, lon: -66.9, direccion: "Av. Urdaneta", telefonos: "+584141234567\n+582127930708",
-      correos: "a@gmail.com", webs: "", redes: "https://www.facebook.com/1", confianza: 0.9, publicacion: "2026-09-23.1",
+      correos: "a@gmail.com", webs: "", redes: "https://www.facebook.com/1", confianza: 0.9, publicacion: "2026-09-23.1", pais: "VE",
     });
   });
   it("rechaza lo que no tiene id, nombre, categoria o coordenadas dentro de Venezuela", () => {
@@ -177,5 +177,29 @@ describe("overture: carga", () => {
   it("escribe la fecha de la publicacion como en Venezuela", () => {
     expect(fechaDePublicacion("2026-09-23.1")).toBe("23/09/2026");
     expect(fechaDePublicacion("rara")).toBe("rara");
+  });
+});
+
+describe("overture: Colombia", () => {
+  const bogota = ciudadPorSlug("bogota")!;
+  const enBogota = (extra: Partial<LugarOverture> = {}) =>
+    prospectosDesdeOverture([lugar({ lat: 4.711, lon: -74.0721, pais: "CO", telefonos: "+573145594975", ...extra })], bogota, "restaurantes-y-bares", { soloContactables: true });
+  it("un lugar de Bogota entra con su ciudad, su departamento y el movil colombiano como WhatsApp", () => {
+    expect(enBogota()[0]).toMatchObject({ ciudad: "Bogotá", estado: "Bogotá D.C.", telefono: "+573145594975", whatsapp: "573145594975" });
+  });
+  it("en Colombia un fijo o un numero con digitos de mas no va a WhatsApp, y el movil sin prefijo si", () => {
+    expect(enBogota({ telefonos: "+576012345678" })[0].whatsapp).toBe("");
+    expect(enBogota({ telefonos: "+5731455949755" })[0].whatsapp).toBe("");
+    expect(enBogota({ telefonos: "314 559 4975" })[0].whatsapp).toBe("573145594975");
+  });
+  it("un lugar marcado de otro pais no entra aunque caiga en el radio de la ciudad", () => {
+    expect(enBogota({ pais: "VE" })).toEqual([]);
+  });
+  it("la carga valida las coordenadas contra el pais que se esta cargando", () => {
+    const crudo = { id: "c1", nombre: "Arepas Bogotá", categoriaBase: "restaurant", categoriaFina: "", lat: 4.711, lon: -74.0721, direccion: "", telefonos: [], correos: [], webs: [], redes: [], confianza: 0.9 };
+    expect(validarLugar(crudo, "2026-09-23.1", "CO")).toMatchObject({ id: "c1", pais: "CO" });
+    expect(validarLugar(crudo, "2026-09-23.1")).toBeNull(); // sin decir pais es Venezuela, y Bogota no esta en Venezuela
+    expect(validarLugar({ ...crudo, lat: 10.48, lon: -66.9 }, "2026-09-23.1", "CO")).toMatchObject({ pais: "CO" }); // Caracas cae en la caja ancha de Colombia: la consulta por pais es la que filtra
+    expect(validarLugar({ ...crudo, lat: 40.4, lon: -3.7 }, "2026-09-23.1", "CO")).toBeNull();
   });
 });

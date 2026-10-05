@@ -16,6 +16,28 @@ describe("normalizarCelular", () => {
   });
 });
 
+describe("normalizarCelular con moviles de Colombia", () => {
+  it.each([
+    ["+57 314 559 4975", "573145594975"],
+    ["+573145594975", "573145594975"],
+    ["57 (300) 123-4567", "573001234567"],
+    ["0057 320 1234567", "573201234567"],
+    ["+57 601 2345678", ""], // fijo de Bogota
+    ["+57 4 4441234", ""], // fijo viejo de Medellin
+    ["314 559 4975", ""], // sin prefijo de pais no se adivina
+    ["+58 412 3229005", "584123229005"], // un venezolano sigue igual
+  ])("%s -> %s", (entrada, salida) => {
+    expect(normalizarCelular(entrada)).toBe(salida);
+  });
+  it("con el pais dicho, un movil colombiano escrito sin prefijo si se toma, y uno venezolano no", () => {
+    expect(normalizarCelular("314 559 4975", "CO")).toBe("573145594975");
+    expect(normalizarCelular("(300) 1234567", "CO")).toBe("573001234567");
+    expect(normalizarCelular("601 2345678", "CO")).toBe("");
+    expect(normalizarCelular("0412-322-9005", "CO")).toBe("");
+    expect(normalizarCelular("0412-322-9005", "VE")).toBe("584123229005");
+  });
+});
+
 describe("normalizarRed", () => {
   it("convierte usuario o @usuario en la URL canonica", () => {
     expect(normalizarRed("@hotelyare", "instagram")).toBe("https://www.instagram.com/hotelyare/");
