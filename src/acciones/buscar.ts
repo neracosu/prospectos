@@ -11,8 +11,8 @@ import { parsearTabla, validarFila, validarTopes, TOPES, type EntradaValidada } 
 import { extraerContactos } from "@/lib/contactos-web-contrato";
 import { esUrlMaps, extraerFichaMaps } from "@/lib/maps-contrato";
 import { ciudadPorNombre, ciudadPorSlug } from "@/lib/overpass-contrato";
-import { reglaDeNicho, prospectosDesdeOverture } from "@/lib/overture-contrato";
-import { lugaresDeOverture, publicacionCargada } from "@/lib/overture";
+import { reglaDeNicho, prospectosDesdeOverture, tomarLote } from "@/lib/overture-contrato";
+import { lugaresDeOverture, publicacionCargada, clavesVistas } from "@/lib/overture";
 import { leerXlsx, decodificarTexto } from "@/lib/plantilla-importar";
 import { crearLote, listaDeTextos, mapaDeTextos, type Origen } from "@/lib/revision";
 import { normalizarCelular, normalizarRed } from "@/lib/celular-contrato";
@@ -95,7 +95,7 @@ export async function buscarOverpass(
 
 // El directorio abierto (Overture Maps) ya esta en la base: aqui no hay red, ni cola, ni cache. Lo usan dueno y
 // prospectador, igual que la busqueda del mapa.
-export async function buscarOverture(formData: FormData): Promise<Resultado<Resumen & { publicacion: string }>> {
+export async function buscarOverture(formData: FormData): Promise<Resultado<Resumen & { publicacion: string; quedan: number }>> {
   const u = await exigirSesion();
   const e = z
     .object({
@@ -117,8 +117,11 @@ export async function buscarOverture(formData: FormData): Promise<Resultado<Resu
       soloContactables: e.data.soloContactables === "on",
     });
     if (!entradas.length) return fallo("El directorio no tiene negocios de ese nicho en esa ciudad.");
-    const lote = await loteDesdeEntradas("overture", entradas, entradas.map(validarTopes), u.id);
-    return exito({ ...lote, publicacion });
+    // Como mucho TOPE_LOTE por busqueda y nunca lo que ya paso por la bandeja: buscar otra vez trae las siguientes.
+    const { lote: tanda, quedan } = tomarLote(entradas, await clavesVistas(e.data.nichoId, nicho.slug, ciudad.nombre));
+    if (!tanda.length) return fallo("Ya pasaron por la bandeja todos los negocios de ese nicho en esa ciudad.");
+    const lote = await loteDesdeEntradas("overture", tanda, tanda.map(validarTopes), u.id);
+    return exito({ ...lote, publicacion, quedan });
   } catch (err) {
     console.error("buscarOverture", err);
     return fallo(ERROR);

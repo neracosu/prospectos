@@ -4,7 +4,7 @@ import path from "node:path";
 import { ciudadPorSlug } from "@/lib/overpass-contrato";
 import {
   REGLAS_NICHO, SIN_EQUIVALENCIA, reglaDeNicho, cajaDeCiudad, ciudadDeLugar, prospectosDesdeOverture,
-  validarLugar, puedeReemplazar, fechaDePublicacion, type LugarOverture,
+  validarLugar, puedeReemplazar, fechaDePublicacion, tomarLote, TOPE_LOTE, type LugarOverture,
 } from "@/lib/overture-contrato";
 
 const caracas = ciudadPorSlug("caracas")!;
@@ -201,5 +201,28 @@ describe("overture: Colombia", () => {
     expect(validarLugar(crudo, "2026-09-23.1")).toBeNull(); // sin decir pais es Venezuela, y Bogota no esta en Venezuela
     expect(validarLugar({ ...crudo, lat: 10.48, lon: -66.9 }, "2026-09-23.1", "CO")).toMatchObject({ pais: "CO" }); // Caracas cae en la caja ancha de Colombia: la consulta por pais es la que filtra
     expect(validarLugar({ ...crudo, lat: 40.4, lon: -3.7 }, "2026-09-23.1", "CO")).toBeNull();
+  });
+});
+
+describe("overture: tope por busqueda", () => {
+  const muchas = (n: number) => prospectosDesdeOverture(
+    Array.from({ length: n }, (_, i) => lugar({ id: `l${i}`, nombre: `Arepera ${i}`, confianza: 1 - i / 10000 })),
+    caracas, "restaurantes-y-bares", { soloContactables: true });
+  it("un lote lleva como mucho el tope, las de mayor confianza, y dice cuantas quedan", () => {
+    expect(TOPE_LOTE).toBe(300);
+    const r = tomarLote(muchas(750), new Set());
+    expect(r.lote).toHaveLength(300);
+    expect(r.lote[0].nombre).toBe("Arepera 0");
+    expect(r.lote[299].nombre).toBe("Arepera 299");
+    expect(r.quedan).toBe(450);
+  });
+  it("lo que ya paso por la bandeja no vuelve: la siguiente busqueda trae las siguientes", () => {
+    const todas = muchas(750);
+    const vistas = new Set(todas.slice(0, 300).map((e) => `${e.nombre}|${e.ciudad}`.toLowerCase().replace(/[^a-z0-9|]/g, "")));
+    const r = tomarLote(todas, vistas);
+    expect(r.lote[0].nombre).toBe("Arepera 300");
+    expect(r.lote).toHaveLength(300);
+    expect(r.quedan).toBe(150);
+    expect(tomarLote(todas.slice(0, 5), vistas)).toEqual({ lote: [], quedan: 0 });
   });
 });

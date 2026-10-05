@@ -140,6 +140,11 @@ nichos (`hoteles`, `hoteles-estadia`).
     cobro integrado a Wompi, sin enlace). Mismos precios en USD y misma promoción. Lo que se ofrece allá, dicho por
     Neri: integración con Wompi, con el registro del lado del cliente si tiene Bancolombia; **la integración no está
     construida**. Etapa 2 pendiente: propuestas en versión Colombia.
+  - **Tope por búsqueda en el directorio (6-oct):** cada búsqueda deja pasar como mucho `TOPE_LOTE` (300), las de mayor
+    confianza entre las que **todavía no pasaron por la bandeja** (`tomarLote` + `clavesVistas`: filas de `Revision`
+    de origen `overture` con cualquier decisión y prospectos que entraron por ahí). Buscar otra vez trae las
+    siguientes; cuando no queda ninguna lo dice y no crea lote. Un prospecto que existía de otra fuente sí vuelve a
+    ofrecerse para completarlo.
   - **Segundo cron dentro de la app:** `src/instrumentation.ts` → `limpiarLotesViejos(30)`, a la misma hora
     que las mensualidades; deja `[revision] N lotes viejos limpiados` (si no aparece tras un
     `pm2 restart`, no arrancó). Es lo único que borra algo en toda la app: filas de `Revision` ya

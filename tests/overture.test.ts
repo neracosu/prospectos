@@ -180,11 +180,17 @@ describe.runIf(DB_HABILITADA)("directorio abierto: buscarOverture", () => {
   it("buscar dos veces lo mismo no deja nada nuevo que aprobar en el segundo lote", async () => {
     await reemplazarLugares([lugar("uno"), lugar("dos")]);
     const a = await buscar();
-    const b = await buscar();
-    expect(a.ok && a.datos.nuevos).toBe(2);
-    expect(b.ok && b.datos).toMatchObject({ nuevos: 0, repetidos: 2 });
-    const filas = await filasDe((b as { datos: { lote: string } }).datos.lote);
-    expect(filas.every((f) => f.decision === "descartado")).toBe(true);
+    expect(a.ok && a.datos).toMatchObject({ nuevos: 2, quedan: 0 });
+    // lo que ya esta en la bandeja no se repite: no se crea un segundo lote
+    expect(await buscar()).toEqual({ ok: false, mensaje: "Ya pasaron por la bandeja todos los negocios de ese nicho en esa ciudad." });
+    expect(await prisma.revision.count()).toBe(2);
+    // llega uno nuevo al directorio: la siguiente busqueda trae solo ese
+    await reemplazarLugares([lugar("uno"), lugar("dos"), lugar("tres")]);
+    const c = await buscar();
+    expect(c.ok && c.datos).toMatchObject({ nuevos: 1, repetidos: 0 });
+    // uno descartado tampoco vuelve, ni uno ya aprobado desde el directorio
+    await prisma.revision.updateMany({ data: { decision: "descartado", decididoEn: new Date() } });
+    expect((await buscar()).ok).toBe(false);
   });
 
   it("un nombre de mas de 120 caracteres entra marcado como error, no revienta", async () => {

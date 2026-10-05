@@ -81,7 +81,10 @@ export function FormOverpass({
             setSalida(null);
             if (fuente === "directorio") {
               const r = await buscarOverture(fd);
-              if (r.ok) setSalida({ ...r.datos, consultado, aviso: "" });
+              if (r.ok) {
+                const q = r.datos.quedan;
+                setSalida({ ...r.datos, consultado, aviso: q > 0 ? `Quedan ${q} más de este nicho en esta ciudad. Vuelve a buscar cuando termines con estas y llegan las siguientes.` : "" });
+              }
               else setError(r.mensaje);
             } else {
               const r = await buscarOverpass(fd);

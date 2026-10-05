@@ -105,7 +105,7 @@ try {
   await directorio.click();
   await resumen.waitFor({ timeout: 10_000 });
   const texto = await resumen.innerText();
-  revisar(/Nuevas\s*1/.test(texto) && /Ya estaban\s*2/.test(texto), "sin la casilla entra la que no tiene contacto y las otras dos ya estaban");
+  revisar(texto.includes("1 ficha encontrada") && /Nuevas\s*1/.test(texto) && !texto.includes("Ya estaban"), "sin la casilla llega solo la que faltaba: las dos que ya estan en la bandeja no se repiten");
 } catch (e) {
   errores.push(`excepcion: ${(e as Error).message}`);
 } finally {

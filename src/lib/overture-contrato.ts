@@ -3,6 +3,7 @@
 import { normalizarCelular, normalizarRed, type Pais } from "@/lib/celular-contrato";
 import { CIUDADES, type Ciudad } from "@/lib/overpass-contrato";
 import type { EntradaValidada } from "@/lib/tabla-contrato";
+import { claveProspecto } from "@/lib/clave-prospecto";
 
 // Las cuatro listas van como texto con un valor por renglon: la tabla no lleva columnas Json a proposito.
 export type LugarOverture = {
@@ -137,6 +138,15 @@ export function prospectosDesdeOverture(
     salida.push(entrada);
   }
   return salida;
+}
+
+// Una ciudad grande trae miles de fichas de un solo nicho (restaurantes en Cali: 1.784) y nadie revisa eso en una
+// bandeja. Cada busqueda deja pasar como mucho TOPE_LOTE, las de mayor confianza entre las que TODAVIA no pasaron por
+// la bandeja (`vistas`: claves nombre|ciudad): asi la siguiente busqueda trae las siguientes, no las mismas.
+export const TOPE_LOTE = 300;
+export function tomarLote(entradas: EntradaValidada[], vistas: Set<string>, tope = TOPE_LOTE): { lote: EntradaValidada[]; quedan: number } {
+  const sinVer = entradas.filter((e) => !vistas.has(claveProspecto(e.nombre, e.ciudad)));
+  return { lote: sinVer.slice(0, tope), quedan: Math.max(0, sinVer.length - tope) };
 }
 
 // --- Carga ------------------------------------------------------------------

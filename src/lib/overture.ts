@@ -1,6 +1,7 @@
 // Acceso a la tabla del directorio abierto (Overture Maps). Las reglas viven en overture-contrato.ts; aqui solo
 // se lee y se reemplaza. No entra en la cadena de src/instrumentation.ts.
 import { prisma } from "@/lib/db";
+import { claveProspecto } from "@/lib/clave-prospecto";
 import type { Ciudad } from "@/lib/overpass-contrato";
 import type { Pais } from "@/lib/celular-contrato";
 import { cajaDeCiudad, type LugarOverture, type ReglaNicho } from "@/lib/overture-contrato";
@@ -43,4 +44,19 @@ export async function reemplazarLugares(lugares: LugarOverture[], pais: Pais = "
     { timeout: 120_000, maxWait: 10_000 },
   );
   return lugares.length;
+}
+
+// Las claves (nombre|ciudad) de lo que ya paso por la bandeja desde el directorio para ese nicho y esa ciudad:
+// filas de Revision con cualquier decision (pendiente, aprobada, descartada) y prospectos que entraron por ahi (las
+// filas decididas se limpian a los 30 dias; el prospecto queda). Es lo que tomarLote no vuelve a ofrecer.
+export async function clavesVistas(nichoId: number, nichoSlug: string, ciudad: string): Promise<Set<string>> {
+  const [filas, prospectos] = await Promise.all([
+    prisma.$queryRaw<{ nombre: string | null }[]>`
+      SELECT JSON_UNQUOTE(JSON_EXTRACT(datos, '$.nombre')) AS nombre FROM Revision
+      WHERE origen = 'overture'
+        AND JSON_UNQUOTE(JSON_EXTRACT(datos, '$.nicho')) = ${nichoSlug}
+        AND JSON_UNQUOTE(JSON_EXTRACT(datos, '$.ciudad')) = ${ciudad}`,
+    prisma.prospecto.findMany({ where: { nichoId, origen: "overture", ciudad }, select: { clave: true } }),
+  ]);
+  return new Set([...filas.map((f) => claveProspecto(f.nombre ?? "", ciudad)), ...prospectos.map((p) => p.clave)]);
 }
