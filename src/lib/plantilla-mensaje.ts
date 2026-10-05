@@ -19,3 +19,9 @@ export function armarMensaje(plantilla: string, valores: Record<string, string>)
     .replace(/\n{3,}/g, "\n\n")
     .replace(/\s+$/, "");
 }
+
+// El mensaje de prospeccion de un nicho ({nombre}, {enlace}, {promo}). Una variable que sale vacia no deja dos
+// espacios seguidos ni un espacio colgando al final.
+export function mensajeDeProspecto(base: string, valores: { nombre: string; enlace: string; promo: string }): string {
+  return rellenar(base, valores).replace(/ {2,}/g, " ").trim();
+}

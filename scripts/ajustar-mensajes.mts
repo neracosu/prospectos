@@ -24,6 +24,8 @@ export function ajustar(texto: string, slug: string, plantilla: string | null): 
   // «se la muestro funcionando»: «la» era la propuesta, no el sistema.
   if (slug === "hoteles") t = t.replaceAll("se la muestro funcionando", "le muestro el sistema funcionando");
   if (slug === "hoteles-estadia") t = t.replaceAll("se la muestro funcionando", "le muestro la página de reservas funcionando");
+  // El gancho de la temporada promocional va justo antes de la pregunta con la que cierra el primer mensaje.
+  if (!t.includes("{promo}")) t = t.replace(" ¿Le parece si", " {promo} ¿Le parece si");
   return t;
 }
 

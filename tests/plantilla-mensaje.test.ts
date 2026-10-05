@@ -35,3 +35,24 @@ describe("armarMensaje", () => {
     expect(armarMensaje("Cambios:\n{cambios}", { cambios: "• uno\n• {enlace}", enlace: "https://x" })).toBe("Cambios:\n• uno\n• {enlace}");
   });
 });
+
+import { mensajeDeProspecto } from "@/lib/plantilla-mensaje";
+import { fraseDePromo } from "@/lib/propuesta-contrato";
+
+describe("mensaje del prospecto con el gancho de la temporada", () => {
+  const base = "Hola, {nombre}. Propuesta: {enlace} {promo} ¿Le parece si hablamos?";
+  it("mientras dura la temporada mete la frase del 40 %", () => {
+    for (const hoy of ["2026-10-05", "2026-12-31"]) {
+      expect(mensajeDeProspecto(base, { nombre: "Bar Uno", enlace: "https://x/p/1", promo: fraseDePromo(hoy) }))
+        .toBe("Hola, Bar Uno. Propuesta: https://x/p/1 Hasta el 31 de diciembre hay 40 % de descuento en el pago único. ¿Le parece si hablamos?");
+    }
+  });
+  it("pasada la fecha la frase desaparece sin dejar el hueco ni la variable a la vista", () => {
+    expect(fraseDePromo("2027-01-01")).toBe("");
+    expect(mensajeDeProspecto(base, { nombre: "Bar Uno", enlace: "https://x/p/1", promo: fraseDePromo("2027-01-01") }))
+      .toBe("Hola, Bar Uno. Propuesta: https://x/p/1 ¿Le parece si hablamos?");
+  });
+  it("un mensaje sin {promo} sale igual que antes, y sin enlace no queda nada colgando", () => {
+    expect(mensajeDeProspecto("Hola, {nombre}: {enlace}", { nombre: "Bar", enlace: "", promo: "x" })).toBe("Hola, Bar:");
+  });
+});

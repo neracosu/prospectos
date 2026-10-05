@@ -66,6 +66,11 @@ const SCRIPT_DESCARGA = `
 // pago unico para quien contrate hasta PROMO_HASTA. Lo decide el dia en que se ABRE la propuesta (`hoy`), no el del
 // envio: una propuesta enviada en diciembre y abierta en enero ya no lo ofrece.
 export const PROMO_HASTA = "2026-12-31";
+// La misma temporada, como frase para el primer mensaje de WhatsApp: la variable {promo} de los mensajes de nicho.
+// Vacia cuando la temporada termino, para que ningun mensaje ofrezca un descuento vencido.
+export function fraseDePromo(hoy: string): string {
+  return hoy <= PROMO_HASTA ? "Hasta el 31 de diciembre hay 40 % de descuento en el pago único." : "";
+}
 export type ExtraPropuesta = { ciudad?: string; rubro?: string; conWeb?: boolean; fecha?: string; hoy?: string };
 
 export const DIAS_VIGENCIA = 30;

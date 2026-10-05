@@ -3,7 +3,9 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { ordenarCola } from "@/lib/cola-contrato";
 import { ETAPAS, type Etapa } from "@/lib/embudo-contrato";
-import { rellenar } from "@/lib/plantilla-mensaje";
+import { mensajeDeProspecto } from "@/lib/plantilla-mensaje";
+import { fraseDePromo } from "@/lib/propuesta-contrato";
+import { hoyCaracas } from "@/lib/fecha-caracas";
 import { enlacePropuesta, type ProspectoTarjeta } from "@/lib/prospectos-contrato";
 import { listaDeTextos, mapaDeTextos } from "@/lib/revision";
 
@@ -28,7 +30,7 @@ function aTarjeta(f: FilaProspecto, abrio: boolean, plantilla: "inicial" | "segu
   const base = plantilla === "inicial" ? f.nicho.mensajeInicial : f.nicho.mensajeSeguimiento;
   // Sin plantilla no hay enlace que ofrecer: se rellena {enlace} con vacio y
   // se recorta para que no quede un ": " o similar colgando en el mensaje.
-  const mensaje = rellenar(base, { nombre: f.nombre, enlace: tienePropuesta ? enlace : "" }).trim();
+  const mensaje = mensajeDeProspecto(base, { nombre: f.nombre, enlace: tienePropuesta ? enlace : "", promo: fraseDePromo(hoyCaracas()) });
   return {
     id: f.id, nombre: f.nombre, ciudad: f.ciudad, nichoNombre: f.nicho.nombre, nichoSlug: f.nicho.slug, nota: f.nota, web: f.web, tipo: f.tipo, tamano: f.tamano,
     etapa: f.etapa as Etapa, proximoSeguimiento: f.proximoSeguimiento, abrio, codigo: f.codigo, enlace, tienePropuesta,
