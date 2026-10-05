@@ -62,7 +62,11 @@ const SCRIPT_DESCARGA = `
 // {{fecha}} y {{vigencia}} (5-oct-2026): la fecha iba escrita a mano en cada plantilla y la de hoteles salio dos
 // semanas con los precios vencidos. `fecha` es el dia de Caracas (YYYY-MM-DD) del primer envio, o el de hoy si
 // todavia no se envio; la vigencia son 30 dias desde ahi.
-export type ExtraPropuesta = { ciudad?: string; rubro?: string; conWeb?: boolean; fecha?: string };
+// <!--si:promo-->…<!--fin:promo--> (temporada promocional, decision de Neri del 5-oct-2026): 40 % de descuento en el
+// pago unico para quien contrate hasta PROMO_HASTA. Lo decide el dia en que se ABRE la propuesta (`hoy`), no el del
+// envio: una propuesta enviada en diciembre y abierta en enero ya no lo ofrece.
+export const PROMO_HASTA = "2026-12-31";
+export type ExtraPropuesta = { ciudad?: string; rubro?: string; conWeb?: boolean; fecha?: string; hoy?: string };
 
 export const DIAS_VIGENCIA = 30;
 const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
@@ -83,7 +87,8 @@ export function renderPropuesta(plantilla: string, nombre: string, urlPdf: strin
     throw new Error("PLANTILLA_SIN_MARCADORES");
   }
   const n = nombreSeguro(nombre);
-  const fecha = extra.fecha && esFechaIso(extra.fecha) ? extra.fecha : hoyCaracas();
+  const hoy = extra.hoy && esFechaIso(extra.hoy) ? extra.hoy : hoyCaracas();
+  const fecha = extra.fecha && esFechaIso(extra.fecha) ? extra.fecha : hoy;
   let cuerpo = plantilla.replace('<div class="documento">', `<div class="documento" data-nombre="${n}">`);
   cuerpo = cuerpo
     .replace(/\{\{nombre\}\}/g, escapar(n) || "su negocio")
@@ -92,6 +97,7 @@ export function renderPropuesta(plantilla: string, nombre: string, urlPdf: strin
     .replace(/\{\{fecha\}\}/g, fechaLarga(fecha))
     .replace(/\{\{vigencia\}\}/g, fechaLarga(sumarDias(fecha, DIAS_VIGENCIA)));
   cuerpo = bloque(bloque(cuerpo, "web", extra.conWeb === true), "sinweb", extra.conWeb === false);
+  cuerpo = bloque(cuerpo, "promo", hoy <= PROMO_HASTA);
   cuerpo = cuerpo.replace(
     /<button class="boton" id="descargar-pdf"[^>]*>([\s\S]*?)<\/button>/,
     `<a class="boton" id="descargar-pdf" href="${urlPdf}">$1</a>`,

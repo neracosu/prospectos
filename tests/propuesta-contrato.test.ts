@@ -53,6 +53,16 @@ describe("renderPropuesta", () => {
       expect(html).toMatch(/\[\d{1,2} de [a-z]+ de \d{4}\|\d{1,2} de [a-z]+ de \d{4}\]/);
     }
   });
+  it("deja el bloque de la temporada promocional hasta el 31 de diciembre de 2026 y lo quita despues", () => {
+    const p = '<title>x</title><style></style><div class="documento"><p>A<!--si:promo--> 40 % menos<!--fin:promo-->B</p></div>';
+    for (const hoy of ["2026-10-05", "2026-12-31"]) expect([hoy, renderPropuesta(p, "Bar", "/p/x/pdf", { hoy }).includes("<p>A 40 % menos</p>".replace("</p>", "B</p>"))]).toEqual([hoy, true]);
+    for (const hoy of ["2027-01-01", "2027-06-15"]) {
+      const html = renderPropuesta(p, "Bar", "/p/x/pdf", { hoy });
+      expect([hoy, html.includes("<p>AB</p>"), html.includes("promo")]).toEqual([hoy, true, false]);
+    }
+    // sin decirle el dia usa el de hoy en Caracas: nunca deja el marcador a la vista
+    expect(renderPropuesta(p, "Bar", "/p/x/pdf")).not.toContain("<!--si:promo-->");
+  });
   it("revienta si la plantilla no tiene los marcadores esperados", () => {
     expect(() => renderPropuesta("<html><body>sin nada util</body></html>", "X", "/p/x/pdf")).toThrow(
       "PLANTILLA_SIN_MARCADORES",
