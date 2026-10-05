@@ -46,6 +46,6 @@ export function extraerFichaMaps(html: string): { nombre: string; direccion: str
   if (!titulo) return null;
   const nombre = titulo.replace(/\s*[-–·]\s*Google Maps\s*$/i, "").trim();
   const direccion = meta(html, "og:description").trim();
-  const tel = html.match(/"(\+58[\d\s().-]{7,20})"/);
+  const tel = html.match(/"(\+5[78][\d\s().-]{7,20})"/);
   return { nombre, direccion, telefono: tel ? tel[1].trim() : "", web: extraerWeb(html) };
 }

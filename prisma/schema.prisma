@@ -337,6 +337,7 @@ model LugarOverture {
   redes         String @db.Text
   confianza     Float
   publicacion   String @db.VarChar(20)
+  pais          String @default("VE") @db.VarChar(2) // VE | CO: cada pais se carga y se reemplaza por separado
 
   @@index([categoriaBase])
 }

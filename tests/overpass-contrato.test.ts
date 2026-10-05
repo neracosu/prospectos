@@ -20,10 +20,10 @@ describe("overpass", () => {
       expect([c.slug, c.lat > latMin && c.lat < latMax && c.lon > lonMin && c.lon < lonMax]).toEqual([c.slug, true]);
     }
   });
-  it("Colombia arranca con siete ciudades y las venezolanas siguen siendo veintidos", () => {
+  it("Colombia arranca con siete ciudades y las venezolanas siguen siendo veinte", () => {
     expect(CIUDADES.filter((c) => c.pais === "CO").map((c) => c.slug).sort())
       .toEqual(["barranquilla", "bogota", "cali", "cartagena", "cucuta", "medellin", "santa-marta"]);
-    expect(CIUDADES.filter((c) => c.pais === "VE")).toHaveLength(22);
+    expect(CIUDADES.filter((c) => c.pais === "VE")).toHaveLength(20);
     expect(ciudadPorSlug("cali")).toMatchObject({ nombre: "Cali", estado: "Valle del Cauca", pais: "CO" });
     expect(ciudadPorNombre("Cartagena de Indias")?.slug).toBe("cartagena");
     expect(ciudadPorNombre("Bogotá, D.C.")?.slug).toBe("bogota");

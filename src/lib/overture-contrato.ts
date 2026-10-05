@@ -1,6 +1,6 @@
 // Reglas puras del directorio abierto (Overture Maps): a que nicho y a que ciudad pertenece cada lugar y como se
 // convierte en una fila de la bandeja. Sin Prisma ni node: lo importan la accion, el script de carga y la pantalla.
-import { normalizarCelular, normalizarRed } from "@/lib/celular-contrato";
+import { normalizarCelular, normalizarRed, type Pais } from "@/lib/celular-contrato";
 import { CIUDADES, type Ciudad } from "@/lib/overpass-contrato";
 import type { EntradaValidada } from "@/lib/tabla-contrato";
 
@@ -8,6 +8,7 @@ import type { EntradaValidada } from "@/lib/tabla-contrato";
 export type LugarOverture = {
   id: string; nombre: string; categoriaBase: string; categoriaFina: string; lat: number; lon: number;
   direccion: string; telefonos: string; correos: string; webs: string; redes: string; confianza: number; publicacion: string;
+  pais: Pais;
 };
 
 // `bases` es basic_category de Overture. Donde la base es muy ancha se afina con taxonomy.primary:
@@ -93,7 +94,9 @@ function primerCorreo(lista: string[]): string {
 // normalizarCelular busca el patron en cualquier parte del texto: de "+14165551234" (un numero de Canada) o de un
 // fijo con digitos de mas saca un movil venezolano que no existe. Aqui el numero entero tiene que ser el movil.
 const MOVIL_EXACTO = /^(?:\+?58)?0?4(?:12|14|16|24|26|22)\d{7}$/;
-const movilExacto = (t: string): string => (MOVIL_EXACTO.test(t.replace(/[\s().-]/g, "")) ? normalizarCelular(t) : "");
+const MOVIL_EXACTO_CO = /^(?:\+?57)?3\d{9}$/;
+const movilExacto = (t: string, pais: Pais): string =>
+  (pais === "CO" ? MOVIL_EXACTO_CO : MOVIL_EXACTO).test(t.replace(/[\s().-]/g, "")) ? normalizarCelular(t, pais) : "";
 
 const MAX_WEB = 191; // TOPES.texto: una web mas larga dejaria la fila marcada como error por un dato secundario
 
@@ -108,6 +111,7 @@ export function prospectosDesdeOverture(
   const salida: EntradaValidada[] = [];
   for (const l of [...lugares].sort((a, b) => b.confianza - a.confianza)) {
     if (!coincideNicho(regla, l)) continue;
+    if (l.pais !== c.pais) continue;
     if (ciudadDeLugar(l.lat, l.lon)?.slug !== c.slug) continue;
     // Solo URL: Overture a veces trae un telefono o un usuario suelto en las redes, y normalizarRed los tomaria por
     // un usuario ("facebook.com/+58 414-…"), que ademas quedaria como fuente de toda la fila.
@@ -119,7 +123,7 @@ export function prospectosDesdeOverture(
     if (!fuente) continue;
     const telefonos = lineas(l.telefonos);
     const telefono = telefonos[0] ?? "";
-    const whatsapp = telefonos.map(movilExacto).find(Boolean) ?? "";
+    const whatsapp = telefonos.map((t) => movilExacto(t, c.pais)).find(Boolean) ?? "";
     const email = primerCorreo(lineas(l.correos));
     if (op.soloContactables && !telefono && !whatsapp && !email) continue;
     const entrada: EntradaValidada = {
@@ -144,17 +148,21 @@ const lista = (v: unknown): string =>
 const numero = (v: unknown): number | null => (typeof v === "number" && Number.isFinite(v) ? v : null);
 
 // Un renglon del JSONL que deja extraer-overture.py. Devuelve null si no sirve: el script lo cuenta y lo salta.
-export function validarLugar(crudo: unknown, publicacion: string): LugarOverture | null {
+// La caja de cada pais, con holgura. El filtro fino por pais lo hace el extractor (campo `country` de Overture);
+// esto solo ataja un archivo de otro continente.
+const CAJA_PAIS: Record<Pais, [number, number, number, number]> = { VE: [0, 13, -74, -59], CO: [-4.5, 13.5, -79.5, -66.5] };
+
+export function validarLugar(crudo: unknown, publicacion: string, pais: Pais = "VE"): LugarOverture | null {
   if (!crudo || typeof crudo !== "object") return null;
   const o = crudo as Record<string, unknown>;
   const id = limpio(o.id, 64), nombre = limpio(o.nombre, 191), categoriaBase = limpio(o.categoriaBase, 80);
   const lat = numero(o.lat), lon = numero(o.lon), confianza = numero(o.confianza);
   if (!id || !nombre || !categoriaBase || lat === null || lon === null || confianza === null) return null;
-  // Venezuela, con holgura. Una fila de otro pais es un error del extractor, no un prospecto.
-  if (lat < 0 || lat > 13 || lon < -74 || lon > -59) return null;
+  const [latMin, latMax, lonMin, lonMax] = CAJA_PAIS[pais];
+  if (lat < latMin || lat > latMax || lon < lonMin || lon > lonMax) return null;
   return {
     id, nombre, categoriaBase, categoriaFina: limpio(o.categoriaFina, 80), lat, lon, direccion: limpio(o.direccion, 191),
-    telefonos: lista(o.telefonos), correos: lista(o.correos), webs: lista(o.webs), redes: lista(o.redes), confianza, publicacion,
+    telefonos: lista(o.telefonos), correos: lista(o.correos), webs: lista(o.webs), redes: lista(o.redes), confianza, publicacion, pais,
   };
 }
 

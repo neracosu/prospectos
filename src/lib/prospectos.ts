@@ -5,6 +5,8 @@ import { ordenarCola } from "@/lib/cola-contrato";
 import { ETAPAS, type Etapa } from "@/lib/embudo-contrato";
 import { mensajeDeProspecto } from "@/lib/plantilla-mensaje";
 import { fraseDePromo } from "@/lib/propuesta-contrato";
+import { paisDeCiudad } from "@/lib/overpass-contrato";
+import { MENSAJE_CO_INICIAL, MENSAJE_CO_SEGUIMIENTO } from "@/lib/colombia-contrato";
 import { hoyCaracas } from "@/lib/fecha-caracas";
 import { enlacePropuesta, type ProspectoTarjeta } from "@/lib/prospectos-contrato";
 import { listaDeTextos, mapaDeTextos } from "@/lib/revision";
@@ -26,11 +28,16 @@ async function abrieron(ids: number[]): Promise<Set<number>> {
 
 function aTarjeta(f: FilaProspecto, abrio: boolean, plantilla: "inicial" | "seguimiento"): ProspectoTarjeta & { ordenCola: number } {
   const enlace = enlacePropuesta(f.codigo);
-  const tienePropuesta = f.nicho.plantillaPropuesta !== "";
-  const base = plantilla === "inicial" ? f.nicho.mensajeInicial : f.nicho.mensajeSeguimiento;
+  // A un prospecto de Colombia no se le manda la propuesta (esta escrita para Venezuela) ni el mensaje del nicho:
+  // lleva el mensaje propio de colombia-contrato.ts.
+  const co = paisDeCiudad(f.ciudad) === "CO";
+  const tienePropuesta = !co && f.nicho.plantillaPropuesta !== "";
+  const base = co
+    ? (plantilla === "inicial" ? MENSAJE_CO_INICIAL : MENSAJE_CO_SEGUIMIENTO)
+    : (plantilla === "inicial" ? f.nicho.mensajeInicial : f.nicho.mensajeSeguimiento);
   // Sin plantilla no hay enlace que ofrecer: se rellena {enlace} con vacio y
   // se recorta para que no quede un ": " o similar colgando en el mensaje.
-  const mensaje = mensajeDeProspecto(base, { nombre: f.nombre, enlace: tienePropuesta ? enlace : "", promo: fraseDePromo(hoyCaracas()) });
+  const mensaje = mensajeDeProspecto(base, { nombre: f.nombre, enlace: tienePropuesta ? enlace : "", promo: fraseDePromo(hoyCaracas()), ciudad: f.ciudad, rubro: f.nicho.nombre.toLowerCase() });
   return {
     id: f.id, nombre: f.nombre, ciudad: f.ciudad, nichoNombre: f.nicho.nombre, nichoSlug: f.nicho.slug, nota: f.nota, web: f.web, tipo: f.tipo, tamano: f.tamano,
     etapa: f.etapa as Etapa, proximoSeguimiento: f.proximoSeguimiento, abrio, codigo: f.codigo, enlace, tienePropuesta,

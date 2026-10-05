@@ -2,9 +2,24 @@
 // celulares venezolanos 0412/0414/0416/0424/0426/0422, a 58XXXXXXXXXX.
 const CELULAR = /(?:\+?58[\s.\-]*)?\(?0?(4(?:12|14|16|24|26|22))\)?[\s.\-]*(\d{3})[\s.\-]*(\d{2})[\s.\-]*(\d{2})/;
 
-export function normalizarCelular(texto: string): string {
-  const m = CELULAR.exec(texto ?? "");
-  return m ? `58${m[1]}${m[2]}${m[3]}${m[4]}` : "";
+// Colombia (6-oct-2026): un movil es 3XX mas siete digitos, y se guarda como 57XXXXXXXXXX. Con el prefijo de pais
+// escrito (+57, 57 o 0057) se reconoce siempre. Sin prefijo solo si quien llama dice que el numero es de Colombia:
+// diez digitos sueltos que empiezan por 3 no se adivinan. Un fijo (601..., 604...) no es celular.
+export type Pais = "VE" | "CO";
+const CELULAR_CO = /(?<!\d)(?:\+|00)?57[\s.\-]*\(?(3\d{2})\)?[\s.\-]*(\d{3})[\s.\-]*(\d{4})(?!\d)/;
+const CELULAR_CO_LOCAL = /^\(?(3\d{2})\)?[\s.\-]*(\d{3})[\s.\-]*(\d{4})$/;
+
+// Sin `pais` vale lo de siempre (un celular venezolano donde aparezca) mas un colombiano con su prefijo. Con `pais`
+// solo se acepta un movil de ese pais.
+export function normalizarCelular(texto: string, pais?: Pais): string {
+  const t = (texto ?? "").trim();
+  if (pais !== "CO") {
+    const m = CELULAR.exec(t);
+    if (m) return `58${m[1]}${m[2]}${m[3]}${m[4]}`;
+    if (pais === "VE") return "";
+  }
+  const co = CELULAR_CO.exec(t) ?? (pais === "CO" ? CELULAR_CO_LOCAL.exec(t) : null);
+  return co ? `57${co[1]}${co[2]}${co[3]}` : "";
 }
 
 const BASE_RED = {

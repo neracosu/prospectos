@@ -111,8 +111,8 @@ export async function buscarOverture(formData: FormData): Promise<Resultado<Resu
     if (!nicho || !ciudad) return fallo("Elige nicho y ciudad.");
     const regla = reglaDeNicho(nicho.slug);
     if (!regla) return fallo("Este nicho no está en el directorio.");
-    const publicacion = await publicacionCargada();
-    if (!publicacion) return fallo("El directorio no está cargado todavía.");
+    const publicacion = await publicacionCargada(ciudad.pais);
+    if (!publicacion) return fallo(ciudad.pais === "CO" ? "El directorio de Colombia no está cargado todavía." : "El directorio no está cargado todavía.");
     const entradas = prospectosDesdeOverture(await lugaresDeOverture(regla, ciudad), ciudad, nicho.slug, {
       soloContactables: e.data.soloContactables === "on",
     });

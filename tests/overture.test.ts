@@ -27,7 +27,7 @@ const PUB = "2026-09-23.1";
 const lugar = (id: string, extra: Partial<LugarOverture> = {}): LugarOverture => ({
   id, nombre: `Arepera ${id}`, categoriaBase: "restaurant", categoriaFina: "venezuelan_restaurant",
   lat: 10.4806, lon: -66.9036, direccion: "", telefonos: "+584141234567", correos: "", webs: "",
-  redes: `https://www.facebook.com/${id}`, confianza: 0.9, publicacion: PUB, ...extra,
+  redes: `https://www.facebook.com/${id}`, confianza: 0.9, publicacion: PUB, pais: "VE", ...extra,
 });
 
 describe.runIf(DB_HABILITADA)("directorio abierto: tabla", () => {
@@ -52,6 +52,22 @@ describe.runIf(DB_HABILITADA)("directorio abierto: tabla", () => {
     // Dos filas con el mismo id revientan el createMany: la transaccion deja la tabla como estaba.
     await expect(reemplazarLugares([lugar("x"), lugar("x")])).rejects.toThrow();
     expect((await prisma.lugarOverture.findMany()).map((l) => l.id)).toEqual(["c"]);
+  });
+
+  it("cada pais se carga y se reemplaza por separado: Colombia no toca Venezuela", async () => {
+    const co = (id: string) => lugar(id, { pais: "CO", lat: 4.711, lon: -74.0721, publicacion: "2026-10-21.0" });
+    await reemplazarLugares([lugar("ve1"), lugar("ve2")]);
+    expect(await publicacionCargada("CO")).toBeNull();
+    await reemplazarLugares([co("co1")], "CO");
+    expect(await publicacionCargada("CO")).toBe("2026-10-21.0");
+    expect(await publicacionCargada("VE")).toBe(PUB);
+    await reemplazarLugares([co("co2"), co("co3")], "CO");
+    expect((await prisma.lugarOverture.findMany({ orderBy: { id: "asc" } })).map((l) => `${l.pais}:${l.id}`)).toEqual(["CO:co2", "CO:co3", "VE:ve1", "VE:ve2"]);
+    // un lugar de otro pais colado en la carga la frena entera
+    await expect(reemplazarLugares([lugar("ve9")], "CO")).rejects.toThrow(/no son de CO/);
+    expect(await prisma.lugarOverture.count()).toBe(4);
+    const bogota = await lugaresDeOverture(reglaDeNicho("restaurantes-y-bares")!, ciudadPorSlug("bogota")!);
+    expect(bogota.map((l) => l.id).sort()).toEqual(["co2", "co3"]);
   });
 
   it("trae solo la caja de la ciudad y las categorias de la regla", async () => {
@@ -102,6 +118,16 @@ describe.runIf(DB_HABILITADA)("directorio abierto: buscarOverture", () => {
     await reemplazarLugares([lugar("farmacia", { categoriaBase: "pharmacy_and_drug_store" })]);
     expect(await buscar()).toEqual({ ok: false, mensaje: "El directorio no tiene negocios de ese nicho en esa ciudad." });
     expect(await prisma.revision.count()).toBe(0);
+  });
+
+  it("una ciudad de Colombia busca en el directorio de Colombia: si no esta cargado lo dice, y cargado trae el movil +57", async () => {
+    await reemplazarLugares([lugar("uno")]);
+    expect(await buscar({ ciudad: "bogota" })).toEqual({ ok: false, mensaje: "El directorio de Colombia no está cargado todavía." });
+    await reemplazarLugares([lugar("bog", { pais: "CO", lat: 4.711, lon: -74.0721, telefonos: "+573145594975" })], "CO");
+    const r = await buscar({ ciudad: "bogota" });
+    expect(r.ok && r.datos.nuevos).toBe(1);
+    const [fila] = await filasDe((r as { datos: { lote: string } }).datos.lote);
+    expect(fila.datos).toMatchObject({ ciudad: "Bogotá", estado: "Bogotá D.C.", whatsapp: "573145594975" });
   });
 
   it("crea un lote con origen overture, la publicacion y la fuente de cada dato", async () => {

@@ -19,8 +19,8 @@ export function FormOverpass({
   directorio,
 }: {
   nichos: { id: number; nombre: string }[];
-  ciudades: { slug: string; nombre: string }[];
-  directorio: { publicacion: string | null; sinNicho: number[] };
+  ciudades: { slug: string; nombre: string; pais: "VE" | "CO" }[];
+  directorio: { publicaciones: Record<"VE" | "CO", string | null>; sinNicho: number[] };
 }) {
   const [error, setError] = useState("");
   const [salida, setSalida] = useState<Salida | null>(null);
@@ -45,8 +45,11 @@ export function FormOverpass({
     try { localStorage.setItem(CLAVE_ULTIMA, JSON.stringify({ nichoId: n, ciudad: c })); } catch {}
   }
 
-  const motivoSinDirectorio = !directorio.publicacion
-    ? "El directorio no está cargado todavía."
+  // Cada pais tiene su propia carga del directorio: la que cuenta es la del pais de la ciudad elegida.
+  const paisElegido = ciudades.find((c) => c.slug === ciudad)?.pais ?? "VE";
+  const publicacion = directorio.publicaciones[paisElegido];
+  const motivoSinDirectorio = !publicacion
+    ? (paisElegido === "CO" ? "El directorio de Colombia no está cargado todavía." : "El directorio no está cargado todavía.")
     : directorio.sinNicho.includes(Number(nichoId))
       ? "Este nicho no está en el directorio."
       : "";
@@ -130,10 +133,14 @@ export function FormOverpass({
               recordar(nichoId, e.target.value);
             }}
           >
-            {ciudades.map((c) => (
-              <option key={c.slug} value={c.slug}>
-                {c.nombre}
-              </option>
+            {([["VE", "Venezuela"], ["CO", "Colombia"]] as const).map(([pais, etiqueta]) => (
+              <optgroup key={pais} label={etiqueta}>
+                {ciudades.filter((c) => c.pais === pais).map((c) => (
+                  <option key={c.slug} value={c.slug}>
+                    {c.nombre}
+                  </option>
+                ))}
+              </optgroup>
             ))}
           </select>
         </label>
@@ -162,7 +169,7 @@ export function FormOverpass({
         </label>
         <p className="suave">
           {motivoSinDirectorio ||
-            `Directorio del ${fechaDePublicacion(directorio.publicacion ?? "")}: lo que cada negocio publicó en su página de Facebook. Responde al momento.`}
+            `Directorio del ${fechaDePublicacion(publicacion ?? "")}: lo que cada negocio publicó en su página de Facebook. Responde al momento.`}
         </p>
       </form>
       {salida && (

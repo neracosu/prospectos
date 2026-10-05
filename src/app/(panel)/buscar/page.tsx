@@ -48,11 +48,11 @@ export default async function Buscar({ searchParams }: { searchParams: Promise<R
   const t = PESTANAS.some((p) => p.clave === sp.t) ? sp.t! : pedido ? "bandeja" : compartida ? "maps" : "bandeja";
   const pagina = Math.max(1, Math.trunc(Number(sp.p)) || 1);
 
-  const [nichos, lotes, lote, publicacion] = await Promise.all([
+  const [nichos, lotes, lote, [pubVE, pubCO]] = await Promise.all([
     listarNichos(),
     t === "bandeja" && !pedido ? lotesRecientes() : Promise.resolve([]),
     t === "bandeja" && pedido ? loteConDetalle(pedido, { pagina }) : Promise.resolve(null),
-    t === "osm" ? publicacionCargada() : Promise.resolve(null),
+    t === "osm" ? Promise.all([publicacionCargada("VE"), publicacionCargada("CO")]) : Promise.resolve([null, null] as const),
   ]);
   const porRevisar = lotes.filter((l) => l.pendientes > 0);
   const listos = lotes.filter((l) => l.pendientes === 0);
@@ -70,8 +70,8 @@ export default async function Buscar({ searchParams }: { searchParams: Promise<R
       {t === "osm" && (
         <FormOverpass
           nichos={nichos}
-          ciudades={CIUDADES.map((c) => ({ slug: c.slug, nombre: c.nombre }))}
-          directorio={{ publicacion, sinNicho: nichos.filter((n) => !reglaDeNicho(n.slug)).map((n) => n.id) }}
+          ciudades={CIUDADES.map((c) => ({ slug: c.slug, nombre: c.nombre, pais: c.pais }))}
+          directorio={{ publicaciones: { VE: pubVE, CO: pubCO }, sinNicho: nichos.filter((n) => !reglaDeNicho(n.slug)).map((n) => n.id) }}
         />
       )}
       {t === "maps" && <FormMaps nichos={nichos} urlInicial={compartida} />}

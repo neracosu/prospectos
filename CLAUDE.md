@@ -130,6 +130,16 @@ nichos (`hoteles`, `hoteles-estadia`).
     y **sin Facebook ni web el lugar no entra**. Al agregar un nicho a `sembrar-nichos.mjs`, el test de los 19 slugs
     obliga a ponerlo en `REGLAS_NICHO` o en `SIN_EQUIVALENCIA`. Recorrido: `scripts/verificar-flujo-overture.mts`
     (⚠️ solo contra el clon y la base de tests, con `LugarOverture` vacía).
+  - **Colombia, etapa 1 (6-oct, spec `2026-10-06-colombia-etapa-1-design.md`):** `CIUDADES` lleva `pais` y siete
+    ciudades colombianas (Bogotá, Medellín, Cali, Barranquilla, Cartagena, Santa Marta, Cúcuta); **el país de un
+    prospecto sale de su ciudad** (`paisDeCiudad`), no hay columna. `normalizarCelular(texto, pais?)` reconoce el
+    móvil `+57 3XX…` y lo guarda como `57…`. El directorio va **por país**: `extraer-overture.py <pub> co`, archivo
+    `co-<pub>.jsonl`, y `cargar-overture.mts` reemplaza solo ese país y **guarda solo rubros con regla dentro de una
+    ciudad del panel** (`--forzar` salta el freno cuando el recorte baja a propósito). **A un prospecto de Colombia no
+    se le manda la propuesta ni el mensaje del nicho**: lleva el de `src/lib/colombia-contrato.ts` (plataforma con
+    cobro integrado a Wompi, sin enlace). Mismos precios en USD y misma promoción. Lo que se ofrece allá, dicho por
+    Neri: integración con Wompi, con el registro del lado del cliente si tiene Bancolombia; **la integración no está
+    construida**. Etapa 2 pendiente: propuestas en versión Colombia.
   - **Segundo cron dentro de la app:** `src/instrumentation.ts` → `limpiarLotesViejos(30)`, a la misma hora
     que las mensualidades; deja `[revision] N lotes viejos limpiados` (si no aparece tras un
     `pm2 restart`, no arrancó). Es lo único que borra algo en toda la app: filas de `Revision` ya
