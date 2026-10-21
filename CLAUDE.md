@@ -408,6 +408,17 @@ nichos (`hoteles`, `hoteles-estadia`).
   de farmacias (bloquea la propuesta de ese nicho; hoy `farmacias` no tiene plantilla y la ficha no
   muestra enlace de propuesta).
 
+**Medición de neracosu.com (21-oct, en producción):** `/web` (solo `dueno`; tarjeta en Hoy con las solicitudes sin
+atender y las personas de 7 días). Dos rutas **públicas** que llama neracosu.com: `POST /api/web/evento` (vistas, clics,
+secciones de la home; lo manda `assets/js/medir.js` por `sendBeacon`) y `POST /api/web/solicitud` (el formulario de
+contacto: guarda en `SolicitudWeb` y avisa por `sendmail` a info@neracosu.com, `src/lib/correo.ts`; fuera de producción
+no manda nada). Solo aceptan `Origin` de neracosu.com (`ORIGENES_WEB`), cuerpo `text/plain` con JSON y tope de bytes;
+120 eventos/min y 5 solicitudes/15 min por IP; robots por User-Agent (204 sin guardar) y campo trampa `sitio` (200 sin
+guardar). **Sin IP ni cookies**: la «persona» es una sesión al azar de `sessionStorage`. Lo puro en
+`src/lib/web-contrato.ts`; `EventoWeb` se poda a 400 días al abrir `/web`. Recorrido: `scripts/verificar-flujo-web.mts`
+(solo clon + base de tests; el clon ya no puede usar el 3014, que es de `gygshopping`: usar 3021). Si cambia el dominio
+o la CSP de neracosu.com, revisar `connect-src` en su `.htaccess`.
+
 **Hoteles son dos nichos desde el 17-sep** (decisión de Neri): `hoteles` (de paso/motel, alta rotación: la propuesta
 original) y `hoteles-estadia` (urbanos, económicos, posadas: venden por noche). Los 132 se repartieron por
 `Prospecto.tipo` con `scripts/dividir-hoteles.mts` (46 y 86; idempotente, deja un evento `nota` en cada movido) y el
