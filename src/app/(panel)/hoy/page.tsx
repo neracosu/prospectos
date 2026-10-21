@@ -42,7 +42,7 @@ export default async function Hoy() {
         // La web (21-oct): una solicitud sin atender salta a la vista; si no hay, es un resumen discreto.
         <Link href={sinAtender > 0 ? "/web#solicitudes" : "/web"} className={`tarjeta tarjeta--compacta fila${sinAtender > 0 ? " tarjeta--franja tarjeta--verde" : ""}`} style={{ display: "flex" }}>
           <span>{sinAtender > 0 ? <b>{sinAtender === 1 ? "1 solicitud nueva" : `${sinAtender} solicitudes nuevas`} desde la web</b> : "Web"}</span>
-          <span className="suave">{personasWeb} {personasWeb === 1 ? "persona" : "personas"} en 7 días ›</span>
+          <span className="suave" style={{ whiteSpace: "nowrap" }}>{personasWeb} {personasWeb === 1 ? "persona" : "personas"} en 7 días ›</span>
         </Link>
       )}
 
