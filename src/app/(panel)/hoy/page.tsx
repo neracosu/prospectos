@@ -7,14 +7,17 @@ import { TarjetaCola } from "@/componentes/TarjetaCola";
 import { TarjetaSeguimiento } from "@/componentes/TarjetaSeguimiento";
 import { ProveedorHoy, ResumenHoy } from "@/componentes/ResumenHoy";
 import type { CifrasHoy } from "@/lib/hoy-contrato";
+import { solicitudesSinAtender, personasSemana } from "@/lib/web";
 
 export const dynamic = "force-dynamic";
 
 export default async function Hoy() {
   const u = await exigirSesion();
   const hoy = hoyCaracas();
-  const [resumen, seguimientos, cola, ganados] = await Promise.all([
+  const esDueno = u.rol === "dueno";
+  const [resumen, seguimientos, cola, ganados, sinAtender, personasWeb] = await Promise.all([
     resumenHoy(hoy), seguimientosQueTocan(hoy), colaDelDia(10), listarGanadosSinProyecto(),
+    esDueno ? solicitudesSinAtender() : 0, esDueno ? personasSemana() : 0,
   ]);
   const mio = resumen.porUsuario.find((x) => x.id === u.id) ?? { enviados: 0, meta: 0, nombre: u.nombre, id: u.id };
   const otros = resumen.porUsuario.filter((x) => x.id !== u.id);
@@ -34,6 +37,14 @@ export default async function Hoy() {
           </div>
         )}
       </ResumenHoy>
+
+      {esDueno && (
+        // La web (21-oct): una solicitud sin atender salta a la vista; si no hay, es un resumen discreto.
+        <Link href={sinAtender > 0 ? "/web#solicitudes" : "/web"} className={`tarjeta tarjeta--compacta fila${sinAtender > 0 ? " tarjeta--franja tarjeta--verde" : ""}`} style={{ display: "flex" }}>
+          <span>{sinAtender > 0 ? <b>{sinAtender === 1 ? "1 solicitud nueva" : `${sinAtender} solicitudes nuevas`} desde la web</b> : "Web"}</span>
+          <span className="suave">{personasWeb} {personasWeb === 1 ? "persona" : "personas"} en 7 días ›</span>
+        </Link>
+      )}
 
       <h2 className="titulo" tabIndex={-1}>Seguimientos que tocan ({seguimientos.length})</h2>
       {seguimientos.length === 0 && <p className="suave">Ninguno hoy.</p>}

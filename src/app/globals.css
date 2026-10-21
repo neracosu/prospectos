@@ -196,3 +196,14 @@ button, input, select, textarea { font: inherit; }
 .totales__chip { text-decoration: none; min-height: 32px; display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; font-size: 13px; white-space: normal; }
 .totales__chip b { color: inherit; font-variant-numeric: tabular-nums; }
 .totales__chip--activo { outline: 2px solid var(--verde); outline-offset: 0; color: var(--tinta); }
+
+/* Medicion de neracosu.com (21-oct): /web. Barras de una sola tinta; el texto dice la cifra, la barra solo la ilustra. */
+.web-sub { font-size: 16px; margin: 0 0 8px; }
+.web-barra__texto { display: flex; justify-content: space-between; gap: 8px; font-size: 14px; }
+.web-barra__texto > span { overflow-wrap: anywhere; }
+.web-barra__texto b { white-space: nowrap; }
+.web-barra .progreso { margin: 4px 0 10px; }
+.web-mensaje { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 14px; margin: 10px 0 0; }
+.web-dias { list-style: none; margin: 0; padding: 0; font-size: 14px; }
+.web-dias li { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid var(--borde); }
+.cifras > div > .suave { font-size: 12px; }
