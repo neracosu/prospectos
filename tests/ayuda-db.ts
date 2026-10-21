@@ -14,6 +14,8 @@ export const PIN_PROSPECTADOR = "654321";
 // La base de tests no guarda historia: se vacia entera, en orden de claves foraneas.
 export async function limpiarBase(): Promise<void> {
   await prisma.evento.deleteMany();
+  await prisma.eventoWeb.deleteMany(); // medicion de neracosu.com (21-oct): sin claves foraneas
+  await prisma.solicitudWeb.deleteMany();
   await prisma.cambio.deleteMany();
   await prisma.version.deleteMany();
   await prisma.horas.deleteMany();
