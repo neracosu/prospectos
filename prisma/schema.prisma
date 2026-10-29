@@ -347,7 +347,7 @@ model LugarOverture {
 model EventoWeb {
   id       Int      @id @default(autoincrement())
   sesion   String   @db.VarChar(32)
-  // vista | clic | seccion
+  // vista | clic | seccion | paso (embudo /empezar)
   tipo     String   @db.VarChar(20)
   ruta     String   @db.VarChar(191)
   // clic: a que (whatsapp, calculadora, para, correo, telefono); seccion: el id de la seccion de la home
@@ -371,6 +371,10 @@ model SolicitudWeb {
   mensaje     String    @db.Text
   pagina      String    @default("") @db.VarChar(191)
   sesion      String    @default("") @db.VarChar(32)
+  // Embudo /empezar (29-oct): JSON {rubro, actual, objetivo, tamano, sistema}, demo|diagnostico|"", y el ?de= del enlace
+  respuestas   String    @default("") @db.VarChar(400)
+  calificacion String    @default("") @db.VarChar(20)
+  origen       String    @default("") @db.VarChar(120)
   creadaEn    DateTime  @default(now())
   atendidaEn  DateTime?
 

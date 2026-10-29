@@ -128,4 +128,19 @@ describe.runIf(DB_HABILITADA)("medicion de la web", () => {
     expect(await solicitudesSinAtender()).toBe(1);
     expect((await marcarSolicitud(999999, true)).ok).toBe(false);
   });
+
+  it("guarda una solicitud de embudo con sus campos y la lista con ellos", async () => {
+    const r = await postSolicitud(peticion("/api/web/solicitud", { nombre: "Luis", phone: "04141234567", type: "embudo", message: "", respuestas: { rubro: "comercio", actual: "web", objetivo: "cobros", tamano: "1", sistema: "cobros" }, calificacion: "demo", origen: "tiktok", sesion: "sesion12345", sitio: "" }));
+    expect(r.status).toBe(200);
+    const fila = (await listarSolicitudes()).find((s) => s.nombre === "Luis");
+    expect(fila).toMatchObject({ tipo: "embudo", calificacion: "demo", origen: "tiktok" });
+    expect(JSON.parse(fila!.respuestas)).toMatchObject({ rubro: "comercio" });
+  });
+  it("un evento paso se guarda y entra al resumen de /empezar", async () => {
+    await postEvento(peticion("/api/web/evento", { s: "sesion77777", t: "vista", r: "/empezar", o: "tiktok", m: true }));
+    await postEvento(peticion("/api/web/evento", { s: "sesion77777", t: "paso", r: "/empezar", d: "p1" }));
+    const r = await resumenWeb(7);
+    expect(r.empezar.personas).toBeGreaterThanOrEqual(1);
+    expect(r.empezar.pasos.find((p) => p.id === "p1")!.personas).toBeGreaterThanOrEqual(1);
+  });
 });

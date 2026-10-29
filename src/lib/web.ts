@@ -33,6 +33,7 @@ export async function podarEventosViejos(ahora = new Date()): Promise<number> {
 
 export type SolicitudFila = {
   id: number; nombre: string; correo: string; whatsapp: string; tipo: string; presupuesto: string; mensaje: string; pagina: string;
+  respuestas: string; calificacion: string; origen: string;
   creadaEn: Date; atendidaEn: Date | null;
 };
 
@@ -41,7 +42,7 @@ export async function listarSolicitudes(limite = 50): Promise<SolicitudFila[]> {
   return prisma.solicitudWeb.findMany({
     orderBy: [{ creadaEn: "desc" }],
     take: limite,
-    select: { id: true, nombre: true, correo: true, whatsapp: true, tipo: true, presupuesto: true, mensaje: true, pagina: true, creadaEn: true, atendidaEn: true },
+    select: { id: true, nombre: true, correo: true, whatsapp: true, tipo: true, presupuesto: true, mensaje: true, pagina: true, respuestas: true, calificacion: true, origen: true, creadaEn: true, atendidaEn: true },
   }).then((xs) => [...xs.filter((x) => !x.atendidaEn), ...xs.filter((x) => x.atendidaEn)]);
 }
 
