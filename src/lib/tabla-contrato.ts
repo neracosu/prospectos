@@ -46,7 +46,7 @@ const LIMITES: [Columna, string, number][] = [
 ];
 
 function normalizarEncabezado(s: string): string {
-  return s.normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z]/g, "");
+  return s.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z]/g, "");
 }
 const ALIAS: Record<string, Columna> = { whatsapp: "whatsapp", celular: "whatsapp", telefono: "telefono", tel: "telefono", correo: "email", email: "email", mail: "email", pagina: "web", sitio: "web", web: "web", ig: "instagram", fb: "facebook", tamano: "tamano", habitaciones: "tamano", notas: "nota", nota: "nota", fuente: "fuente", fuentes: "fuente", url: "fuente" };
 
