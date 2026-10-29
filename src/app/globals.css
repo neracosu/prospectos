@@ -415,3 +415,21 @@ button, input, select, textarea { font: inherit; }
 .web-dias-barras li { flex: 1 1 0; min-width: 2px; height: calc(var(--h) * 1%); min-height: 1px; background: var(--verde); border-radius: 2px 2px 0 0; position: relative; }
 .web-dias-barras__cero { opacity: .3; }
 .web-dias-barras li span { position: absolute; top: 100%; left: 0; font-size: 11px; color: var(--tinta-suave); white-space: nowrap; }
+
+/* Busqueda global (fase 4): dialogo con Ctrl+K, boton en la lateral y en la hoja Mas */
+.busqueda { position: fixed; inset: 0; z-index: 50; }
+.busqueda__caja { position: absolute; left: 0; right: 0; top: 0; z-index: 51; background: var(--panel); border-bottom: 1px solid var(--borde); padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); max-height: 80vh; overflow-y: auto; }
+.busqueda__input { width: 100%; min-height: 48px; padding: 0 14px; font-size: 16px; border-radius: 10px; border: 1px solid var(--borde-control); background: var(--fondo); color: var(--tinta); }
+.busqueda__lista { list-style: none; margin: 8px 0 0; padding: 0; }
+.busqueda__item { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 6px 8px; border-radius: 8px; cursor: pointer; }
+.busqueda__item[aria-selected="true"] { background: var(--superficie-2); }
+.busqueda__tipo { flex: none; font-size: 11px; padding: 2px 6px; border-radius: 999px; background: var(--borde); color: var(--tinta-suave); min-width: 64px; text-align: center; }
+.busqueda__texto { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.busqueda__nada { margin: 10px 0 0; }
+.hoja__item--boton { width: 100%; background: none; border: 0; border-bottom: 1px solid var(--borde); cursor: pointer; font: inherit; text-align: left; }
+.lateral__buscar { display: none; }
+@media (min-width: 1024px) {
+  .busqueda__caja { left: 50%; right: auto; top: 12vh; transform: translateX(-50%); width: min(560px, 92vw); border: 1px solid var(--borde); border-radius: var(--radio); padding: 12px; max-height: 70vh; }
+  .lateral__buscar { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 40px; margin: 0 0 8px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--borde-control); background: var(--fondo); color: var(--tinta-suave); font: inherit; font-size: 14px; cursor: pointer; }
+  .lateral__buscar kbd { margin-left: auto; font: inherit; font-size: 11px; padding: 1px 6px; border: 1px solid var(--borde-control); border-radius: 6px; color: var(--tinta-suave); }
+}

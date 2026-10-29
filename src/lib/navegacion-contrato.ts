@@ -2,7 +2,7 @@
 // la barra lateral (escritorio), la barra inferior con «Mas» (telefono) y los tests. Desde la fase 3 Cobros es
 // seccion propia y va entre las cuatro fijas del telefono (Inicio · Leads · Solicitudes · Cobros · Mas).
 export type Rol = "dueno" | "prospectador";
-export type Icono = "inicio" | "leads" | "solicitudes" | "cobros" | "proyectos" | "directorio" | "web" | "ajustes" | "pin";
+export type Icono = "inicio" | "leads" | "solicitudes" | "cobros" | "proyectos" | "directorio" | "web" | "ajustes" | "pin" | "buscar";
 export type Seccion = { href: string; texto: string; icono: Icono };
 
 const S = {

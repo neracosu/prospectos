@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { barraPara, estaActiva, type Rol } from "@/lib/navegacion-contrato";
 import { HojaMas } from "@/componentes/HojaMas";
+import { abrirBusqueda } from "@/componentes/BusquedaGlobal";
 import { Icono } from "@/componentes/Icono";
 
 // Barra inferior del telefono (hasta 1023 px): cuatro secciones fijas y «Mas» con el resto (panel CRM, fase 1).
@@ -34,7 +35,7 @@ export function BarraInferior({ rol }: { rol: Rol }) {
           </button>
         )}
       </nav>
-      {abierta && <HojaMas secciones={mas} onCerrar={cerrar} />}
+      {abierta && <HojaMas secciones={mas} onCerrar={cerrar} onBuscar={abrirBusqueda} />}
     </>
   );
 }
