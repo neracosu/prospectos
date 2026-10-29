@@ -143,3 +143,57 @@ describe("depurarUniverso", () => {
     expect(r.duplicadas).toEqual([{ id: 9, principalId: 8 }]);
   });
 });
+
+describe("correcciones de revision", () => {
+  const webBase = analizarWeb("", URL, "Casa Sol", "viva");
+  const conWa = (href: string, texto: string) =>
+    analizarWeb(`<title>Casa Sol</title><a href="${href}">${texto}</a>`, URL, "Casa Sol", "viva");
+
+  it("mantenimiento: solo por titulo/h1 o cuerpo casi vacio, con gancho propio", () => {
+    const largo = "<p>" + "Ofrecemos un servicio de mantenimiento y pronto, próximamente, más. ".repeat(12) + "</p>";
+    expect(estadoDeDescarga({ ok: true, estado: 200, texto: `<title>Casa Sol</title><body>${largo}</body>` }, URL)).toBe("viva");
+    const t = "<html><head><title>Sitio en mantención</title></head><body>" + largo + "</body></html>";
+    expect(estadoDeDescarga({ ok: true, estado: 200, texto: t }, URL)).toBe("en_mantenimiento");
+    const w = analizarWeb(t, URL, "Casa Sol", "en_mantenimiento");
+    const g = armarGancho({ web: w, base: vacia }, "hoteles");
+    expect(g).toContain("está en mantenimiento");
+    expect(g).not.toContain("hoy no abre");
+  });
+
+  it("WhatsApp: reserva, pedido y pedir informacion se distinguen", () => {
+    const reserva = conWa("https://wa.me/58412?text=Quiero+reservar", "Reservas");
+    const pedido = conWa("https://wa.me/58412?text=Hola", "Haga su pedido");
+    const info = conWa("https://wa.me/58412", "Pedir información");
+    expect(reserva).toMatchObject({ reservaPorWhatsApp: true, pedidoPorWhatsApp: false });
+    expect(pedido).toMatchObject({ reservaPorWhatsApp: false, pedidoPorWhatsApp: true });
+    expect(info).toMatchObject({ reservaPorWhatsApp: false, pedidoPorWhatsApp: false });
+    expect(armarGancho({ web: reserva, base: vacia }, "restaurantes-y-bares")).toContain("reservas de mesa se piden por WhatsApp");
+    expect(armarGancho({ web: pedido, base: vacia }, "restaurantes-y-bares")).toContain("pedidos se hacen por WhatsApp");
+    expect(armarGancho({ web: info, base: vacia }, "restaurantes-y-bares")).toBe("");
+    expect(armarGancho({ web: info, base: vacia }, "hoteles-estadia")).toBe("");
+    expect(armarGancho({ web: pedido, base: vacia }, "hoteles-estadia")).toBe("");
+  });
+
+  it("estadoDeFicha: web sin_web sin Overture es sin_hallazgos", () => {
+    const w = { ...webBase, estado: "sin_web" as const, titulo: "x" };
+    expect(estadoDeFicha({ web: w, base: vacia }, "")).toBe("sin_hallazgos");
+  });
+
+  it("arquetipo desconocido: sin gancho", () => {
+    const caida = analizarWeb("", URL, "Casa Sol", "caida");
+    expect(armarGancho({ web: caida, base: { ...vacia, variasSedes: true } }, "otro-nicho")).toBe("");
+    expect(armarGancho({ web: caida, base: vacia }, "")).toBe("");
+  });
+
+  it("correos genericos fuera, cada id con su motivo", () => {
+    const f = (id: number, email: string): FilaUniverso => ({
+      id, email, nombre: "N" + id, ciudad: "Caracas", etapa: "por_contactar", esLead: false, fuenteLead: "",
+      web: "", whatsapp: "", instagram: "", facebook: "", telefono: "", nota: "",
+    });
+    const r = depurarUniverso([f(1, "noreply@x.test"), f(2, "a@example.com"), f(3, "No-Reply@y.test"), f(4, "ok@x.test")], () => "VE");
+    expect(r.excluidas).toEqual([
+      { id: 1, motivo: "correo_generico" }, { id: 2, motivo: "correo_generico" }, { id: 3, motivo: "correo_generico" },
+    ]);
+    expect(r.cola.map((x) => x.id)).toEqual([4]);
+  });
+});

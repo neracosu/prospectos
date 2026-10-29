@@ -7,7 +7,7 @@ export type Plataforma = "wordpress" | "woocommerce" | "shopify" | "wix" | "tien
 
 export type HallazgosWeb = {
   url: string; estado: EstadoWeb; titulo: string; descripcion: string; plataforma: Plataforma;
-  paginasLeidas: string[]; reservaPorWhatsApp: boolean; tieneReservasEnLinea: boolean;
+  paginasLeidas: string[]; reservaPorWhatsApp: boolean; pedidoPorWhatsApp: boolean; tieneReservasEnLinea: boolean;
   tieneTiendaEnLinea: boolean; cobraEnLinea: boolean; tieneMenuOCatalogo: boolean; menuEnPdf: boolean;
   motorExterno: string; metodosPago: string[]; horario: string; direccion: string; redes: string[];
   nombreCoincide: boolean;
@@ -34,13 +34,24 @@ export function esWebRedSocial(url: string): boolean {
   return REDES.test(limpio);
 }
 
+const MANTENIMIENTO = /mantenci[oó]n|mantenimiento|coming soon|pr[oó]ximamente/i;
+
+// mantenimiento solo si lo dice el titulo o el h1, o si el cuerpo casi no tiene texto
+function senalMantenimiento(html: string): boolean {
+  const titulo = /<title[^>]*>([\s\S]*?)<\/title>/i.exec(html)?.[1] ?? "";
+  const h1 = /<h1[^>]*>([\s\S]*?)<\/h1>/i.exec(html)?.[1] ?? "";
+  if (MANTENIMIENTO.test(titulo) || MANTENIMIENTO.test(h1)) return true;
+  const visible = textoPlano(html);
+  return visible.length < 400 && MANTENIMIENTO.test(visible);
+}
+
 export function estadoDeDescarga(r: { ok: boolean; estado?: number; texto?: string }, urlPedida: string): EstadoWeb {
   if (esWebRedSocial(urlPedida)) return "red_social";
   if (!r.ok || (r.estado !== undefined && r.estado >= 500)) return "caida";
   const t = r.texto ?? "";
   if (/domain is for sale|dominio en venta|hugedomains|sedo\b/i.test(t)) return "vendida";
   if (/ConnectYourDomain|not connected to a website/i.test(t)) return "caida";
-  if (/mantenci[oó]n|mantenimiento|coming soon|pr[oó]ximamente/i.test(t)) return "en_mantenimiento";
+  if (senalMantenimiento(t)) return "en_mantenimiento";
   return "viva";
 }
 
@@ -77,7 +88,7 @@ function textoPlano(html: string): string {
 }
 
 function sinAcentos(s: string): string {
-  return s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+  return s.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
 }
 
 function recortar(s: string, max: number): string {
@@ -106,10 +117,13 @@ function hrefs(html: string): { href: string; texto: string }[] {
 }
 
 const ENLACE_WHATSAPP = /wa\.me\/|api\.whatsapp\.com|whatsapp\.com\/send/i;
-const VERBOS_RESERVA = /reserv|pedid|pedir|ordenar|cita|agend|turno/i;
+const VERBOS_RESERVA = /reserv|cita|agend|turno/i;
+const VERBOS_PEDIDO = /pedid|pedir|ordenar|delivery/i;
 
-function detectarReservaPorWhatsApp(enlaces: { href: string; texto: string }[]): boolean {
-  return enlaces.some((e) => ENLACE_WHATSAPP.test(e.href) && VERBOS_RESERVA.test(e.href + " " + e.texto));
+// "pedir informacion" no es un pedido
+function detectarWhatsApp(enlaces: { href: string; texto: string }[], verbos: RegExp): boolean {
+  return enlaces.some((e) => ENLACE_WHATSAPP.test(e.href)
+    && verbos.test((e.href + " " + e.texto).replace(/pedir\s+informaci[oó]n/gi, " ")));
 }
 
 function detectarMenuEnPdf(enlaces: { href: string; texto: string }[]): boolean {
@@ -175,7 +189,8 @@ export function analizarWeb(html: string, urlFinal: string, nombre: string, esta
   return {
     url: urlFinal, estado, titulo, descripcion, plataforma,
     paginasLeidas: [urlFinal],
-    reservaPorWhatsApp: detectarReservaPorWhatsApp(enlaces),
+    reservaPorWhatsApp: detectarWhatsApp(enlaces, VERBOS_RESERVA),
+    pedidoPorWhatsApp: detectarWhatsApp(enlaces, VERBOS_PEDIDO),
     tieneReservasEnLinea: motorExterno !== "" || /reservar en l[ií]nea|book now|calendly/i.test(h),
     tieneTiendaEnLinea, cobraEnLinea,
     tieneMenuOCatalogo: menuEnPdf || enlaces.some((e) => /men[uú]|carta|cat[aá]logo/i.test(e.href + " " + e.texto)),
@@ -196,12 +211,15 @@ export function hallazgosDeBase(p: {
 
 // ---------- gancho ----------
 
-type Regla = "web_caida" | "whatsapp" | "tienda_a_mano" | "carta_pdf" | "motor" | "sedes" | "instagram";
+type Regla = "web_caida" | "mantenimiento" | "whatsapp" | "tienda_a_mano" | "carta_pdf" | "motor" | "sedes" | "instagram";
 
 const ARQ_WHATSAPP = ["hoteles-estadia", "reservas", "restaurantes-y-bares", "citas-y-servicios"];
 const ARQ_INSTAGRAM = ["comercio-y-tienda", "restaurantes-y-bares", "citas-y-servicios", "reservas", "hoteles-estadia"];
 
-const WEB_NO_ABRE = new Set<EstadoWeb>(["caida", "vendida", "en_mantenimiento"]);
+const WEB_NO_ABRE = new Set<EstadoWeb>(["caida", "vendida"]);
+const ARQUETIPOS = [
+  "hoteles", "hoteles-estadia", "restaurantes-y-bares", "reservas", "comercio-y-tienda", "citas-y-servicios", "cobros-y-pagos",
+];
 
 function webViva(h: Hallazgos): HallazgosWeb | undefined {
   return h.web && h.web.estado === "viva" ? h.web : undefined;
@@ -211,12 +229,18 @@ function sinWebPropia(h: Hallazgos): boolean {
   return !h.web || h.web.estado === "sin_web" || h.web.estado === "red_social";
 }
 
+function whatsappAplica(w: HallazgosWeb, arq: string): boolean {
+  if (!ARQ_WHATSAPP.includes(arq)) return false;
+  return w.reservaPorWhatsApp || (arq === "restaurantes-y-bares" && w.pedidoPorWhatsApp);
+}
+
 function reglaDeGancho(h: Hallazgos, arq: string): Regla | "" {
   const w = webViva(h);
   if (h.web && WEB_NO_ABRE.has(h.web.estado)) return "web_caida";
+  if (h.web?.estado === "en_mantenimiento") return "mantenimiento";
   // en restaurantes la carta en PDF es la senal mas especifica: va antes que el WhatsApp
   if (w && arq === "restaurantes-y-bares" && w.menuEnPdf) return "carta_pdf";
-  if (w && w.reservaPorWhatsApp && ARQ_WHATSAPP.includes(arq)) return "whatsapp";
+  if (w && whatsappAplica(w, arq)) return "whatsapp";
   if (w && arq === "comercio-y-tienda" && w.tieneTiendaEnLinea && !w.cobraEnLinea) return "tienda_a_mano";
   if (w && w.menuEnPdf && arq === "comercio-y-tienda") return "carta_pdf";
   if (w && w.motorExterno && arq === "hoteles-estadia") return "motor";
@@ -233,11 +257,15 @@ function usuarioInstagram(s: string): string {
 
 function textoGancho(regla: Regla, h: Hallazgos, arq: string): string {
   switch (regla) {
+    case "mantenimiento":
+      return "Vi que su página está en mantenimiento. El sistema trae su propia página, en su dominio, lista para vender y cobrar.";
     case "web_caida":
       return "Vi que su dirección web hoy no abre. El sistema trae su propia página, en su dominio, lista para vender y cobrar.";
     case "whatsapp":
       if (arq === "restaurantes-y-bares") {
-        return "Vi que en su página los pedidos se piden por WhatsApp. Eso es justo lo que el sistema convierte en un pedido confirmado solo, con el pago validado.";
+        return h.web?.reservaPorWhatsApp
+          ? "Vi que en su página las reservas de mesa se piden por WhatsApp. Eso es justo lo que el sistema convierte en una reserva confirmada sola, con el anticipo validado."
+          : "Vi que en su página los pedidos se hacen por WhatsApp. Eso es justo lo que el sistema convierte en un pedido confirmado solo, con el pago validado.";
       }
       if (arq === "citas-y-servicios") {
         return "Vi que hoy la cita se pide por WhatsApp y se confirma a mano. Eso es lo primero que el diagnóstico mira: cómo se aparta la hora y cómo se cobra.";
@@ -259,6 +287,7 @@ function textoGancho(regla: Regla, h: Hallazgos, arq: string): string {
 }
 
 export function armarGancho(h: Hallazgos, arquetipo: string): string {
+  if (!ARQUETIPOS.includes(arquetipo)) return "";
   if (h.web && h.web.nombreCoincide === false) return "";
   const regla = reglaDeGancho(h, arquetipo);
   if (!regla) return "";
@@ -289,6 +318,7 @@ function hechosDeWeb(w: HallazgosWeb): string[] {
 function lineaMontado(h: Hallazgos): string {
   const w = h.web;
   if (w && WEB_NO_ABRE.has(w.estado)) return "Su dirección web hoy no abre.";
+  if (w && w.estado === "en_mantenimiento") return "Su página está en mantenimiento.";
   if (w && w.estado === "viva") {
     const hechos = hechosDeWeb(w);
     return hechos.length ? `Tiene web: ${hechos.join("; ")}.` : "Tiene web, sin señales claras de reservas, pedidos ni cobro.";
@@ -300,6 +330,7 @@ function lineaMontado(h: Hallazgos): string {
 function lineaFuga(h: Hallazgos, arq: string): string {
   const regla = reglaDeGancho(h, arq);
   const fugas: Record<Regla, string> = {
+    mantenimiento: "Fuga probable: mientras la página está en mantenimiento nadie puede reservar o comprar.",
     web_caida: "Fuga probable: quien la busca no encuentra dónde reservar o comprar.",
     whatsapp: "Fuga probable: la confirmación y el cobro dependen de que alguien conteste a mano.",
     tienda_a_mano: "Fuga probable: cada pago móvil se revisa en el banco a mano.",
@@ -325,13 +356,13 @@ export function armarResumen(h: Hallazgos, arquetipo: string, ciudad: string): s
 // ---------- estado de la ficha ----------
 
 function webSinSenales(w: HallazgosWeb): boolean {
-  return !w.titulo && !w.descripcion && !w.plataforma && !w.reservaPorWhatsApp && !w.tieneReservasEnLinea
+  return !w.titulo && !w.descripcion && !w.plataforma && !w.reservaPorWhatsApp && !w.pedidoPorWhatsApp && !w.tieneReservasEnLinea
     && !w.tieneTiendaEnLinea && !w.cobraEnLinea && !w.tieneMenuOCatalogo && !w.menuEnPdf && !w.motorExterno
     && w.metodosPago.length === 0 && !w.horario && !w.direccion && w.redes.length === 0;
 }
 
 export function estadoDeFicha(h: Hallazgos, gancho: string): EstadoFicha {
-  const w = h.web && (h.web.estado !== "viva" || !webSinSenales(h.web)) ? h.web : undefined;
+  const w = h.web && h.web.estado !== "sin_web" && (h.web.estado !== "viva" || !webSinSenales(h.web)) ? h.web : undefined;
   if (w && w.nombreCoincide === false) return "borrador";
   if (gancho.trim() || (w && w.estado === "viva")) return "lista";
   if (w || h.overture) return "borrador";
@@ -355,6 +386,7 @@ function completitud(f: FilaUniverso): number {
 
 function motivoDeExclusion(f: FilaUniverso, correo: string, pais: (c: string) => "VE" | "CO"): string {
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(correo)) return "correo_invalido";
+  if (/(^|[^a-z])(no-?reply|noreply)|@(.*\.)?example\./.test(correo)) return "correo_generico";
   if (/\.gob\.ve$|\.gov\.ve$/.test(correo.split("@")[1])) return "correo_estado";
   if (pais(f.ciudad) === "CO") return "colombia";
   if (f.esLead && f.fuenteLead !== "directorio") return "lead_propio";
