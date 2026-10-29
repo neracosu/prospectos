@@ -96,7 +96,12 @@ describe("filtrarCobros y ordenarCobros (fase 3)", () => {
   const todos = [vencido, esteMes, proximo, pagado, anulado, anuladoPagado];
   it("pendientes = sin pagar ni anular, de cualquier fecha", () => expect(filtrarCobros(todos, "pendientes", hoy)).toEqual([vencido, esteMes, proximo]));
   it("vencidos = pendientes con vence < hoy", () => expect(filtrarCobros(todos, "vencidos", hoy)).toEqual([vencido]));
-  it("mes = pendientes que vencen en el mes de hoy, vencidos incluidos", () => expect(filtrarCobros(todos, "mes", hoy)).toEqual([vencido, esteMes]));
+  it("mes = pendientes del mes de hoy desde hoy (lo mismo que suma la cifra «por cobrar este mes»); lo vencido va en vencidos", () => expect(filtrarCobros(todos, "mes", hoy)).toEqual([esteMes]));
+  it("mes cuadra con cifrasDelMes.porCobrar", () => {
+    const conMonto = todos.map((c, i) => ({ ...c, monto: (i + 1) * 10 }));
+    const suma = filtrarCobros(conMonto, "mes", hoy).reduce((s, c) => s + c.monto, 0);
+    expect(suma).toBe(cifrasDelMes(conMonto, "2026-10", hoy).porCobrar);
+  });
   it("pagados = con pagadoEn y sin anular", () => expect(filtrarCobros(todos, "pagados", hoy)).toEqual([pagado]));
   it("ordenarCobros: vencidos primero y luego por fecha; pagados del mas reciente al mas viejo", () => {
     const filas = [{ vence: "2026-11-05", estado: "por_vencer" as const }, { vence: "2026-10-20", estado: "vencido" as const }, { vence: "2026-10-31", estado: "pendiente" as const }];

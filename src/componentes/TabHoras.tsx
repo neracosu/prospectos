@@ -21,7 +21,8 @@ export function TabHoras({ proyectoId, horas, cotizadas, reales, tarifa, hoy }: 
       </div>
       <p className="suave">Solo tú ves esto. El cliente nunca ve horas ni tarifa.</p>
       <div className="fila-botones"><button type="button" className="boton" aria-expanded={nuevo} onClick={() => setNuevo((v) => !v)}>{nuevo ? "Cancelar" : "Registrar horas"}</button></div>
-      {nuevo && <form className="pregunta" action={(fd) => correr(() => registrarHoras(fd))}>
+      {/* onSubmit y no action: con action React vaciaba el formulario antes de la respuesta y un error borraba lo escrito */}
+      {nuevo && <form className="pregunta" onSubmit={(e) => { e.preventDefault(); correr(() => registrarHoras(new FormData(e.currentTarget))); }}>
         <input type="hidden" name="proyectoId" value={proyectoId} />
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
           <label className="campo"><span>Fecha</span><input name="fecha" type="date" defaultValue={hoy} max={hoy} required /></label>

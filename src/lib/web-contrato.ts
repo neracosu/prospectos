@@ -263,3 +263,12 @@ export function alturaBarra(n: number, max: number): number {
   if (max <= 0 || n <= 0) return 0;
   return Math.round((100 * n) / max);
 }
+
+// Los dias sin visitas tambien se dibujan: una barra en 0 por cada fecha del rango (ISO, inclusive).
+export function rellenarDias(porDia: { dia: string; personas: number }[], desde: string, hasta: string): { dia: string; personas: number }[] {
+  const mapa = new Map(porDia.map((d) => [d.dia, d.personas]));
+  const salida: { dia: string; personas: number }[] = [];
+  const d = new Date(`${desde}T00:00:00Z`);
+  for (let dia = desde; dia <= hasta; d.setUTCDate(d.getUTCDate() + 1), dia = d.toISOString().slice(0, 10)) salida.push({ dia, personas: mapa.get(dia) ?? 0 });
+  return salida;
+}

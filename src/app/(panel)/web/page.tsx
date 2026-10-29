@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { exigirRol } from "@/lib/sesion";
 import { PERIODOS, resumenWeb, podarEventosViejos } from "@/lib/web";
-import { alturaBarra } from "@/lib/web-contrato";
+import { alturaBarra, rellenarDias } from "@/lib/web-contrato";
 import { CabeceraPagina } from "@/componentes/CabeceraPagina";
-import { fechaVisible, hoyCaracas } from "@/lib/fecha-caracas";
+import { fechaVisible, hoyCaracas, sumarDias } from "@/lib/fecha-caracas";
 
 export const dynamic = "force-dynamic";
 
@@ -25,7 +25,8 @@ function Barras({ filas }: { filas: { nombre: string; n: number; de: number }[] 
 export default async function Web({ searchParams }: { searchParams: Promise<{ d?: string }> }) {
   await exigirRol("dueno");
   const pedido = Number((await searchParams).d);
-  const dias = (PERIODOS as readonly number[]).includes(pedido) ? pedido : 7;
+  const diasPeriodo = (PERIODOS as readonly number[]).includes(pedido) ? pedido : 7;
+  const dias = diasPeriodo;
   await podarEventosViejos().catch(() => 0);
   const r = await resumenWeb(dias);
 
@@ -83,12 +84,15 @@ export default async function Web({ searchParams }: { searchParams: Promise<{ d?
       <section className="tarjeta">
         <h3 className="web-sub">Personas por día</h3>
         {r.porDia.length === 0 ? <p className="suave">Sin datos todavía.</p> : (() => {
-          // Barras compactas en vez de 90 renglones: una por dia, etiqueta visible cada 7 y el detalle en el title.
-          const max = Math.max(...r.porDia.map((d) => d.personas));
+          // Barras compactas en vez de 90 renglones: una por dia del periodo (los dias sin visitas en 0, para no
+          // comprimir el tiempo), etiqueta visible cada 7 y el detalle en el title.
+          const hoy = hoyCaracas();
+          const dias = rellenarDias(r.porDia, sumarDias(hoy, -(diasPeriodo - 1)), hoy);
+          const max = Math.max(...dias.map((d) => d.personas));
           return (
-            <ol className="web-dias-barras" aria-label="Personas por día">
-              {r.porDia.map((d, i) => (
-                <li key={d.dia} className={d.personas === 0 ? "web-dias-barras__cero" : ""} style={{ "--h": alturaBarra(d.personas, max) } as React.CSSProperties} title={`${fechaVisible(d.dia)} · ${d.personas}`}>
+            <ol className="web-dias-barras" role="img" aria-label={`Personas por día, ${diasPeriodo} días: ${dias.reduce((s, d) => s + d.personas, 0)} en total, máximo ${max} en un día`}>
+              {dias.map((d, i) => (
+                <li key={d.dia} aria-hidden="true" className={d.personas === 0 ? "web-dias-barras__cero" : ""} style={{ "--h": alturaBarra(d.personas, max) } as React.CSSProperties} title={`${fechaVisible(d.dia)} · ${d.personas}`}>
                   {(i % 7 === 0) && <span>{d.dia.slice(8, 10)}/{d.dia.slice(5, 7)}</span>}
                 </li>
               ))}

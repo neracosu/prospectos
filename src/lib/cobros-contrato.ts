@@ -107,7 +107,8 @@ export function esFiltroCobros(s: string): s is FiltroCobros {
 }
 
 // pendientes: sin pagar ni anular, de cualquier fecha. vencidos: pendientes con vence < hoy. mes: pendientes del mes
-// de hoy, vencidos incluidos (es lo que falta por entrar este mes). pagados: con pago y sin anular.
+// de hoy que vencen desde hoy, exactamente lo que suma cifrasDelMes.porCobrar (lo vencido va en vencidos, como la
+// cifra de al lado). pagados: con pago y sin anular, de cualquier mes.
 export function filtrarCobros<T extends { vence: string; pagadoEn: Date | null; anuladoEn: Date | null }>(cobros: T[], filtro: FiltroCobros, hoy: string): T[] {
   const mes = mesDe(hoy);
   return cobros.filter((c) => {
@@ -115,7 +116,7 @@ export function filtrarCobros<T extends { vence: string; pagadoEn: Date | null; 
     if (filtro === "pagados") return c.pagadoEn !== null;
     if (c.pagadoEn) return false;
     if (filtro === "vencidos") return c.vence < hoy;
-    if (filtro === "mes") return c.vence < hoy || mesDe(c.vence) === mes;
+    if (filtro === "mes") return c.vence >= hoy && mesDe(c.vence) === mes;
     return true;
   });
 }

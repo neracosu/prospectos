@@ -17,12 +17,15 @@ function whereDe(filtro: FiltroCobros, hoy: string): Prisma.CobroWhereInput {
   if (filtro === "pagados") return { pagadoEn: { not: null }, anuladoEn: null };
   const pendiente: Prisma.CobroWhereInput = { pagadoEn: null, anuladoEn: null };
   if (filtro === "vencidos") return { ...pendiente, vence: { lt: hoy } };
-  if (filtro === "mes") return { ...pendiente, vence: { lte: finDeMes(hoy) } };
+  // Misma regla que filtrarCobros y que cifrasDelMes.porCobrar: desde hoy hasta fin de mes
+  if (filtro === "mes") return { ...pendiente, vence: { gte: hoy, lte: finDeMes(hoy) } };
   return pendiente;
 }
 
 export async function listarCobros(filtro: FiltroCobros, hoy: string): Promise<CobroFila[]> {
-  const filas = await prisma.cobro.findMany({ where: whereDe(filtro, hoy), include: { proyecto: { select: { nombre: true } } }, orderBy: { vence: "asc" }, take: TOPE });
+  // Los pagados se piden del mas reciente al mas viejo: con mas de TOPE, el corte deja fuera los viejos, no los de hoy
+  const orden: Prisma.CobroOrderByWithRelationInput[] = filtro === "pagados" ? [{ pagadoEn: "desc" }, { vence: "desc" }] : [{ vence: "asc" }];
+  const filas = await prisma.cobro.findMany({ where: whereDe(filtro, hoy), include: { proyecto: { select: { nombre: true } } }, orderBy: orden, take: TOPE });
   const desde = new Date(`${hoy}T00:00:00-04:00`);
   const recordadosHoy = new Set((await prisma.evento.findMany({ where: { tipo: "recordatorio", creadoEn: { gte: desde }, cobroId: { in: filas.map((f) => f.id) } }, select: { cobroId: true } })).map((e) => e.cobroId));
   return ordenarCobros(filas.map((c) => aCobroFila(c, hoy, recordadosHoy, c.proyecto.nombre)));

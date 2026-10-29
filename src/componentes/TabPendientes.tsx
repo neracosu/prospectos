@@ -69,7 +69,9 @@ export function TabPendientes({ proyectoId, pendientes }: { proyectoId: number; 
         </Fragment>
       ))}
       <div className="fila-botones"><button type="button" className="boton" aria-expanded={nuevo} onClick={() => setNuevo((v) => !v)}>{nuevo ? "Cancelar" : "Nuevo pendiente"}</button></div>
-      {nuevo && <form className="pregunta" action={(fd) => correr(() => agregarPendiente(fd), undefined, () => setNuevo(false))}>
+      {/* onSubmit y no action: React vacia un <form action> al terminar, y aqui la accion termina antes de que el servidor
+          responda; con un error lo escrito se perdia. Al guardar bien, el formulario se cierra. */}
+      {nuevo && <form className="pregunta" onSubmit={(e) => { e.preventDefault(); correr(() => agregarPendiente(new FormData(e.currentTarget)), undefined, () => setNuevo(false)); }}>
         <input type="hidden" name="proyectoId" value={proyectoId} />
         {/* Reglas copiadas de NuevoZ (src/acciones/pendientes.ts). */}
         <Campo nombre="texto" etiqueta="Nuevo pendiente" regla={{ tipo: "texto", min: 2, max: 200 }} requerido autoComplete="off" />

@@ -20,7 +20,9 @@ Plan: `docs/superpowers/plans/2026-10-30-panel-crm-fase-3-dinero-proyectos.md`. 
 
 - **`/cobros`** (solo dueño): tres cifras (por cobrar este mes · vencido · cobrado este mes, las de `resumenMes`), filtro
   `?f=pendientes|vencidos|mes|pagados` (`filtrarCobros`/`ordenarCobros` en `cobros-contrato.ts`, puros; la consulta
-  `listarCobros` en `src/lib/cobros.ts`, tope 300) y `TablaCobros`: mismo DOM para teléfono (filas apiladas con
+  `listarCobros` en `src/lib/cobros.ts`, tope 300; **«Este mes» = pendientes que vencen desde hoy hasta fin de mes, lo
+  mismo que suma la cifra «Por cobrar este mes»; lo vencido va en «Vencidos»; «Pagados» son todos, del más reciente al
+  más viejo**) y `TablaCobros`: mismo DOM para teléfono (filas apiladas con
   `data-label`) y escritorio (tabla), con las mismas acciones que la pestaña Cobros del proyecto (Marcar pagado en
   línea, Recordar, Avisar, Anular con motivo, recibo). «Agregar cobro» sigue solo en el proyecto. `CobroFila` lleva
   `proyectoId` y `proyectoNombre` (`aCobroFila` la arma en los dos sitios); `refrescar` de `acciones/cobros.ts`
@@ -38,7 +40,10 @@ Plan: `docs/superpowers/plans/2026-10-30-panel-crm-fase-3-dinero-proyectos.md`. 
   «Nuevo pendiente» / «Registrar horas» y lo cierran al guardar.
 - **`/web`**: «Personas por día» son barras compactas (`ol.web-dias-barras`, `alturaBarra` en `web-contrato.ts`,
   etiqueta cada 7 días, detalle en el `title`).
-- Recorrido real: `scripts/verificar-dinero.mts` (25 comprobaciones a 1280 y 390: cifras y filtros de /cobros, marcar
+- `TabPendientes` y `TabHoras` envían con `onSubmit` + `FormData`, no con `<form action>`: React vacía un `form action`
+  al terminar la acción, antes de la respuesta, y un error del servidor borraba lo escrito.
+- `/web`: `rellenarDias` pone en 0 los días sin visitas para que la gráfica no comprima el tiempo.
+- Recorrido real: `scripts/verificar-dinero.mts` (27 comprobaciones a 1280 y 390: cifras y filtros de /cobros, marcar
   pagado desde la tabla y verlo en el proyecto, tabla de proyectos con filtro, ficha a dos columnas, formularios detrás
   de botón, barras de /web, prospectador fuera de /cobros). Solo contra el clon y la base de tests.
 - Pendiente (fase 4): búsqueda global (Ctrl+K), arrastre en el tablero de leads, prueba en el teléfono de Neri.

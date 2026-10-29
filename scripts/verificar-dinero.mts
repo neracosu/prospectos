@@ -89,6 +89,16 @@ try {
     revisar(!(await pg.locator(".ficha__principal form").count()), "horas: sin formulario hasta tocar «Registrar horas»");
     await pg.locator("button", { hasText: "Registrar horas" }).click();
     revisar(await visible(pg, '.ficha__principal form input[name="horas"]'), "horas: el boton abre el formulario");
+    await pg.fill('.ficha__principal form input[name="horas"]', "abc");
+    await pg.fill('.ficha__principal form input[name="descripcion"]', "probando el error");
+    await pg.locator('.ficha__principal form button[type=submit], .ficha__principal form button:not([type])').last().click();
+    await pg.waitForSelector(".ficha__principal .error", { timeout: 10000 });
+    revisar((await pg.inputValue('.ficha__principal form input[name="horas"]')) === "abc" && (await pg.inputValue('.ficha__principal form input[name="descripcion"]')) === "probando el error", "horas: tras un error del servidor el formulario conserva lo escrito");
+    await pg.goto(`${BASE}/cobros?f=mes`); await pg.waitForLoadState("networkidle");
+    const cifraMes = (await pg.locator(".cifras-inicio--tres .cifra").first().innerText()).replace(/\s+/g, " ");
+    const montos = await pg.locator("tr.cobro-fila td[data-label=Monto]").allInnerTexts();
+    const suma = montos.reduce((s, m) => s + Number(m.replace(/[^0-9,]/g, "").replace(",", ".")), 0);
+    revisar(cifraMes.includes(suma.toLocaleString("es-VE", { minimumFractionDigits: 2 }).replace(/\u00a0/g, "")) || cifraMes.includes(`$${suma.toFixed(2).replace(".", ",")}`), `cobros: la cifra «por cobrar este mes» cuadra con la lista ?f=mes (${cifraMes} vs ${suma})`);
     await pg.goto(`${BASE}/proyectos`); await pg.waitForLoadState("networkidle");
     revisar(await visible(pg, "table.tabla--proyectos") && (await pg.locator(`tr[data-id="${activo.id}"]`).count()) === 1, "1280: /proyectos es una tabla con la fila del proyecto");
     revisar((await pg.locator(`tr[data-id="${activo.id}"] td[data-label="Próximo cobro"]`).innerText()).includes("/"), "1280: la fila trae la fecha del proximo cobro");

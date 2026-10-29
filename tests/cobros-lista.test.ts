@@ -34,6 +34,19 @@ describe.runIf(DB_HABILITADA)("listarCobros", () => {
     const pen = await listarCobros("pendientes", hoy);
     expect(pen.map((c) => c.detalle)).toEqual(["Cuota 1 de 2"]);
   });
+  it("mes trae solo lo que vence desde hoy dentro del mes, igual que la cifra", async () => {
+    const mes = await listarCobros("mes", hoy);
+    expect(mes.map((c) => c.detalle)).not.toContain("Cuota 1 de 2"); // vencida: va en vencidos
+    expect(mes.every((c) => c.vence >= hoy && c.vence.slice(0, 7) === hoy.slice(0, 7))).toBe(true);
+  });
+  it("pagados: con mas de 300 pagados, la lista trae los mas recientes", async () => {
+    const viejos = Array.from({ length: 305 }, (_, i) => ({ proyectoId: p2, concepto: "extra", detalle: `Viejo ${i}`, monto: "1.00", vence: "2020-01-01", pagadoEn: new Date("2020-01-02T12:00:00Z"), canal: "zelle" }));
+    await prisma.cobro.createMany({ data: viejos });
+    const pag = await listarCobros("pagados", hoy);
+    expect(pag).toHaveLength(300);
+    expect(pag[0].detalle).toBe("Pagado"); // el pagado de hoy, no uno del 2020
+    await prisma.cobro.deleteMany({ where: { detalle: { startsWith: "Viejo " } } });
+  });
   it("fichaProyecto rellena el proyecto en cada CobroFila", async () => {
     const f = await fichaProyecto(p1, hoy);
     expect(f!.cobros[0].proyectoNombre).toBe("PMS Hotel");

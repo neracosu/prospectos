@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
-  origenPermitido, esBot, normalizarEvento, normalizarSolicitud, rutaLimpia, clasificarOrigen, resumirWeb, respuestasLegibles, alturaBarra,
+  origenPermitido, esBot, normalizarEvento, normalizarSolicitud, rutaLimpia, clasificarOrigen, resumirWeb, respuestasLegibles, alturaBarra, rellenarDias,
   type EventoParaResumen,
 } from "@/lib/web-contrato";
 
@@ -215,4 +215,12 @@ describe("alturaBarra (personas por dia en barras, fase 3)", () => {
     expect(alturaBarra(7, 7)).toBe(100);
     expect(alturaBarra(1, 3)).toBe(33);
   });
+});
+
+describe("rellenarDias (los dias sin visitas tambien se dibujan)", () => {
+  it("devuelve un dia por cada fecha del rango, con 0 donde no hubo nadie, en orden", () => {
+    const r = rellenarDias([{ dia: "2026-10-03", personas: 2 }, { dia: "2026-10-01", personas: 5 }], "2026-10-01", "2026-10-04");
+    expect(r).toEqual([{ dia: "2026-10-01", personas: 5 }, { dia: "2026-10-02", personas: 0 }, { dia: "2026-10-03", personas: 2 }, { dia: "2026-10-04", personas: 0 }]);
+  });
+  it("un rango de un dia devuelve un dia", () => expect(rellenarDias([], "2026-10-04", "2026-10-04")).toEqual([{ dia: "2026-10-04", personas: 0 }]));
 });
