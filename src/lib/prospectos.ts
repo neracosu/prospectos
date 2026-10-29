@@ -61,13 +61,12 @@ export async function colaDelDia(limite = 10): Promise<ProspectoTarjeta[]> {
 }
 
 export async function seguimientosQueTocan(hoy: string, ambito: "directorio" | "todos" = "directorio"): Promise<ProspectoTarjeta[]> {
+  // Los enviados por correo se siguen desde /correos (tocaSeguimiento), no por la cola de WhatsApp: se excluyen en la
+  // consulta (no despues) para que no llenen las 50 filas.
   const filas = await prisma.prospecto.findMany({
-    where: { etapa: "enviado", proximoSeguimiento: { lte: hoy }, ...(ambito === "directorio" ? DEL_DIRECTORIO : {}) }, select: SELECT, orderBy: { proximoSeguimiento: "asc" }, take: 50,
+    where: { etapa: "enviado", proximoSeguimiento: { lte: hoy }, NOT: { eventos: { some: { tipo: "enviado", canal: "email" } } }, ...(ambito === "directorio" ? DEL_DIRECTORIO : {}) }, select: SELECT, orderBy: { proximoSeguimiento: "asc" }, take: 50,
   });
-  // Los enviados por correo se siguen desde /correos (tocaSeguimiento), no por la cola de WhatsApp.
-  const eventos = await prisma.evento.findMany({ where: { prospectoId: { in: filas.map((f) => f.id) }, tipo: "enviado" }, orderBy: { id: "asc" }, select: { prospectoId: true, canal: true } });
-  const ultimoCanal = new Map(eventos.map((e) => [e.prospectoId, e.canal]));
-  const aWhatsapp = filas.filter((f) => ultimoCanal.get(f.id) !== "email");
+  const aWhatsapp = filas;
   const ab = await abrieron(aWhatsapp.map((f) => f.id));
   return aWhatsapp.map((f) => aTarjeta(f, ab.has(f.id), "seguimiento"));
 }

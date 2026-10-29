@@ -51,7 +51,7 @@ describe.runIf(DB_HABILITADA)("correos: preparar, enviar a mano, cola y cifras",
     const r = await prepararEnvio(p.id, "inicial");
     if ("error" in r) throw new Error(r.error);
     const e = await prisma.envioCorreo.findUniqueOrThrow({ where: { token: r.token } });
-    expect(e).toMatchObject({ prospectoId: p.id, tipo: "inicial", fallo: "", para: p.email });
+    expect(e).toMatchObject({ prospectoId: p.id, tipo: "inicial", fallo: "en curso", para: p.email });
     expect(r.correo.html).toContain("Su web no tiene reservas en linea");
     expect(r.correo.html).toContain(r.token);
     expect(r.datos.dondeCorreo).toBe("su página hotelx.test");
@@ -205,5 +205,29 @@ describe.runIf(DB_HABILITADA)("correos: preparar, enviar a mano, cola y cifras",
     const r = await prepararEnvio(p.id, "inicial");
     if ("error" in r) throw new Error(r.error);
     expect(r.datos.dondeCorreo).toBe("un directorio público");
+  });
+
+  it("seguimientosQueTocan: 60 enviados por correo vencidos no tapan al de WhatsApp", async () => {
+    const wa = await nuevo({ etapa: "enviado", proximoSeguimiento: sumarDias(hoy, -1) });
+    await prisma.evento.create({ data: { prospectoId: wa.id, tipo: "enviado", canal: "whatsapp" } });
+    for (let i = 0; i < 60; i++) {
+      const c = await crearProspectoDePrueba(ids.nichoId, { etapa: "enviado", proximoSeguimiento: sumarDias(hoy, -10) });
+      await prisma.evento.create({ data: { prospectoId: c.id, tipo: "enviado", canal: "email" } });
+    }
+    expect((await seguimientosQueTocan(hoy)).map((x) => x.id)).toEqual([wa.id]);
+  });
+
+  it("una reserva en curso de hace 11 minutos no bloquea ni cuenta en el tope y queda interrumpida", async () => {
+    const p = await nuevo();
+    const vieja = await prisma.envioCorreo.create({ data: { prospectoId: p.id, tipo: "inicial", asunto: "x", para: p.email, token: "v".repeat(22), fallo: "en curso", enviadoEn: new Date(Date.now() - 11 * 60_000) } });
+    expect(await enviadosHoy(hoy)).toBe(0);
+    expect((await colaCorreo(hoy, { estado: "fallidas" })).map((f) => f.prospectoId)).toContain(p.id);
+    expect((await enviarA(p.id, "inicial", null, { tope: 1 })).ok).toBe(true);
+    expect((await prisma.envioCorreo.findUniqueOrThrow({ where: { id: vieja.id } })).fallo).toBe("interrumpido");
+    // una reserva fresca si bloquea y cuenta
+    const q = await nuevo();
+    await prisma.envioCorreo.create({ data: { prospectoId: q.id, tipo: "inicial", asunto: "x", para: q.email, token: "w".repeat(22), fallo: "en curso" } });
+    expect((await enviarA(q.id, "inicial", null)).ok).toBe(false);
+    expect(await enviadosHoy(hoy)).toBe(2);
   });
 });
