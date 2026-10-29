@@ -3,12 +3,13 @@ import { sumarDias } from "@/lib/fecha-caracas";
 import { prisma } from "@/lib/db";
 import type { Prisma } from "@prisma/client";
 import { estadoCobro, cifrasDelMes, mesDe, type Concepto, type EstadoCobro } from "@/lib/cobros-contrato";
-import { semaforo, porcentajeAvance, type EstadoProyecto, type Semaforo } from "@/lib/proyectos-contrato";
+import { semaforo, porcentajeAvance, proximoCobroDe, type EstadoProyecto, type Semaforo } from "@/lib/proyectos-contrato";
 import { compararSemver, type TipoCambio } from "@/lib/semver-contrato";
 import { redondear2 } from "@/lib/dinero";
 import type { ClienteFila } from "@/lib/clientes";
 
-export type ProyectoResumen = { id: number; nombre: string; clienteId: number; clienteNombre: string; estado: EstadoProyecto; versionActual: string; semaforo: Semaforo; avance: number | null };
+// Desde la fase 3 la tabla de /proyectos muestra ademas nicho, mensualidad y el proximo cobro.
+export type ProyectoResumen = { id: number; nombre: string; clienteId: number; clienteNombre: string; nichoNombre: string; mensualidad: number; proximoCobro: string | null; estado: EstadoProyecto; versionActual: string; semaforo: Semaforo; avance: number | null };
 // Desde la fase 3 cada fila sabe de que proyecto es: /cobros las lista todas juntas.
 export type CobroFila = { id: number; proyectoId: number; proyectoNombre: string; concepto: Concepto; detalle: string; monto: number; vence: string; estado: EstadoCobro; pagadoEn: Date | null; canal: string; referencia: string; nota: string; anuladoMotivo: string; recordadoHoy: boolean; reciboNumero: string; notaAnulacion: boolean; avisado: boolean };
 
@@ -33,14 +34,16 @@ function versionActualDe(versiones: { version: string }[]): string {
   return [...versiones].sort((a, b) => compararSemver(b.version, a.version))[0]?.version ?? "";
 }
 
-export async function listarProyectos(hoy: string): Promise<ProyectoResumen[]> {
+export async function listarProyectos(hoy: string, estado?: EstadoProyecto): Promise<ProyectoResumen[]> {
   const filas = await prisma.proyecto.findMany({
-    select: { id: true, nombre: true, clienteId: true, estado: true, cliente: { select: { nombre: true } }, versiones: { select: { version: true } },
+    where: estado ? { estado } : {},
+    select: { id: true, nombre: true, clienteId: true, estado: true, mensualidad: true, nicho: { select: { nombre: true } }, cliente: { select: { nombre: true } }, versiones: { select: { version: true } },
       cobros: { select: { vence: true, pagadoEn: true, anuladoEn: true } }, pendientes: { select: { hecho: true, visibleCliente: true } } },
     orderBy: [{ estado: "asc" }, { nombre: "asc" }],
   });
   return filas.map((p) => ({
-    id: p.id, nombre: p.nombre, clienteId: p.clienteId, clienteNombre: p.cliente.nombre, estado: p.estado as EstadoProyecto,
+    id: p.id, nombre: p.nombre, clienteId: p.clienteId, clienteNombre: p.cliente.nombre, nichoNombre: p.nicho.nombre, mensualidad: Number(p.mensualidad),
+    proximoCobro: proximoCobroDe(p.cobros), estado: p.estado as EstadoProyecto,
     versionActual: versionActualDe(p.versiones), semaforo: semaforo(p.cobros.map((c) => estadoCobro(c, hoy))), avance: porcentajeAvance(p.pendientes),
   }));
 }
@@ -102,7 +105,7 @@ export async function fichaProyecto(id: number, hoy: string): Promise<ProyectoFi
   const { _count, ...cl } = p.cliente;
   return {
     id: p.id, nombre: p.nombre, clienteId: p.clienteId, clienteNombre: p.cliente.nombre, estado: p.estado as EstadoProyecto, versionActual: versiones[0]?.version ?? "",
-    semaforo: semaforo(cobros.map((c) => c.estado)), avance: porcentajeAvance(p.pendientes), nichoNombre: p.nicho.nombre,
+    semaforo: semaforo(cobros.map((c) => c.estado)), avance: porcentajeAvance(p.pendientes), nichoNombre: p.nicho.nombre, proximoCobro: proximoCobroDe(p.cobros),
     pagoUnico: Number(p.pagoUnico), mensualidad: Number(p.mensualidad), horasCotizadas: Number(p.horasCotizadas), fechaInicio: p.fechaInicio,
     fechaEntregaEstimada: p.fechaEntregaEstimada, fechaEntregaReal: p.fechaEntregaReal, diaCobroMensual: p.diaCobroMensual, propuestaCodigo: p.propuestaCodigo,
     cliente: { ...cl, proyectos: _count.proyectos }, cobros,

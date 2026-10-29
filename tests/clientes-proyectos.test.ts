@@ -124,6 +124,13 @@ describe.runIf(DB_HABILITADA)("clientes y proyectos", () => {
     expect(pms.semaforo).toBe("rojo"); // cuota 1 vencio el 2026-09-01
     expect(pms.clienteNombre).toBe("Hotel Ganado");
     expect(pms.versionActual).toBe("");
+    // Tabla de proyectos (fase 3): nicho, mensualidad y proximo cobro; filtro por estado
+    expect(pms.nichoNombre).toBeTruthy();
+    expect(pms.mensualidad).toBe(100);
+    expect(pms.proximoCobro).toBe("2026-09-01"); // la cuota 1, vencida, sigue siendo la proxima por cobrar
+    const cerrados = await listarProyectos(hoy, "cerrado"); // un test anterior cierra un proyecto; el filtro solo trae ese estado
+    expect(cerrados.every((p) => p.estado === "cerrado")).toBe(true);
+    expect(cerrados.length).toBeLessThan(lista.length);
     const m = await resumenMes(hoy);
     expect(m.cobrado).toBe(0);
     expect(m.vencido).toBeCloseTo(933.33 + 2500, 2); // cuota 1 de PMS + pago unico de Tienda (vence 09-01)

@@ -395,3 +395,9 @@ button, input, select, textarea { font: inherit; }
   .tabla__acciones { justify-content: flex-end; }
   .tabla .boton.mini { min-height: 36px; }
 }
+
+/* Proyectos (fase 3): aviso de ganados sin proyecto y tabla */
+.aviso { background: #3b3520; color: var(--ambar); border-radius: var(--radio); padding: 10px 14px; margin-bottom: 12px; font-size: 14px; }
+.aviso__fila { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 6px 0 0; color: var(--tinta); }
+.tabla__principal { display: inline-flex; align-items: center; gap: 6px; text-decoration: none; color: var(--tinta); }
+.pestanas__item--aparte { margin-left: auto; }

@@ -33,3 +33,10 @@ export function semaforo(estados: EstadoCobro[]): Semaforo {
   if (estados.includes("por_vencer")) return "amarillo";
   return "verde";
 }
+
+// Tabla de proyectos (fase 3): la fecha del cobro pendiente mas cercano, o null si no hay nada por cobrar.
+export function proximoCobroDe(cobros: { vence: string; pagadoEn: Date | null; anuladoEn: Date | null }[]): string | null {
+  let mejor: string | null = null;
+  for (const c of cobros) if (!c.pagadoEn && !c.anuladoEn && (mejor === null || c.vence < mejor)) mejor = c.vence;
+  return mejor;
+}
