@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
-  origenPermitido, esBot, normalizarEvento, normalizarSolicitud, rutaLimpia, clasificarOrigen, resumirWeb, respuestasLegibles,
+  origenPermitido, esBot, normalizarEvento, normalizarSolicitud, rutaLimpia, clasificarOrigen, resumirWeb, respuestasLegibles, alturaBarra,
   type EventoParaResumen,
 } from "@/lib/web-contrato";
 
@@ -205,5 +205,14 @@ describe("embudo /empezar", () => {
     expect(r.empezar.pasos.find((p) => p.id === "p1")?.personas).toBe(2);
     expect(r.empezar.pasos.find((p) => p.id === "enviado")?.personas).toBe(1);
     expect(r.empezar.origenes).toEqual([{ nombre: "TikTok", personas: 2, enviaron: 1 }]);
+  });
+});
+
+describe("alturaBarra (personas por dia en barras, fase 3)", () => {
+  it("es el porcentaje entero respecto al maximo y 0 cuando no hay maximo", () => {
+    expect(alturaBarra(5, 10)).toBe(50);
+    expect(alturaBarra(3, 0)).toBe(0);
+    expect(alturaBarra(7, 7)).toBe(100);
+    expect(alturaBarra(1, 3)).toBe(33);
   });
 });

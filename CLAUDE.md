@@ -14,6 +14,35 @@ solicitud) y en el correo de aviso. Contrato en `src/lib/web-contrato.ts`; migra
 set +a`): el 2026-10-28 se corrio sin ella, no fallo la cadena y el panel quedo dos minutos con el codigo nuevo sin las
 columnas. Plan: `docs/superpowers/plans/2026-10-28-embudo-empezar-panel.md`.
 
+## Panel CRM, fase 3: dinero y proyectos (desde el 2026-10-30)
+
+Plan: `docs/superpowers/plans/2026-10-30-panel-crm-fase-3-dinero-proyectos.md`. Sin migración.
+
+- **`/cobros`** (solo dueño): tres cifras (por cobrar este mes · vencido · cobrado este mes, las de `resumenMes`), filtro
+  `?f=pendientes|vencidos|mes|pagados` (`filtrarCobros`/`ordenarCobros` en `cobros-contrato.ts`, puros; la consulta
+  `listarCobros` en `src/lib/cobros.ts`, tope 300) y `TablaCobros`: mismo DOM para teléfono (filas apiladas con
+  `data-label`) y escritorio (tabla), con las mismas acciones que la pestaña Cobros del proyecto (Marcar pagado en
+  línea, Recordar, Avisar, Anular con motivo, recibo). «Agregar cobro» sigue solo en el proyecto. `CobroFila` lleva
+  `proyectoId` y `proyectoNombre` (`aCobroFila` la arma en los dos sitios); `refrescar` de `acciones/cobros.ts`
+  revalida también `/cobros`. **Cobros está en la barra**: fijas del teléfono Inicio · Leads · Solicitudes · Cobros,
+  y «Más» con Proyectos, Directorio, Web y Ajustes (`navegacion-contrato.ts`). La cifra «Por cobrar» de Inicio y los
+  cobros de la lista Hoy llevan a `/cobros`.
+- **`/proyectos`** es una tabla (`.tabla--proyectos`: proyecto, cliente, nicho, estado, mensualidad, próximo cobro,
+  avance) con chips `?estado=` y un chip aparte «Clientes»; `listarProyectos(hoy, estado?)` trae `nichoNombre`,
+  `mensualidad` y `proximoCobro` (`proximoCobroDe`, puro: el `vence` más chico sin pagar ni anular, o `null` → «—»).
+  Las cifras de dinero salieron de aquí. «Ganados sin proyecto» es un aviso `.aviso` bajo la cabecera.
+- **Ficha de proyecto a dos columnas** (`.ficha--proyecto`): cabecera con `CabeceraPagina`, pestañas y la pestaña
+  activa a la izquierda; a la derecha el **resumen** (`AccionesProyecto` + cliente con sus canales) y el historial. En
+  el teléfono los dos van plegados arriba (`details.historial-plegado`). **La pestaña Cliente ya no existe**
+  (`?t=cliente` cae en cobros): su contenido vive en el resumen. `TabPendientes` y `TabHoras` abren el formulario con
+  «Nuevo pendiente» / «Registrar horas» y lo cierran al guardar.
+- **`/web`**: «Personas por día» son barras compactas (`ol.web-dias-barras`, `alturaBarra` en `web-contrato.ts`,
+  etiqueta cada 7 días, detalle en el `title`).
+- Recorrido real: `scripts/verificar-dinero.mts` (25 comprobaciones a 1280 y 390: cifras y filtros de /cobros, marcar
+  pagado desde la tabla y verlo en el proyecto, tabla de proyectos con filtro, ficha a dos columnas, formularios detrás
+  de botón, barras de /web, prospectador fuera de /cobros). Solo contra el clon y la base de tests.
+- Pendiente (fase 4): búsqueda global (Ctrl+K), arrastre en el tablero de leads, prueba en el teléfono de Neri.
+
 ## Panel CRM, fase 2: leads vs directorio (desde el 2026-10-30)
 
 Plan: `docs/superpowers/plans/2026-10-29-panel-crm-fase-2-leads.md`. **Un lead es una conversación real; el directorio es
@@ -62,7 +91,7 @@ directorio, otro), `valorEstimado`, `proximoPaso`, `propuestaUrl` (migración a 
   Directorio, redirecciones, prospectador sin leads ajenos). ⚠️ Con `loading.tsx` el `notFound()` llega en streaming con
   estado 200: se comprueba por el cuerpo. Suite 608 con base.
 - Carga de los prospectos reales: hecha a mano con un script fuera del repo (los nombres y contactos no entran aquí).
-- Pendiente (fase 3): `/cobros`, tabla de proyectos, ficha de proyecto a dos columnas, `/web` solo medición.
+- La fase 3 (cobros, tabla de proyectos, ficha a dos columnas, `/web`) ya está hecha: ver arriba.
 
 ## Panel CRM, fase 1: esqueleto (desde el 2026-10-29)
 

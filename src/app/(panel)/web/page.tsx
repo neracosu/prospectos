@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { exigirRol } from "@/lib/sesion";
 import { PERIODOS, resumenWeb, podarEventosViejos } from "@/lib/web";
+import { alturaBarra } from "@/lib/web-contrato";
 import { CabeceraPagina } from "@/componentes/CabeceraPagina";
 import { fechaVisible, hoyCaracas } from "@/lib/fecha-caracas";
 
@@ -81,11 +82,19 @@ export default async function Web({ searchParams }: { searchParams: Promise<{ d?
 
       <section className="tarjeta">
         <h3 className="web-sub">Personas por día</h3>
-        {r.porDia.length === 0 ? <p className="suave">Sin datos todavía.</p> : (
-          <ul className="web-dias">
-            {r.porDia.map((d) => <li key={d.dia}><span>{fechaVisible(d.dia)}</span><b>{d.personas}</b></li>)}
-          </ul>
-        )}
+        {r.porDia.length === 0 ? <p className="suave">Sin datos todavía.</p> : (() => {
+          // Barras compactas en vez de 90 renglones: una por dia, etiqueta visible cada 7 y el detalle en el title.
+          const max = Math.max(...r.porDia.map((d) => d.personas));
+          return (
+            <ol className="web-dias-barras" aria-label="Personas por día">
+              {r.porDia.map((d, i) => (
+                <li key={d.dia} className={d.personas === 0 ? "web-dias-barras__cero" : ""} style={{ "--h": alturaBarra(d.personas, max) } as React.CSSProperties} title={`${fechaVisible(d.dia)} · ${d.personas}`}>
+                  {(i % 7 === 0) && <span>{d.dia.slice(8, 10)}/{d.dia.slice(5, 7)}</span>}
+                </li>
+              ))}
+            </ol>
+          );
+        })()}
       </section>
     </>
   );

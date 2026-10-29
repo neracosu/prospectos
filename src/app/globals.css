@@ -409,3 +409,9 @@ button, input, select, textarea { font: inherit; }
 .ficha__cliente .fila-botones { margin-top: 6px; }
 .cabecera-pagina__cifra .semaforo { vertical-align: middle; }
 .cabecera-pagina__cifra a { color: var(--tinta); }
+
+/* Web (fase 3): personas por dia en barras compactas */
+.web-dias-barras { display: flex; align-items: flex-end; gap: 2px; height: 72px; list-style: none; margin: 0 0 24px; padding: 0; }
+.web-dias-barras li { flex: 1 1 0; min-width: 2px; height: calc(var(--h) * 1%); min-height: 1px; background: var(--verde); border-radius: 2px 2px 0 0; position: relative; }
+.web-dias-barras__cero { opacity: .3; }
+.web-dias-barras li span { position: absolute; top: 100%; left: 0; font-size: 11px; color: var(--tinta-suave); white-space: nowrap; }

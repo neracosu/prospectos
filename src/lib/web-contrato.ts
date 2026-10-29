@@ -257,3 +257,9 @@ export function resumirWeb(eventos: EventoParaResumen[], solicitudes: number): R
     },
   };
 }
+
+// «Personas por dia» en barras (fase 3): altura en porcentaje entero respecto al dia mas alto; 0 si no hay maximo.
+export function alturaBarra(n: number, max: number): number {
+  if (max <= 0 || n <= 0) return 0;
+  return Math.round((100 * n) / max);
+}
