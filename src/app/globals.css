@@ -296,3 +296,22 @@ button, input, select, textarea { font: inherit; }
   .hoy-item { grid-template-columns: 1fr auto auto; grid-template-areas: "texto fecha accion"; }
   .hoy-item > .boton { justify-self: end; }
 }
+
+/* Ajustes: indice y acordeon (panel CRM, fase 1) */
+.indice-ajustes { display: flex; gap: 6px; overflow-x: auto; margin: 0 -16px 12px; padding: 0 16px; scrollbar-width: none; }
+.indice-ajustes a { flex: 0 0 auto; padding: 8px 12px; border-radius: 999px; border: 1px solid var(--borde-control); color: var(--tinta-suave); text-decoration: none; font-size: 14px; min-height: 40px; display: inline-flex; align-items: center; }
+.acordeon { background: var(--panel); border: 1px solid var(--borde); border-radius: var(--radio); margin-bottom: 10px; }
+.acordeon > summary { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 14px; cursor: pointer; list-style: none; font-weight: 600; min-height: 48px; }
+.acordeon > summary::-webkit-details-marker { display: none; }
+.acordeon > summary::after { content: "+"; color: var(--tinta-suave); font-weight: 400; font-size: 20px; line-height: 1; }
+.acordeon[open] > summary::after { content: "–"; }
+.acordeon[open] > summary { border-bottom: 1px solid var(--borde); }
+.acordeon__cuerpo { padding: 12px 14px 4px; }
+.acordeon__cuerpo > .tarjeta { border: 0; padding: 0 0 12px; margin-bottom: 8px; background: transparent; }
+.lista-nichos { list-style: none; margin: 0; padding: 0; }
+.acordeon--nicho { margin-bottom: 6px; background: var(--fondo); }
+.acordeon--nicho > summary { font-weight: 500; min-height: 44px; padding: 10px 12px; }
+@media (min-width: 1024px) {
+  .ajustes-cuerpo { max-width: 760px; }
+  .indice-ajustes { position: sticky; top: 56px; z-index: 19; background: var(--fondo); margin: 0 0 16px; padding: 4px 0 8px; }
+}
