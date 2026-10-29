@@ -14,6 +14,43 @@ solicitud) y en el correo de aviso. Contrato en `src/lib/web-contrato.ts`; migra
 set +a`): el 2026-10-28 se corrio sin ella, no fallo la cadena y el panel quedo dos minutos con el codigo nuevo sin las
 columnas. Plan: `docs/superpowers/plans/2026-10-28-embudo-empezar-panel.md`.
 
+## Panel CRM, fase 2: leads vs directorio (desde el 2026-10-30)
+
+Plan: `docs/superpowers/plans/2026-10-29-panel-crm-fase-2-leads.md`. **Un lead es una conversación real; el directorio es
+la prospección masiva.** Mismo modelo `Prospecto`, con `esLead`, `fuenteLead` (web, embudo, whatsapp, instagram, referido,
+directorio, otro), `valorEstimado`, `proximoPaso`, `propuestaUrl` (migración a mano `20261030090000_leads`, con el
+`UPDATE` que marcó como lead lo que ya había avanzado de etapa u origen `manual`); `SolicitudWeb.prospectoId`.
+
+- **Contrato puro en `src/lib/leads-contrato.ts`**: etiquetas de lead (Nuevo · Propuesta enviada · Conversando · Demo o
+  diagnóstico · Ganado · Descartado) sobre los mismos seis valores de etapa; **transiciones propias de lead**
+  (`puedePasarLead`: desde Nuevo a cualquiera; propuesta, conversando y demo van y vienen) que **no borran la fecha del
+  siguiente paso**; `claveLead(nombre, ciudad, contacto)` (ciudad opcional, el contacto evita que dos personas con el
+  mismo nombre choquen; el directorio sigue con `nombre|ciudad`); `naceLead` (solo `manual` y `solicitud`);
+  `nichoDesdeRubro` (rubro del embudo → slug). Nicho comodín **`otro`** (sembrado; en `SIN_EQUIVALENCIA`; el test de
+  slugs va en 20).
+- **Un directorio asciende a lead al marcar enviado** (`marcarEnviado`: `esLead = true`, `fuenteLead = "directorio"` si
+  estaba vacía).
+- Acciones en `src/acciones/leads.ts`: `crearLead` (alta corta, exige un contacto), `moverLead` (rechaza lo que no es
+  lead; a «Propuesta enviada» deja evento `enviado` sin pasar por «¿se envió?»), `guardarSiguientePaso`,
+  `guardarDatosLead`, `convertirSolicitud` (con la solicitud bloqueada `FOR UPDATE`: dos toques crean uno; deja
+  `prospectoId` y `atendidaEn`).
+- Pantallas: `/leads` (`listarLeads`: cinco columnas sin descartados, valor por columna; **mismo DOM** para teléfono (chips
+  `?etapa=`) y escritorio (tablero con desplazamiento interno por columna); el prospectador solo ve
+  `fuenteLead = directorio`), `/leads/nuevo`, `/leads/[id]` (Siguiente paso + Mover a, datos, contacto, propuesta,
+  historial a la derecha en escritorio y plegado en el teléfono). `/prospectos/[id]` redirige los leads y sigue siendo la
+  ficha del directorio con la cola. `/solicitudes` convierte en lead (`BotonConvertir`) o enlaza al lead.
+- **`/directorio`** (`?t=cola|lista|buscar|maps|importar|bandeja`): la cola de siempre (`InicioProspectador`), la lista
+  filtrada `esLead: false` (`DirectorioLista`, `FiltrosProspectos.soloDirectorio`) y lo de `/buscar`
+  (`DirectorioBuscar`; la pestaña `osm` se llama `buscar`). `/prospectos` → `/directorio?t=lista`, `/prospectos/nuevo` →
+  `/leads/nuevo`, `/buscar` → `/directorio?t=…` (conservan la consulta); `share_target` del manifiesto → `/directorio`.
+  Las acciones de buscar/revisión revalidan también `/directorio`.
+- Inicio del dueño: cifras por `esLead`; en «Hoy» no entran los seguimientos de directorio en «Propuesta enviada» (viven
+  en Directorio › Cola); la cola dejó de estar plegada en Inicio: es un enlace.
+- Recorrido real: `scripts/verificar-leads.mts` (32 comprobaciones; tablero con 30 leads en una columna y 0 en otra,
+  Mover a, alta sin ciudad, ficha, convertir solicitud, Directorio, redirecciones, prospectador). Suite 603 con base.
+- Carga de los prospectos reales: hecha a mano con un script fuera del repo (los nombres y contactos no entran aquí).
+- Pendiente (fase 3): `/cobros`, tabla de proyectos, ficha de proyecto a dos columnas, `/web` solo medición.
+
 ## Panel CRM, fase 1: esqueleto (desde el 2026-10-29)
 
 Diseño: `docs/superpowers/specs/2026-10-29-panel-crm-design.md` (leads vs directorio, Inicio con cifras, tablero, cobros,
