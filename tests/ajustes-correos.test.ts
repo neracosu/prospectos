@@ -26,6 +26,10 @@ describe.runIf(DB_HABILITADA)("ajustes de correos", () => {
   beforeEach(async () => { sesionFalsa.actual = { id: ids.usuarioId, nombre: "Neri", rol: "dueno" }; await prisma.configuracion.deleteMany(); });
   afterAll(async () => { await limpiarBase(); await prisma.$disconnect(); });
 
+  it("sin nada guardado el automatico esta apagado (se enciende a mano tras revisar la muestra)", async () => {
+    expect(await leerCorreosAutomatico()).toBe(false);
+    expect(await leerCorreosPorDia()).toBe(25);
+  });
   it("guarda el tope y el interruptor", async () => {
     expect(await guardarCorreos(fd({ tope: "40", automatico: "off" }))).toEqual({ ok: true });
     expect(await leerCorreosPorDia()).toBe(40);
@@ -45,6 +49,7 @@ describe.runIf(DB_HABILITADA)("ajustes de correos", () => {
     expect(await leerCorreosAutomatico()).toBe(true);
   });
   it("solo el dueno", async () => {
+    await guardarCorreos(fd({ tope: "10", automatico: "on" }));
     sesionFalsa.actual = { id: ids.prospectadorId, nombre: "María", rol: "prospectador" };
     await expect(guardarCorreos(fd({ tope: "10", automatico: "off" }))).rejects.toThrow("REDIRECT:/inicio");
     expect(await leerCorreosAutomatico()).toBe(true);

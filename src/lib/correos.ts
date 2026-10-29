@@ -193,7 +193,9 @@ type Reserva = { reenviar?: boolean; tope?: number };
 // Reserva el envio (fila con fallo "en curso") dentro de una transaccion que serializa con un candado de fila: asi el segundo
 // clic o el automatico encuentran la fila en curso y el tope diario no se pasa.
 async function reservar(d: { prospectoId: number; tipo: "inicial" | "seguimiento"; asunto: string; para: string }, o: Reserva, hoy: string): Promise<{ token: string } | { error: string }> {
-  await prisma.configuracion.upsert({ where: { clave: "candado_correos" }, update: {}, create: { clave: "candado_correos", valor: "" } });
+  // La fila la siembra la migracion 20261031100000; esto es solo respaldo (una base sin ella). INSERT IGNORE no choca
+  // con otro envio que la cree a la vez (el upsert de Prisma daba P2002 en esa carrera).
+  await prisma.$executeRaw`INSERT IGNORE INTO Configuracion (clave, valor) VALUES ('candado_correos', '1')`;
   return prisma.$transaction(async (tx) => {
     await tx.$queryRaw`SELECT clave FROM Configuracion WHERE clave = 'candado_correos' FOR UPDATE`;
     await tx.envioCorreo.updateMany({ where: { fallo: EN_CURSO, enviadoEn: { lt: new Date(Date.now() - VIGENCIA_MS) } }, data: { fallo: "interrumpido" } });

@@ -17,7 +17,8 @@ export const CLAVES = {
 export const DEFECTOS: Record<string, string> = {
   [CLAVES.tarifaHora]: "17",
   [CLAVES.correosPorDia]: "25",
-  [CLAVES.correosAutomatico]: "on",
+  // Apagado al desplegar: Neri lo enciende desde Ajustes tras revisar la muestra (la migracion 20261031100000 lo siembra).
+  [CLAVES.correosAutomatico]: "off",
   // El renglon del portal va solo: mensajeDeCobro lo quita entero si el cliente no tiene acceso (armarMensaje).
   [CLAVES.mensajeRecordatorio]: `Buenas, {cliente}. Le recuerdo el cobro de {concepto} de {proyecto} por {monto}, que vence el {vence}.\n${RENGLON_PORTAL_COBRO}\nCualquier duda me escribe por aquí. Gracias.`,
   [CLAVES.mensajeVencido]: `Buenas, {cliente}. Le escribo por el cobro de {concepto} de {proyecto} por {monto}, que venció el {vence}.\n${RENGLON_PORTAL_COBRO}\n¿Me confirma cuándo lo podemos regularizar? Gracias.`,

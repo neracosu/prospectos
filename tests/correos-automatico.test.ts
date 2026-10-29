@@ -44,6 +44,7 @@ describe.runIf(DB_HABILITADA)("enviarAutomatico y su ruta", () => {
   beforeEach(async () => {
     await prisma.evento.deleteMany(); await prisma.envioCorreo.deleteMany(); await prisma.correoBloqueado.deleteMany(); await prisma.fichaNegocio.deleteMany();
     await prisma.prospecto.deleteMany(); await prisma.configuracion.deleteMany({ where: { clave: { in: [CLAVES.correosAutomatico, CLAVES.correosPorDia] } } });
+    await guardarConfig(CLAVES.correosAutomatico, "on"); // por defecto viene apagado
     salidos.length = 0;
     _transporteParaTests({ sendMail: async (o) => { salidos.push(o); return { messageId: "m1" }; } });
     vi.spyOn(console, "log").mockImplementation(() => {});
@@ -87,6 +88,8 @@ describe.runIf(DB_HABILITADA)("enviarAutomatico y su ruta", () => {
 
   it("apagado o fuera de horario: 0 enviados con su motivo", async () => {
     await nuevo();
+    await prisma.configuracion.deleteMany({ where: { clave: CLAVES.correosAutomatico } });
+    expect(await enviarAutomatico(LUNES_MEDIODIA)).toMatchObject({ enviados: 0, motivo: "apagado" }); // defecto
     await guardarConfig(CLAVES.correosAutomatico, "off");
     expect(await enviarAutomatico(LUNES_MEDIODIA)).toMatchObject({ enviados: 0, motivo: "apagado" });
     await guardarConfig(CLAVES.correosAutomatico, "on");

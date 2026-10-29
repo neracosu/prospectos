@@ -448,7 +448,7 @@ it("la ruta sin secreto responde 404 y no manda", ...);
 
 - [ ] **Step 2: Run tests to verify they fail** → FAIL.
 - [ ] **Step 3: Implementar.** Agregar `PROSPECTOS_CRON_SECRET` al env de producción (`openssl rand -base64 32`, en `~/.config/prospectos/env`, 600) **sin pasarlo por la línea de comandos** y anotar la línea de crontab en el CLAUDE.md:
-  `0 9-17 * * 1-5 bash -c 'set -a; . ~/.config/prospectos/env; set +a; curl -s -o /dev/null -X POST -H "x-cron-secret: $PROSPECTOS_CRON_SECRET" https://prospectos.neracosu.com/api/correos/automatico'`
+  `0 9-17 * * 1-5 bash -c 'set -a; . ~/.config/prospectos/env; set +a; curl -s --max-time 540 -o /dev/null -X POST -H "x-cron-secret: $PROSPECTOS_CRON_SECRET" https://prospectos.neracosu.com/api/correos/automatico'`
 - [ ] **Step 4: Run tests to verify they pass** → PASS.
 - [ ] **Step 5: Commit** (`feat(correos): envio automatico goteado por ruta con secreto para el crontab, tope diario e interruptor`).
 
