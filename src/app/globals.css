@@ -317,3 +317,41 @@ button, input, select, textarea { font: inherit; }
   .ajustes-cuerpo { max-width: 760px; }
   .indice-ajustes { position: sticky; top: 56px; z-index: 19; background: var(--fondo); margin: 0 0 16px; padding: 4px 0 8px; }
 }
+
+/* Leads (panel CRM, fase 2): tablero por etapas. En el telefono se ve una columna (data-activa); en escritorio, las cinco. */
+.acordeon--filtros { margin-bottom: 12px; }
+.filtros .campo { margin-bottom: 8px; }
+.tablero { display: block; }
+.tablero__columna { display: none; }
+.tablero[data-activa="por_contactar"] .tablero__columna[data-etapa="por_contactar"],
+.tablero[data-activa="enviado"] .tablero__columna[data-etapa="enviado"],
+.tablero[data-activa="respondio"] .tablero__columna[data-etapa="respondio"],
+.tablero[data-activa="reunion"] .tablero__columna[data-etapa="reunion"],
+.tablero[data-activa="ganado"] .tablero__columna[data-etapa="ganado"],
+.tablero[data-activa="descartado"] .tablero__columna[data-etapa="descartado"] { display: block; }
+.tablero__titulo { display: none; }
+.tablero__vacio { padding: 12px 0; }
+.lead { background: var(--panel); border: 1px solid var(--borde); border-radius: var(--radio); padding: 12px; margin-bottom: 10px; display: grid; gap: 6px; }
+.lead--vencido { box-shadow: inset 3px 0 0 var(--rojo); }
+.lead--hoy { box-shadow: inset 3px 0 0 var(--ambar); }
+.lead__cabecera { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.lead__nombre { font-weight: 600; color: var(--tinta); text-decoration: none; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lead__valor { color: var(--verde); font-weight: 600; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.lead__meta { font-size: 13px; }
+.lead__paso { display: flex; justify-content: space-between; gap: 10px; font-size: 14px; }
+.lead__fecha { white-space: nowrap; color: var(--tinta-suave); font-size: 13px; }
+.lead__fecha--vencido { color: var(--rojo); font-weight: 600; }
+.lead__fecha--hoy { color: var(--ambar); font-weight: 600; }
+.lead__acciones, .lead__mover { display: flex; flex-wrap: wrap; gap: 8px; }
+.lead__mover { padding-top: 8px; border-top: 1px dashed var(--borde); }
+.lead__motivo { flex: 1 1 100%; min-height: 40px; padding: 6px 10px; border-radius: 10px; border: 1px solid var(--borde-control); background: var(--fondo); color: var(--tinta); }
+@media (min-width: 1024px) {
+  .tablero-chips { display: none; }
+  .tablero { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; align-items: start; }
+  .tablero[data-activa="descartado"] { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .tablero__columna { display: block !important; background: var(--fondo); border: 1px solid var(--borde); border-radius: var(--radio); min-width: 0; }
+  .tablero__titulo { display: flex; justify-content: space-between; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--borde); font-size: 14px; position: sticky; top: 0; background: var(--fondo); z-index: 1; border-radius: var(--radio) var(--radio) 0 0; }
+  .tablero__lista { padding: 10px; max-height: calc(100vh - 220px); overflow-y: auto; }
+  .lead { padding: 10px; }
+  .lead__acciones .boton.mini { min-height: 36px; }
+}
