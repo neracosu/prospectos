@@ -180,3 +180,16 @@ export function armarCorreoPropuesta(d: DatosCorreo): { asunto: string; previo: 
   const c = contenidoDe(d);
   return { asunto, previo, html: cuerpoHtml(d, c, asunto, previo), texto: cuerpoTexto(d, c) };
 }
+
+// Ventana del envio automatico: lunes a viernes, 09:00 a 16:59 hora de Caracas.
+export function ventanaDeEnvio(ahora: Date): boolean {
+  const partes = new Intl.DateTimeFormat("es-VE", { timeZone: "America/Caracas", weekday: "short", hour: "2-digit", hour12: false }).formatToParts(ahora);
+  const dia = (partes.find((p) => p.type === "weekday")?.value ?? "").toLowerCase().replace(".", "");
+  const hora = Number(partes.find((p) => p.type === "hour")?.value ?? "-1") % 24;
+  return ["lun", "mar", "mie", "mié", "jue", "vie"].includes(dia) && hora >= 9 && hora <= 16;
+}
+
+// Cuantos manda cada pasada del cron (9 pasadas al dia): el tope diario repartido en ocho.
+export function tamanoLote(tope: number): number {
+  return Math.max(1, Math.ceil(tope / 8));
+}

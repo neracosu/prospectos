@@ -10,7 +10,8 @@ import { normalizarCorreo, motivoDeCorreo, type EstadoFicha } from "@/lib/ficha-
 import { leerFicha } from "@/lib/fichas";
 import { leerPlantillaPara, generarPdf, hashDe, fechaDePropuesta } from "@/lib/propuesta";
 import { renderPropuesta, webUsable } from "@/lib/propuesta-contrato";
-import { armarCorreoPropuesta, type DatosCorreo } from "@/lib/correo-propuesta-contrato";
+import { armarCorreoPropuesta, ventanaDeEnvio, tamanoLote, type DatosCorreo } from "@/lib/correo-propuesta-contrato";
+import { leerCorreosAutomatico, leerCorreosPorDia } from "@/lib/configuracion";
 import { enviarCorreo } from "@/lib/correo-envio";
 import { fallo, exito, type Resultado } from "@/acciones/resultado";
 
@@ -272,4 +273,35 @@ export async function enviarA(prospectoId: number, tipo: "inicial" | "seguimient
     prisma.prospecto.updateMany({ where: { id: prospectoId, etapa: { in: ["por_contactar", "enviado"] } }, data: { etapa: "enviado", proximoSeguimiento: sumarDias(hoy, dias) } }),
   ]);
   return exito({ token: prep.token });
+}
+
+export type ResultadoAutomatico = { enviados: number; delDia: number; tope: number; motivo: "apagado" | "fuera_de_horario" | "tope" | "sin_cola" | "ok" };
+
+// Una pasada del cron: manda un lote chico de la cola "listas" que Neri dejo al automatico. El tope se aplica dentro del
+// candado de enviarA, asi que ni dos pasadas solapadas ni un clic a mano lo pasan.
+export async function enviarAutomatico(ahora: Date = new Date()): Promise<ResultadoAutomatico> {
+  const hoy = hoyCaracas(ahora);
+  const hora = new Intl.DateTimeFormat("es-VE", { timeZone: "America/Caracas", hour: "2-digit", minute: "2-digit", hour12: false }).format(ahora);
+  const [activo, tope] = await Promise.all([leerCorreosAutomatico(), leerCorreosPorDia()]);
+  let enviados = 0;
+  let delDia = await enviadosHoy(hoy);
+  let motivo: ResultadoAutomatico["motivo"] = "ok";
+  if (!activo) motivo = "apagado";
+  else if (!ventanaDeEnvio(ahora)) motivo = "fuera_de_horario";
+  else if (delDia >= tope) motivo = "tope";
+  else {
+    const cola = (await colaCorreo(hoy, { estado: "listas" })).filter((f) => f.alAutomatico && !f.nombreNoCoincide && !f.bloqueado && (f.estadoFicha === "lista" || f.estadoFicha === "revisada"));
+    if (cola.length === 0) motivo = "sin_cola";
+    const lote = tamanoLote(tope);
+    for (const f of cola) {
+      if (enviados >= lote) break;
+      if (await enviadosHoy(hoy) >= tope) { motivo = "tope"; break; }
+      const r = await enviarA(f.prospectoId, "inicial", null, { tope });
+      if (r.ok) enviados++;
+      else if (r.mensaje.startsWith("Hoy ya salieron")) { motivo = "tope"; break; }
+    }
+    delDia = await enviadosHoy(hoy);
+  }
+  console.log(`[correos] ${hoy} ${hora}: ${enviados} enviados, ${delDia} del dia, tope ${tope} (${motivo})`);
+  return { enviados, delDia, tope, motivo };
 }

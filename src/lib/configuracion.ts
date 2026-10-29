@@ -11,11 +11,13 @@ export const CLAVES = {
   avisoVersion: "mensaje_aviso_version",
   avisoCobro: "mensaje_aviso_cobro",
   correosPorDia: "correos_por_dia",
+  correosAutomatico: "correos_automatico",
 } as const;
 
 export const DEFECTOS: Record<string, string> = {
   [CLAVES.tarifaHora]: "17",
   [CLAVES.correosPorDia]: "25",
+  [CLAVES.correosAutomatico]: "on",
   // El renglon del portal va solo: mensajeDeCobro lo quita entero si el cliente no tiene acceso (armarMensaje).
   [CLAVES.mensajeRecordatorio]: `Buenas, {cliente}. Le recuerdo el cobro de {concepto} de {proyecto} por {monto}, que vence el {vence}.\n${RENGLON_PORTAL_COBRO}\nCualquier duda me escribe por aquí. Gracias.`,
   [CLAVES.mensajeVencido]: `Buenas, {cliente}. Le escribo por el cobro de {concepto} de {proyecto} por {monto}, que venció el {vence}.\n${RENGLON_PORTAL_COBRO}\n¿Me confirma cuándo lo podemos regularizar? Gracias.`,
@@ -42,6 +44,10 @@ export async function leerTarifaHora(): Promise<number> {
 export async function leerCorreosPorDia(): Promise<number> {
   const n = Number(await leerConfig(CLAVES.correosPorDia));
   return Number.isInteger(n) && n > 0 ? n : 25;
+}
+
+export async function leerCorreosAutomatico(): Promise<boolean> {
+  return (await leerConfig(CLAVES.correosAutomatico)).trim().toLowerCase() !== "off";
 }
 
 export type DatosEmisor = { nombre: string; rif: string; whatsapp: string; email: string };
