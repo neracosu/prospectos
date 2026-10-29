@@ -12,8 +12,8 @@ describe("enviarCorreo", () => {
     const r = await enviarCorreo({ ...base, adjunto: { nombre: "Propuesta.pdf", ruta: "/tmp/p.pdf" } });
     expect(r).toEqual({ ok: true, id: "<abc@neracosu.com>" });
     expect(o.to).toBe("cliente@ejemplo.test");
-    expect(String(o.from)).toContain("info@neracosu.com");
-    expect(String(o.replyTo)).toContain("info@neracosu.com");
+    expect(o.from).toEqual({ name: "Neri Colón · NERACOSU", address: "info@neracosu.com" });
+    expect(o.replyTo).toBe("info@neracosu.com");
     expect(o.envelope.from).toBe("info@neracosu.com");
     expect(o.envelope.to).toBe("cliente@ejemplo.test");
     expect(o.html).toBe("<p>Hola</p>");

@@ -4,7 +4,7 @@ import { tieneSesion } from "@/lib/sesion-ligera";
 export const dynamic = "force-dynamic";
 
 // PNG 1x1 transparente.
-const PIXEL = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==", "base64");
+const PIXEL = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR4nGNgAAIAAAUAAXpeqz8AAAAASUVORK5CYII=", "base64");
 
 // Siempre 200 con el mismo PNG: no dice si el token existe. Cuenta la apertura si es de un envio real.
 export async function GET(_req: Request, ctx: { params: Promise<{ token: string }> }) {

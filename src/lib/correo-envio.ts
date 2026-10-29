@@ -3,7 +3,7 @@
 import nodemailer from "nodemailer";
 
 const DE = "info@neracosu.com";
-const REMITENTE = `NERACOSU <${DE}>`;
+const REMITENTE = { name: "Neri Colón · NERACOSU", address: DE };
 
 export type Mensaje = { para: string; asunto: string; html: string; texto: string; adjunto?: { nombre: string; ruta: string } };
 type Transporte = { sendMail: (o: Record<string, unknown>) => Promise<{ messageId: string }> };
@@ -26,7 +26,7 @@ export async function enviarCorreo(m: Mensaje): Promise<{ ok: true; id: string }
   try {
     const r = await transporte().sendMail({
       from: REMITENTE,
-      replyTo: REMITENTE,
+      replyTo: DE,
       envelope: { from: DE, to: m.para },
       to: m.para,
       subject: m.asunto,

@@ -19,31 +19,32 @@ const CAMPOS = {
   pdf: { en: "pdfEn", cuenta: "pdfs", evento: "pdf_descargado" },
 } as const;
 
-// Suma el contador siempre; la fecha y el evento solo la primera vez.
-async function contar(envio: { id: number; prospectoId: number; primera: boolean }, campo: Campo): Promise<void> {
+// Suma el contador siempre; la fecha y el evento solo la primera vez. La primera vez se decide con un
+// updateMany condicionado a que el campo siga en null: bajo carrera (proxies de imagenes) gana una sola peticion.
+async function contar(envio: { id: number; prospectoId: number }, campo: Campo): Promise<void> {
   const c = CAMPOS[campo];
-  const data = { [c.cuenta]: { increment: 1 }, ...(envio.primera ? { [c.en]: new Date() } : {}) };
-  await prisma.envioCorreo.update({ where: { id: envio.id }, data });
-  if (envio.primera) await prisma.evento.create({ data: { prospectoId: envio.prospectoId, tipo: c.evento } });
+  const { count } = await prisma.envioCorreo.updateMany({ where: { id: envio.id, [c.en]: null }, data: { [c.en]: new Date() } });
+  await prisma.envioCorreo.update({ where: { id: envio.id }, data: { [c.cuenta]: { increment: 1 } } });
+  if (count === 1) await prisma.evento.create({ data: { prospectoId: envio.prospectoId, tipo: c.evento } });
 }
 
 export async function registrarApertura(token: string, o: Opc = {}): Promise<void> {
   if (!TOKEN_VALIDO.test(token) || o.conSesion) return;
-  const e = await prisma.envioCorreo.findUnique({ where: { token }, select: { id: true, prospectoId: true, abiertoEn: true } });
-  if (e) await contar({ id: e.id, prospectoId: e.prospectoId, primera: !e.abiertoEn }, "abierto");
+  const e = await prisma.envioCorreo.findUnique({ where: { token }, select: { id: true, prospectoId: true } });
+  if (e) await contar({ id: e.id, prospectoId: e.prospectoId }, "abierto");
 }
 
 export async function registrarClic(token: string, o: Opc = {}): Promise<string | null> {
   if (!TOKEN_VALIDO.test(token)) return null;
-  const e = await prisma.envioCorreo.findUnique({ where: { token }, select: { id: true, prospectoId: true, clicEn: true, prospecto: { select: { codigo: true } } } });
+  const e = await prisma.envioCorreo.findUnique({ where: { token }, select: { id: true, prospectoId: true, prospecto: { select: { codigo: true } } } });
   if (!e) return null;
-  if (!o.conSesion) await contar({ id: e.id, prospectoId: e.prospectoId, primera: !e.clicEn }, "clic");
+  if (!o.conSesion) await contar({ id: e.id, prospectoId: e.prospectoId }, "clic");
   return e.prospecto.codigo;
 }
 
 export async function registrarPdf(token: string, codigo: string, o: Opc = {}): Promise<void> {
   if (!TOKEN_VALIDO.test(token) || o.conSesion) return;
-  const e = await prisma.envioCorreo.findUnique({ where: { token }, select: { id: true, prospectoId: true, pdfEn: true, prospecto: { select: { codigo: true } } } });
+  const e = await prisma.envioCorreo.findUnique({ where: { token }, select: { id: true, prospectoId: true, prospecto: { select: { codigo: true } } } });
   if (!e || e.prospecto.codigo !== codigo) return;
-  await contar({ id: e.id, prospectoId: e.prospectoId, primera: !e.pdfEn }, "pdf");
+  await contar({ id: e.id, prospectoId: e.prospectoId }, "pdf");
 }

@@ -90,6 +90,19 @@ describe.runIf(DB_HABILITADA)("rastreo de correos", () => {
     expect(b.readUInt32BE(16)).toBe(1);
     expect(b.readUInt32BE(20)).toBe(1);
     expect(await prisma.evento.count()).toBe(0);
+    // alfa 0: IHDR dice RGBA 8 bits (tipo 6) y el pixel descomprimido es filtro 0 + 0,0,0,0
+    expect(b[24]).toBe(8); expect(b[25]).toBe(6);
+    const idat = b.indexOf("IDAT");
+    const len = b.readUInt32BE(idat - 4);
+    const crudo = (await import("node:zlib")).inflateSync(b.subarray(idat + 4, idat + 4 + len));
+    expect([...crudo]).toEqual([0, 0, 0, 0, 0]);
+  });
+
+  it("tres aperturas simultaneas dejan un solo evento y aperturas = 3", async () => {
+    const { token } = await nuevo();
+    await Promise.all([registrarApertura(token), registrarApertura(token), registrarApertura(token)]);
+    expect(await eventos("correo_abierto")).toBe(1);
+    expect((await prisma.envioCorreo.findUniqueOrThrow({ where: { token } })).aperturas).toBe(3);
   });
 
   it("la ruta del pixel cuenta con token valido", async () => {
