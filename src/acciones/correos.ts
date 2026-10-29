@@ -7,6 +7,9 @@ import { exigirRol } from "@/lib/sesion";
 import { permitirIntento } from "@/lib/rate-limit";
 import { GANCHO_MAX, normalizarCorreo, type EstadoFicha } from "@/lib/ficha-contrato";
 import { guardarFicha, investigarProspecto, marcarAlAutomatico } from "@/lib/fichas";
+import { enviarA, enviadosHoy } from "@/lib/correos";
+import { leerCorreosPorDia } from "@/lib/configuracion";
+import { hoyCaracas } from "@/lib/fecha-caracas";
 import { fallo, exito, type Resultado } from "@/acciones/resultado";
 
 // exigirRol() va FUERA del try/catch (redirige lanzando). Cada funcion exportada
@@ -20,7 +23,7 @@ const GanchoZ = z.string().trim().max(GANCHO_MAX).regex(/^[^<>\r\n]*$/);
 const ResumenZ = z.string().trim().max(RESUMEN_MAX);
 
 function refrescar(id: number) {
-  revalidatePath("/correos"); revalidatePath(`/prospectos/${id}`);
+  revalidatePath("/correos"); revalidatePath(`/prospectos/${id}`); revalidatePath("/inicio");
 }
 
 export async function guardarGancho(prospectoId: number, fd: FormData): Promise<Resultado> {
@@ -92,5 +95,22 @@ export async function ponerAlAutomatico(prospectoId: number, si: boolean): Promi
     return exito();
   } catch {
     return fallo(ERROR);
+  }
+}
+
+export async function enviarPropuestaCorreo(prospectoId: number, reenviar = false): Promise<Resultado<{ token: string }>> {
+  const u = await exigirRol("dueno");
+  const eId = Id.safeParse(prospectoId);
+  if (!eId.success || typeof reenviar !== "boolean") return fallo("Ese prospecto no existe.");
+  try {
+    const tope = await leerCorreosPorDia();
+    const n = await enviadosHoy(hoyCaracas());
+    if (n >= tope) return fallo(`Hoy ya salieron ${n} de ${tope}. Suba el tope en Ajustes o espere a mañana.`);
+    const r = await enviarA(eId.data, "inicial", u.id, { reenviar });
+    if (r.ok) refrescar(eId.data);
+    return r;
+  } catch (err) {
+    console.error("enviarPropuestaCorreo", err);
+    return fallo("No se pudo enviar. Intente de nuevo.");
   }
 }

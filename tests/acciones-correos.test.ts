@@ -9,12 +9,21 @@ vi.mock("@/lib/sesion", async () => {
   };
 });
 vi.mock("next/cache", () => ({ revalidatePath: () => {} }));
+vi.mock("@/lib/propuesta", async (orig) => {
+  const { mkdtempSync, writeFileSync } = await import("node:fs");
+  const { tmpdir } = await import("node:os");
+  const path = await import("node:path");
+  const real = await orig<typeof import("@/lib/propuesta")>();
+  return { ...real, generarPdf: async (codigo: string) => { const r = path.join(mkdtempSync(path.join(tmpdir(), "pdf-")), `${codigo}.pdf`); writeFileSync(r, "%PDF-1.4 falso"); return r; } };
+});
 
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
 import { prisma } from "@/lib/db";
 import { DB_HABILITADA, limpiarBase, sembrarBasico, crearProspectoDePrueba } from "./ayuda-db";
 import { sesionFalsa } from "./ayuda-sesion";
-import { guardarGancho, reinvestigar, bloquearCorreo, ponerAlAutomatico } from "@/acciones/correos";
+import { guardarGancho, reinvestigar, bloquearCorreo, ponerAlAutomatico, enviarPropuestaCorreo } from "@/acciones/correos";
+import { guardarConfig } from "@/lib/configuracion";
+import { _transporteParaTests } from "@/lib/correo-envio";
 
 const fd = (o: Record<string, string>) => { const f = new FormData(); for (const [k, v] of Object.entries(o)) f.set(k, v); return f; };
 
@@ -81,5 +90,36 @@ describe.runIf(DB_HABILITADA)("acciones de correo: la ficha", () => {
     await expect(ponerAlAutomatico(p.id, true)).rejects.toThrow("REDIRECT");
     expect(await prisma.fichaNegocio.count({ where: { prospectoId: p.id } })).toBe(0);
     expect(await prisma.correoBloqueado.count({ where: { email: "z@x.test" } })).toBe(0);
+  });
+});
+
+describe.runIf(DB_HABILITADA)("acciones de correo: enviar a mano", () => {
+  let ids: Awaited<ReturnType<typeof sembrarBasico>>;
+  beforeAll(async () => { await limpiarBase(); ids = await sembrarBasico(); });
+  beforeEach(async () => {
+    sesionFalsa.actual = { id: ids.usuarioId, nombre: "Neri", rol: "dueno" };
+    await prisma.evento.deleteMany(); await prisma.envioCorreo.deleteMany(); await prisma.fichaNegocio.deleteMany(); await prisma.prospecto.deleteMany(); await prisma.configuracion.deleteMany();
+    _transporteParaTests({ sendMail: async () => ({ messageId: "m" }) });
+  });
+  afterAll(async () => { _transporteParaTests(null); await limpiarBase(); await prisma.$disconnect(); });
+
+  const listo = async () => {
+    const p = await crearProspectoDePrueba(ids.nichoId, { email: `a${Math.random().toString(36).slice(2, 8)}@ejemplo.test` });
+    await prisma.fichaNegocio.create({ data: { prospectoId: p.id, gancho: "Un gancho", estado: "revisada" } });
+    return p;
+  };
+
+  it("enviarPropuestaCorreo respeta el tope diario y el rol", async () => {
+    await guardarConfig("correos_por_dia", "2");
+    const [a, b, c] = [await listo(), await listo(), await listo()];
+    const r1 = await enviarPropuestaCorreo(a.id);
+    expect(r1.ok).toBe(true);
+    if (r1.ok) expect(r1.datos.token).toMatch(/^[A-Za-z0-9_-]{22}$/);
+    expect((await enviarPropuestaCorreo(b.id)).ok).toBe(true);
+    expect(await enviarPropuestaCorreo(c.id)).toEqual({ ok: false, mensaje: "Hoy ya salieron 2 de 2. Suba el tope en Ajustes o espere a mañana." });
+    expect(await prisma.envioCorreo.count({ where: { prospectoId: c.id } })).toBe(0);
+    expect(await enviarPropuestaCorreo(-1)).toEqual({ ok: false, mensaje: "Ese prospecto no existe." });
+    sesionFalsa.actual = { id: ids.prospectadorId, nombre: "María", rol: "prospectador" };
+    await expect(enviarPropuestaCorreo(c.id)).rejects.toThrow("REDIRECT");
   });
 });

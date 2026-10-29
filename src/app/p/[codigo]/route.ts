@@ -6,6 +6,7 @@ import { ipCliente } from "@/lib/ip";
 import { leerPlantillaPara, fechaDePropuesta } from "@/lib/propuesta";
 import { renderPropuesta, webUsable } from "@/lib/propuesta-contrato";
 import { CODIGO_VALIDO } from "@/lib/codigo";
+import { TOKEN_VALIDO } from "@/lib/correos";
 import { leerFicha } from "@/lib/fichas";
 
 const MINUTOS_DEDUPE = 30;
@@ -64,7 +65,10 @@ export async function GET(req: Request, ctx: { params: Promise<{ codigo: string 
   if (!p) return new Response("No encontrado", { status: 404 });
   await registrarAbiertoSiHaceFalta(p.id, req);
   try {
-    const html = renderPropuesta(p.plantilla, p.nombre, `/p/${codigo}/pdf`, p.extra);
+    // Si llega desde el correo (?e=<token>), el PDF hereda el token para que su descarga tambien cuente.
+    const e = new URL(req.url).searchParams.get("e") ?? "";
+    const urlPdf = TOKEN_VALIDO.test(e) ? `/p/${codigo}/pdf?e=${e}` : `/p/${codigo}/pdf`;
+    const html = renderPropuesta(p.plantilla, p.nombre, urlPdf, p.extra);
     return new Response(html, { headers: encabezados() });
   } catch (err) {
     // Una plantilla sin los marcadores esperados no debe tumbar la ruta
