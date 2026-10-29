@@ -14,6 +14,28 @@ solicitud) y en el correo de aviso. Contrato en `src/lib/web-contrato.ts`; migra
 set +a`): el 2026-10-28 se corrio sin ella, no fallo la cadena y el panel quedo dos minutos con el codigo nuevo sin las
 columnas. Plan: `docs/superpowers/plans/2026-10-28-embudo-empezar-panel.md`.
 
+## Panel CRM, fase 4: pulido (desde el 2026-10-30)
+
+Plan: `docs/superpowers/plans/2026-10-30-panel-crm-fase-4-pulido.md`. Sin migración.
+
+- **Búsqueda global** (`BusquedaGlobal`, montada en el layout del panel): se abre con **Ctrl+K / Cmd+K**, con el botón
+  «Buscar» de la barra lateral y con «Buscar» en la hoja «Más» del teléfono; los tres disparan el evento
+  `nc:buscar` (`abrirBusqueda()`), así que no comparten estado. Diálogo `role="dialog"` con flechas, Enter y Escape;
+  al cerrar devuelve el foco a donde estaba. Espera 200 ms y descarta respuestas viejas. Lo puro en
+  `src/lib/busqueda-contrato.ts` (`normalizarConsulta`: mínimo 2 caracteres, máximo 80; `ordenarResultados`: primero
+  lo que empieza por la consulta sin acentos ni mayúsculas, luego por tipo lead · proyecto · cliente · directorio, tope
+  20). La acción `buscarGlobal` (`src/acciones/busqueda.ts`) **respeta el rol**: el prospectador solo alcanza el
+  directorio y los leads de `fuenteLead = directorio`; clientes y proyectos son del dueño; nunca devuelve montos.
+- **Arrastre en el tablero de leads** (`ColumnaTablero` + `TarjetaLead arrastrable`): API nativa de HTML5; el dato
+  viaja como `id:etapa` en `text/plain` y la etapa también como tipo `application/x-lead-etapa-<etapa>` (durante
+  `dragover` el navegador no deja leer el dato). Al soltar llama a `moverLead`, la misma acción de «Mover a…»;
+  `puedeSoltar` (puro) no deja soltar en la misma columna, en una no permitida ni en **Descartado** (pide motivo).
+  Con el dedo el arrastre nativo no se dispara: ahí sigue «Mover a…». CSS solo bajo `(pointer: fine)`.
+- Recorrido real: `scripts/verificar-pulido.mts` (17 comprobaciones a 1280 y 390, dueño y prospectador). Solo contra el
+  clon y la base de tests. ⚠️ Un script de depuración que falle **antes** de su `try` deja sembrado en la base de
+  tests (pasó con un dueño de PIN repetido): sembrar siempre dentro del `try`.
+- **La prueba en el teléfono real la hace Neri.**
+
 ## Panel CRM, fase 3: dinero y proyectos (desde el 2026-10-30)
 
 Plan: `docs/superpowers/plans/2026-10-30-panel-crm-fase-3-dinero-proyectos.md`. Sin migración.
@@ -46,7 +68,7 @@ Plan: `docs/superpowers/plans/2026-10-30-panel-crm-fase-3-dinero-proyectos.md`. 
 - Recorrido real: `scripts/verificar-dinero.mts` (27 comprobaciones a 1280 y 390: cifras y filtros de /cobros, marcar
   pagado desde la tabla y verlo en el proyecto, tabla de proyectos con filtro, ficha a dos columnas, formularios detrás
   de botón, barras de /web, prospectador fuera de /cobros). Solo contra el clon y la base de tests.
-- Pendiente (fase 4): búsqueda global (Ctrl+K), arrastre en el tablero de leads, prueba en el teléfono de Neri.
+- La fase 4 (búsqueda global, arrastre) ya está hecha: ver arriba.
 
 ## Panel CRM, fase 2: leads vs directorio (desde el 2026-10-30)
 
