@@ -58,3 +58,8 @@ export function nichoDesdeRubro(rubro: string): string {
 export function fuenteDesdeSolicitud(s: { tipo: string; origen: string }): FuenteLead {
   return s.tipo === "embudo" ? "embudo" : "web";
 }
+
+// Arrastre en el tablero (fase 4): a otra columna, permitida por las transiciones, y nunca a Descartado (pide motivo).
+export function puedeSoltar(de: Etapa, a: Etapa): boolean {
+  return de !== a && a !== "descartado" && puedePasarLead(de, a);
+}

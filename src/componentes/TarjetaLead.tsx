@@ -11,7 +11,8 @@ const fechaCorta = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
 
 // Un lead en el tablero o en la lista: nombre, fuente, valor, siguiente paso con su fecha, WhatsApp y «Mover a».
 // Al mover, la tarjeta se va de su columna al instante; la accion revalida y la columna nueva la trae.
-export function TarjetaLead({ lead, compacta = false, conValor = true }: { lead: LeadTarjeta; compacta?: boolean; conValor?: boolean }) {
+export function TarjetaLead({ lead, compacta = false, conValor = true, arrastrable = false }: { lead: LeadTarjeta; compacta?: boolean; conValor?: boolean; arrastrable?: boolean }) {
+  const [arrastrando, setArrastrando] = useState(false);
   const [oculta, setOculta] = useState(false);
   const [abierto, setAbierto] = useState(false);
   const [motivo, setMotivo] = useState("");
@@ -30,7 +31,14 @@ export function TarjetaLead({ lead, compacta = false, conValor = true }: { lead:
   };
   const wa = lead.whatsapp.replace(/\D/g, "");
   return (
-    <article className={`lead${lead.estadoPaso ? ` lead--${lead.estadoPaso}` : ""}`} data-id={lead.id}>
+    <article
+      className={`lead${lead.estadoPaso ? ` lead--${lead.estadoPaso}` : ""}${arrastrando ? " lead--arrastrando" : ""}`}
+      data-id={lead.id}
+      draggable={arrastrable || undefined}
+      // El dato real va en text/plain; el tipo con la etapa es una marca legible durante dragover (ColumnaTablero)
+      onDragStart={arrastrable ? (e) => { e.dataTransfer.setData("text/plain", `${lead.id}:${lead.etapa}`); e.dataTransfer.setData(`application/x-lead-etapa-${lead.etapa}`, "1"); e.dataTransfer.effectAllowed = "move"; setArrastrando(true); } : undefined}
+      onDragEnd={arrastrable ? () => setArrastrando(false) : undefined}
+    >
       <Link href={`/leads/${lead.id}`} className="lead__nombre">{lead.nombre}</Link>
       {conValor && lead.valorEstimado !== null && <span className="lead__valor">{formatoUSD(lead.valorEstimado)}</span>}
       <div className="lead__meta suave">{ETIQUETA_FUENTE[lead.fuenteLead as FuenteLead] ?? lead.fuenteLead} · {lead.nichoNombre}{lead.ciudad ? ` · ${lead.ciudad}` : ""}</div>

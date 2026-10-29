@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { puedePasarLead, destinosLead, naceLead, claveLead, nichoDesdeRubro, fuenteDesdeSolicitud, ETIQUETA_ETAPA_LEAD, ETIQUETA_FUENTE, FUENTES_LEAD } from "@/lib/leads-contrato";
+import { puedePasarLead, puedeSoltar, destinosLead, naceLead, claveLead, nichoDesdeRubro, fuenteDesdeSolicitud, ETIQUETA_ETAPA_LEAD, ETIQUETA_FUENTE, FUENTES_LEAD } from "@/lib/leads-contrato";
 
 describe("transiciones de un lead", () => {
   it("desde Nuevo se puede ir a cualquier etapa", () => {
@@ -54,5 +54,14 @@ describe("desde una solicitud", () => {
   it("la fuente es embudo o web", () => {
     expect(fuenteDesdeSolicitud({ tipo: "embudo", origen: "tiktok" })).toBe("embudo");
     expect(fuenteDesdeSolicitud({ tipo: "Software a Medida", origen: "" })).toBe("web");
+  });
+});
+
+describe("puedeSoltar (arrastre en el tablero, fase 4)", () => {
+  it("solo a otra columna permitida y nunca a Descartado", () => {
+    expect(puedeSoltar("por_contactar", "enviado")).toBe(true);
+    expect(puedeSoltar("enviado", "enviado")).toBe(false);
+    expect(puedeSoltar("por_contactar", "descartado")).toBe(false);
+    expect(puedeSoltar("ganado", "por_contactar")).toBe(false);
   });
 });

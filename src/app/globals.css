@@ -433,3 +433,11 @@ button, input, select, textarea { font: inherit; }
   .lateral__buscar { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 40px; margin: 0 0 8px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--borde-control); background: var(--fondo); color: var(--tinta-suave); font: inherit; font-size: 14px; cursor: pointer; }
   .lateral__buscar kbd { margin-left: auto; font: inherit; font-size: 11px; padding: 1px 6px; border: 1px solid var(--borde-control); border-radius: 6px; color: var(--tinta-suave); }
 }
+
+/* Arrastre en el tablero de leads (fase 4, solo puntero fino) */
+@media (pointer: fine) and (min-width: 1024px) {
+  .lead[draggable="true"] { cursor: grab; }
+  .lead--arrastrando { opacity: .5; }
+  .lead--pendiente { opacity: .4; pointer-events: none; }
+  .tablero__lista--recibe { outline: 2px dashed var(--verde); outline-offset: -4px; }
+}

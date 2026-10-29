@@ -8,6 +8,7 @@ import { ETIQUETA_ETAPA_LEAD, ETIQUETA_FUENTE, FUENTES_LEAD, esFuenteLead } from
 import { formatoUSD } from "@/lib/dinero";
 import { CabeceraPagina } from "@/componentes/CabeceraPagina";
 import { TarjetaLead } from "@/componentes/TarjetaLead";
+import { ColumnaTablero } from "@/componentes/ColumnaTablero";
 
 export const dynamic = "force-dynamic";
 
@@ -63,10 +64,10 @@ export default async function Leads({ searchParams }: { searchParams: Promise<Re
               <span>{ETIQUETA_ETAPA_LEAD[c.etapa]} <b>{c.leads.length}</b></span>
               {u.rol === "dueno" && c.valor > 0 && <span className="suave">{formatoUSD(c.valor)}</span>}
             </header>
-            <div className="tablero__lista">
+            <ColumnaTablero etapa={c.etapa}>
               {c.leads.length === 0 && <p className="suave tablero__vacio">Nada aquí.</p>}
-              {c.leads.map((l) => <TarjetaLead key={l.id} lead={l} conValor={u.rol === "dueno"} />)}
-            </div>
+              {c.leads.map((l) => <TarjetaLead key={l.id} lead={l} conValor={u.rol === "dueno"} arrastrable />)}
+            </ColumnaTablero>
           </section>
         ))}
         {verDescartados && (
