@@ -3,7 +3,7 @@ import { sesionActual } from "@/lib/sesion";
 import { TecladoPin } from "@/componentes/TecladoPin";
 
 export default async function Entrar() {
-  if (await sesionActual()) redirect("/hoy");
+  if (await sesionActual()) redirect("/inicio");
   return (
     <main className="contenedor entrar">
       <h1 className="titulo">Prospectos</h1>

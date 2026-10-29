@@ -47,7 +47,7 @@ export async function guardarNicho(formData: FormData): Promise<Resultado> {
     }
     await prisma.nicho.update({ where: { id }, data });
     revalidatePath("/ajustes");
-    revalidatePath("/hoy");
+    revalidatePath("/inicio");
     return exito();
   } catch (err) {
     console.error("guardarNicho", err);
@@ -84,7 +84,7 @@ export async function guardarUsuario(formData: FormData): Promise<Resultado> {
       if (r.count === 0) return fallo("Esa cuenta no existe.");
     }
     revalidatePath("/ajustes");
-    revalidatePath("/hoy");
+    revalidatePath("/inicio");
     return exito();
   } catch (err) {
     const m = mensajePin(err);

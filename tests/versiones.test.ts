@@ -5,7 +5,7 @@ vi.mock("@/lib/sesion", async () => {
     COOKIE_SESION: "pr_sesion", DIAS_SESION: 30,
     sesionActual: async () => sesionFalsa.actual,
     exigirSesion: async () => { if (!sesionFalsa.actual) throw new Error("REDIRECT:/entrar"); return sesionFalsa.actual; },
-    exigirRol: async (rol: string) => { if (sesionFalsa.actual?.rol !== rol) throw new Error("REDIRECT:/hoy"); return sesionFalsa.actual; },
+    exigirRol: async (rol: string) => { if (sesionFalsa.actual?.rol !== rol) throw new Error("REDIRECT:/inicio"); return sesionFalsa.actual; },
   };
 });
 vi.mock("next/cache", () => ({ revalidatePath: () => {} }));

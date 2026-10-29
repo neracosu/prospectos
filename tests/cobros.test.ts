@@ -5,7 +5,7 @@ vi.mock("@/lib/sesion", async () => {
     COOKIE_SESION: "pr_sesion", DIAS_SESION: 30,
     sesionActual: async () => sesionFalsa.actual,
     exigirSesion: async () => { if (!sesionFalsa.actual) throw new Error("REDIRECT:/entrar"); return sesionFalsa.actual; },
-    exigirRol: async (rol: string) => { if (sesionFalsa.actual?.rol !== rol) throw new Error("REDIRECT:/hoy"); return sesionFalsa.actual; },
+    exigirRol: async (rol: string) => { if (sesionFalsa.actual?.rol !== rol) throw new Error("REDIRECT:/inicio"); return sesionFalsa.actual; },
   };
 });
 vi.mock("next/cache", () => ({ revalidatePath: () => {} }));
@@ -56,7 +56,7 @@ describe.runIf(DB_HABILITADA)("acciones de cobros", () => {
 
   it("el prospectador no toca cobros", async () => {
     sesionFalsa.actual = { id: ids.prospectadorId, nombre: "María", rol: "prospectador" };
-    await expect(anularCobro(1, "x")).rejects.toThrow("REDIRECT:/hoy");
+    await expect(anularCobro(1, "x")).rejects.toThrow("REDIRECT:/inicio");
   });
 
   it("agregarCobro valida y crea; pago_unico y mensualidad no se agregan a mano", async () => {
@@ -233,7 +233,7 @@ describe.runIf(DB_HABILITADA)("acciones de cobros", () => {
     it("el prospectador no deshace pagos", async () => {
       const id = await pagar("Deshacer sin permiso");
       sesionFalsa.actual = { id: ids.prospectadorId, nombre: "María", rol: "prospectador" };
-      await expect(deshacerPago(id)).rejects.toThrow("REDIRECT:/hoy");
+      await expect(deshacerPago(id)).rejects.toThrow("REDIRECT:/inicio");
       expect((await prisma.cobro.findUniqueOrThrow({ where: { id } })).pagadoEn).not.toBeNull();
     });
   });

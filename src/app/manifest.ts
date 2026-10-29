@@ -9,7 +9,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: "Prospectos NERACOSU",
     short_name: "Prospectos",
     description: "Panel de prospección: cola del día, embudo y bandeja de revisión.",
-    start_url: "/hoy",
+    start_url: "/inicio",
     scope: "/",
     display: "standalone",
     background_color: "#0f1412",

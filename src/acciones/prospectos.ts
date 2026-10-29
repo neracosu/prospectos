@@ -25,7 +25,7 @@ const ERROR = "No se pudo guardar. Intenta de nuevo.";
 const UMBRAL_DOBLE_TOQUE_MS = 2 * 60 * 1000;
 
 function refrescar(id?: number) {
-  revalidatePath("/hoy"); revalidatePath("/prospectos");
+  revalidatePath("/inicio"); revalidatePath("/prospectos");
   if (id) revalidatePath(`/prospectos/${id}`);
 }
 

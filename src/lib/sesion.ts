@@ -26,6 +26,6 @@ export async function exigirSesion(): Promise<SesionUsuario> {
 // Solo dueno ve dinero, proyectos y ajustes. Se llama FUERA del try/catch.
 export async function exigirRol(rol: "dueno"): Promise<SesionUsuario> {
   const u = await exigirSesion();
-  if (u.rol !== rol) redirect("/hoy");
+  if (u.rol !== rol) redirect("/inicio");
   return u;
 }

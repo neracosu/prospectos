@@ -6,7 +6,7 @@ vi.mock("@/lib/sesion", async () => {
     DIAS_SESION: 30,
     sesionActual: async () => sesionFalsa.actual,
     exigirSesion: async () => { if (!sesionFalsa.actual) throw new Error("REDIRECT:/entrar"); return sesionFalsa.actual; },
-    exigirRol: async (rol: string) => { if (sesionFalsa.actual?.rol !== rol) throw new Error("REDIRECT:/hoy"); return sesionFalsa.actual; },
+    exigirRol: async (rol: string) => { if (sesionFalsa.actual?.rol !== rol) throw new Error("REDIRECT:/inicio"); return sesionFalsa.actual; },
   };
 });
 vi.mock("next/cache", () => ({ revalidatePath: () => {} }));
@@ -28,9 +28,9 @@ describe.runIf(DB_HABILITADA)("ajustes", () => {
 
   it("el prospectador no puede tocar nichos ni usuarios", async () => {
     sesionFalsa.actual = { id: ids.prospectadorId, nombre: "María", rol: "prospectador" };
-    await expect(guardarNicho(fd({ id: String(ids.nichoId), mensajeInicial: "x", mensajeSeguimiento: "y", diasSeguimiento: "2" }))).rejects.toThrow("REDIRECT:/hoy");
-    await expect(guardarUsuario(fd({ nombre: "Z", rol: "prospectador", pin: "111111", metaDiaria: "3" }))).rejects.toThrow("REDIRECT:/hoy");
-    await expect(restablecerPin(ids.usuarioId, "999999")).rejects.toThrow("REDIRECT:/hoy");
+    await expect(guardarNicho(fd({ id: String(ids.nichoId), mensajeInicial: "x", mensajeSeguimiento: "y", diasSeguimiento: "2" }))).rejects.toThrow("REDIRECT:/inicio");
+    await expect(guardarUsuario(fd({ nombre: "Z", rol: "prospectador", pin: "111111", metaDiaria: "3" }))).rejects.toThrow("REDIRECT:/inicio");
+    await expect(restablecerPin(ids.usuarioId, "999999")).rejects.toThrow("REDIRECT:/inicio");
   });
   it("guardarNicho exige {enlace} en el mensaje inicial y dias entre 1 y 30", async () => {
     expect((await guardarNicho(fd({ id: String(ids.nichoId), mensajeInicial: "sin enlace {nombre}", mensajeSeguimiento: "y {enlace}", diasSeguimiento: "3" }))).ok).toBe(false);

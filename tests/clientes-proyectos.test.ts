@@ -5,7 +5,7 @@ vi.mock("@/lib/sesion", async () => {
     COOKIE_SESION: "pr_sesion", DIAS_SESION: 30,
     sesionActual: async () => sesionFalsa.actual,
     exigirSesion: async () => { if (!sesionFalsa.actual) throw new Error("REDIRECT:/entrar"); return sesionFalsa.actual; },
-    exigirRol: async (rol: string) => { if (sesionFalsa.actual?.rol !== rol) throw new Error("REDIRECT:/hoy"); return sesionFalsa.actual; },
+    exigirRol: async (rol: string) => { if (sesionFalsa.actual?.rol !== rol) throw new Error("REDIRECT:/inicio"); return sesionFalsa.actual; },
   };
 });
 vi.mock("next/cache", () => ({ revalidatePath: () => {} }));
@@ -31,9 +31,9 @@ describe.runIf(DB_HABILITADA)("clientes y proyectos", () => {
 
   it("el prospectador no entra a nada de esta pieza", async () => {
     sesionFalsa.actual = { id: ids.prospectadorId, nombre: "María", rol: "prospectador" };
-    await expect(crearCliente(fd({ nombre: "X" }))).rejects.toThrow("REDIRECT:/hoy");
-    await expect(crearProyecto(fd({ nombre: "X" }))).rejects.toThrow("REDIRECT:/hoy");
-    await expect(cambiarEstadoProyecto(1, "activo")).rejects.toThrow("REDIRECT:/hoy");
+    await expect(crearCliente(fd({ nombre: "X" }))).rejects.toThrow("REDIRECT:/inicio");
+    await expect(crearProyecto(fd({ nombre: "X" }))).rejects.toThrow("REDIRECT:/inicio");
+    await expect(cambiarEstadoProyecto(1, "activo")).rejects.toThrow("REDIRECT:/inicio");
   });
 
   it("configuracion devuelve defectos y guarda", async () => {

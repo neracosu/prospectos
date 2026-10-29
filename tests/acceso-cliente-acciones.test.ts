@@ -5,7 +5,7 @@ vi.mock("@/lib/sesion", async () => {
     COOKIE_SESION: "pr_sesion", DIAS_SESION: 30,
     sesionActual: async () => sesionFalsa.actual,
     exigirSesion: async () => { if (!sesionFalsa.actual) throw new Error("REDIRECT:/entrar"); return sesionFalsa.actual; },
-    exigirRol: async (rol: string) => { if (sesionFalsa.actual?.rol !== rol) throw new Error("REDIRECT:/hoy"); return sesionFalsa.actual; },
+    exigirRol: async (rol: string) => { if (sesionFalsa.actual?.rol !== rol) throw new Error("REDIRECT:/inicio"); return sesionFalsa.actual; },
   };
 });
 vi.mock("next/cache", () => ({ revalidatePath: () => {} }));
@@ -32,9 +32,9 @@ describe.runIf(DB_HABILITADA)("acciones de acceso al portal", () => {
 
   it("el prospectador no toca el acceso de los clientes", async () => {
     sesionFalsa.actual = { id: ids.prospectadorId, nombre: "María", rol: "prospectador" };
-    await expect(enviarAcceso(conCel.id)).rejects.toThrow("REDIRECT:/hoy");
-    await expect(regenerarPinCliente(conCel.id)).rejects.toThrow("REDIRECT:/hoy");
-    await expect(desactivarAccesoCliente(conCel.id)).rejects.toThrow("REDIRECT:/hoy");
+    await expect(enviarAcceso(conCel.id)).rejects.toThrow("REDIRECT:/inicio");
+    await expect(regenerarPinCliente(conCel.id)).rejects.toThrow("REDIRECT:/inicio");
+    await expect(desactivarAccesoCliente(conCel.id)).rejects.toThrow("REDIRECT:/inicio");
   });
 
   it("la primera vez devuelve enlace y PIN en dos mensajes separados, y el PIN entra de verdad", async () => {

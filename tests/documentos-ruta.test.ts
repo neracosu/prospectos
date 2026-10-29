@@ -5,7 +5,7 @@ vi.mock("@/lib/sesion", async () => {
     COOKIE_SESION: "pr_sesion", DIAS_SESION: 30,
     sesionActual: async () => sesionFalsa.actual,
     exigirSesion: async () => { if (!sesionFalsa.actual) throw new Error("REDIRECT:/entrar"); return sesionFalsa.actual; },
-    exigirRol: async (rol: string) => { if (sesionFalsa.actual?.rol !== rol) throw new Error("REDIRECT:/hoy"); return sesionFalsa.actual; },
+    exigirRol: async (rol: string) => { if (sesionFalsa.actual?.rol !== rol) throw new Error("REDIRECT:/inicio"); return sesionFalsa.actual; },
   };
 });
 vi.mock("@/lib/sesion-cliente", async () => {
@@ -167,7 +167,7 @@ describe.runIf(DB_HABILITADA)("documentos: subir, quitar y servir", () => {
 
   it("quitar: solo el dueno; despues el cliente recibe 404 y el dueno lo sigue viendo", async () => {
     sesionFalsa.actual = { id: ids.prospectadorId, nombre: "María", rol: "prospectador" };
-    await expect(quitarDocumentoDeProyecto(docId)).rejects.toThrow("REDIRECT:/hoy");
+    await expect(quitarDocumentoDeProyecto(docId)).rejects.toThrow("REDIRECT:/inicio");
     comoDueno();
     expect(await quitarDocumentoDeProyecto(docId)).toEqual({ ok: true, datos: undefined });
     expect((await quitarDocumentoDeProyecto(999_999)).ok).toBe(false);

@@ -25,7 +25,7 @@ const Lote = z.string().min(8).max(64);
 
 function refrescar() {
   revalidatePath("/buscar");
-  revalidatePath("/hoy");
+  revalidatePath("/inicio");
   revalidatePath("/prospectos");
 }
 

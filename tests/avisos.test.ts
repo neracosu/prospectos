@@ -5,7 +5,7 @@ vi.mock("@/lib/sesion", async () => {
     COOKIE_SESION: "pr_sesion", DIAS_SESION: 30,
     sesionActual: async () => sesionFalsa.actual,
     exigirSesion: async () => { if (!sesionFalsa.actual) throw new Error("REDIRECT:/entrar"); return sesionFalsa.actual; },
-    exigirRol: async (rol: string) => { if (sesionFalsa.actual?.rol !== rol) throw new Error("REDIRECT:/hoy"); return sesionFalsa.actual; },
+    exigirRol: async (rol: string) => { if (sesionFalsa.actual?.rol !== rol) throw new Error("REDIRECT:/inicio"); return sesionFalsa.actual; },
   };
 });
 vi.mock("next/cache", () => ({ revalidatePath: () => {} }));
@@ -58,7 +58,7 @@ describe.runIf(DB_HABILITADA)("avisos al cliente", () => {
     const interno = await prisma.pendiente.create({ data: { proyectoId, texto: "Refactor interno", hecho: true, hechoEn: new Date(), visibleCliente: false, orden: 1 } });
     const hito = await prisma.pendiente.create({ data: { proyectoId, texto: "Recepción y habitaciones", visibleCliente: true, orden: 2 } });
     sesionFalsa.actual = { id: ids.prospectadorId, nombre: "María", rol: "prospectador" };
-    await expect(avisarHito(hito.id)).rejects.toThrow("REDIRECT:/hoy");
+    await expect(avisarHito(hito.id)).rejects.toThrow("REDIRECT:/inicio");
     sesionFalsa.actual = { id: ids.usuarioId, nombre: "Neri", rol: "dueno" };
     expect((await avisarHito(interno.id)).ok).toBe(false);
     expect((await avisarHito(hito.id)).ok).toBe(false); // todavia no esta cumplido
@@ -131,7 +131,7 @@ describe.runIf(DB_HABILITADA)("avisos al cliente", () => {
   it("guardarMensajesAviso: solo el dueno; cada aviso lleva su variable; guarda los tres", async () => {
     const buenos = { hito: "Listo {hito} en {proyecto}.\n{enlace}", version: "Versión {version}:\n{cambios}\n{enlace}", cobro: "Cobro por {monto}, vence {vence}.\n{enlace}" };
     sesionFalsa.actual = { id: ids.prospectadorId, nombre: "María", rol: "prospectador" };
-    await expect(guardarMensajesAviso(fd(buenos))).rejects.toThrow("REDIRECT:/hoy");
+    await expect(guardarMensajesAviso(fd(buenos))).rejects.toThrow("REDIRECT:/inicio");
     sesionFalsa.actual = { id: ids.usuarioId, nombre: "Neri", rol: "dueno" };
     for (const malos of [{ ...buenos, hito: "Ya quedó listo, avise si lo ve." }, { ...buenos, version: "Publicamos una versión nueva." }, { ...buenos, cobro: "Le registré un cobro nuevo." }, { ...buenos, hito: "{hito}" }]) {
       const r = await guardarMensajesAviso(fd(malos));

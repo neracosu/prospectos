@@ -19,7 +19,7 @@ const Fecha = z.string().trim().refine(esFechaIso, "fecha");
 const Id = z.number().int().positive();
 
 function refrescar(id?: number) {
-  revalidatePath("/proyectos"); revalidatePath("/hoy"); revalidatePath("/clientes");
+  revalidatePath("/proyectos"); revalidatePath("/inicio"); revalidatePath("/clientes");
   if (id) revalidatePath(`/proyectos/${id}`);
 }
 

@@ -43,6 +43,6 @@ export async function entrar(_: unknown, formData: FormData): Promise<Resultado>
     console.error("entrar", err);
     return fallo("No se pudo entrar. Intenta de nuevo.");
   }
-  if (listo) redirect("/hoy");
+  if (listo) redirect("/inicio");
   return fallo("No se pudo entrar. Intenta de nuevo.");
 }
