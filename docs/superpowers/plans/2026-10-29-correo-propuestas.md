@@ -17,7 +17,7 @@
 - Nada en la ficha ni en el gancho que no salga de una fuente (web, Overture, base). Sin hallazgos → sin gancho.
 - Correos excluidos: `@*.gob.ve`, `example`, `noreply|no-reply`; prospectos de Colombia (`paisDeCiudad === "CO"`) fuera; leads que no sean `fuenteLead = "directorio"` fuera; un correo por dirección (normalizada a minúsculas y sin espacios).
 - Remitente `Neri Colón · NERACOSU <info@neracosu.com>`, `Reply-To: info@neracosu.com`, envelope `-f info@neracosu.com`; fuera de `NODE_ENV=production` no se manda nada salvo con `PROSPECTOS_CORREO_SIMULADO=1` (devuelve éxito sin enviar).
-- Tope diario por defecto **25** (`correos_por_dia`), interruptor `correos_automatico` por defecto `on`, lote por hora `ceil(tope / 8)`, solo lunes a viernes de 09:00 a 17:00 hora de Caracas.
+- Tope diario por defecto **25** (`correos_por_dia`), interruptor `correos_automatico` por defecto `off` (se enciende desde Ajustes tras los primeros 10 envíos), lote por hora `ceil(tope / 8)`, solo lunes a viernes de 09:00 a 17:00 hora de Caracas.
 - `GANCHO_MAX = 280` caracteres; el gancho se escapa siempre (HTML y correo); nunca contiene saltos de línea.
 - Toda petición saliente va por `src/lib/red-segura.ts` (`descargar`), nunca `fetch`.
 - Ningún archivo nuevo entra en la cadena de imports de `src/instrumentation.ts` (lo vigila `tests/instrumentation-grafo.test.ts`); `correo-envio.ts` usa `node:`.

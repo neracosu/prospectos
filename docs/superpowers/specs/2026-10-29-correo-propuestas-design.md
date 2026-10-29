@@ -172,8 +172,9 @@ cambia de hash cuando cambia el gancho, así que el caché se regenera solo.
 
 ### 4b. Envío automático (decisión de Neri, 29-oct)
 
-- **Interruptor** en Ajustes (`correos_automatico`: `on`/`off`, por defecto `on` al desplegar, tras revisar con Neri
-  la muestra de 20 fichas) y **tope diario** `correos_por_dia` (por defecto **25**; Neri pidió «un poquito más» que
+- **Interruptor** en Ajustes (`correos_automatico`: `on`/`off`; **por defecto `off`** al desplegar, sembrado por la
+  migración `20261031100000_correos_semillas`; Neri lo enciende desde Ajustes después de revisar la muestra de 20 fichas y
+  los primeros 10 envíos a mano; decisión de la revisión final del 29-oct) y **tope diario** `correos_por_dia` (por defecto **25**; Neri pidió «un poquito más» que
   15; recomendación: una semana en 25 y, sin rebotes ni quejas, subir a 40).
 - **Goteo:** una ruta interna `POST /api/correos/automatico` (cabecera `x-cron-secret` = `PROSPECTOS_CRON_SECRET` del
   env; sin ella 404) manda **un lote pequeño** por llamada: `ceil(tope / 8)` correos, solo de lunes a viernes entre las
@@ -183,8 +184,11 @@ cambia de hash cuando cambia el gancho, así que el caché se regenera solo.
   ficha `nombreNoCoincide` ni una dirección en `CorreoBloqueado`; orden: primero las fichas con gancho. Los prospectos
   que entren al directorio **después** del despliegue no entran al automático: se les investiga y se les manda a mano
   desde `/correos` (botón «Enviar»), salvo que Neri los marque «al automático» en la ficha.
-- Cada llamada deja una línea `[correos] <fecha hora>: N enviados, M del día, tope T` en el log de PM2; si una
-  dirección falla en sendmail se registra el evento `correo_fallido` y la fila queda para reintento manual.
+- Cada llamada deja una línea `[correos] <fecha hora>: N enviados, M del día, tope T (motivo)` en el log de PM2; si una
+  dirección falla en sendmail la fila queda con `fallo` (sin evento aparte) en «fallidas», para reintento manual. Una
+  reserva «en curso» de más de 10 minutos se da por «interrumpida» (puede haber salido): se reintenta a mano. El lote
+  corta tras 2 fallos seguidos. Una web que no responde a tiempo queda `desconocida` (sin gancho, sigue como web
+  existente), no «caída».
 - En `/correos`, arriba: estado del automático (encendido, enviados hoy / tope, próximo lote) y el botón de pausa.
 
 ### 4c. Rastreo
