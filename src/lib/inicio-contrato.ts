@@ -5,13 +5,13 @@ import { esFechaIso } from "@/lib/fecha-caracas";
 import { formatoUSD } from "@/lib/dinero";
 
 export type EstadoHoy = "vencido" | "hoy" | "proximo";
-export type ItemHoy = { tipo: "seguimiento" | "cobro" | "hito"; id: string; titulo: string; sub: string; fecha: string; estado: EstadoHoy; href: string; whatsapp?: string };
+export type ItemHoy = { tipo: "seguimiento" | "cobro" | "hito"; id: string; titulo: string; sub: string; fecha: string; estado: EstadoHoy; href: string; enlaceWhatsApp?: string };
 
 export type CifrasInicio = { leadsActivos: number; conVencido: number; solicitudes: number; porCobrar: number; vencido: number; personasWeb: number };
 
 export type EntradaHoy = {
   hoy: string;
-  seguimientos: { id: number; nombre: string; ciudad: string; proximoSeguimiento: string | null; whatsapp?: string }[];
+  seguimientos: { id: number; nombre: string; ciudad: string; proximoSeguimiento: string | null; whatsapp?: string; mensaje?: string }[];
   cobros: { id: number; proyectoId: number; proyectoNombre: string; concepto: string; monto: number; vence: string }[];
   hitos: { id: number; proyectoId: number; proyectoNombre: string; texto: string; fechaEstimada: string | null }[];
 };
@@ -28,7 +28,10 @@ export function armarHoy(e: EntradaHoy): ItemHoy[] {
   const items: ItemHoy[] = [];
   for (const s of e.seguimientos) {
     if (!s.proximoSeguimiento || !esFechaIso(s.proximoSeguimiento)) continue;
-    items.push({ tipo: "seguimiento", id: `s${s.id}`, titulo: s.nombre, sub: s.ciudad ? `Seguimiento · ${s.ciudad}` : "Seguimiento", fecha: s.proximoSeguimiento, estado: estadoDe(s.proximoSeguimiento, e.hoy), href: `/prospectos/${s.id}`, whatsapp: s.whatsapp || undefined });
+    // El boton de WhatsApp lleva el mensaje de seguimiento del nicho ya escrito, como la tarjeta de la cola.
+    const num = (s.whatsapp || "").replace(/\D/g, "");
+    const enlaceWhatsApp = num ? `https://wa.me/${num}${s.mensaje ? "?text=" + encodeURIComponent(s.mensaje) : ""}` : undefined;
+    items.push({ tipo: "seguimiento", id: `s${s.id}`, titulo: s.nombre, sub: s.ciudad ? `Seguimiento · ${s.ciudad}` : "Seguimiento", fecha: s.proximoSeguimiento, estado: estadoDe(s.proximoSeguimiento, e.hoy), href: `/prospectos/${s.id}`, enlaceWhatsApp });
   }
   for (const c of e.cobros) {
     if (!esFechaIso(c.vence)) continue;

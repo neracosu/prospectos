@@ -8,9 +8,11 @@ export default async function LayoutPanel({ children }: { children: React.ReactN
   const u = await exigirSesion();
   return (
     <ProveedorFlotante>
-      <BarraLateral rol={u.rol} nombre={u.nombre} />
-      <main className="contenedor">{children}</main>
-      <BarraInferior rol={u.rol} />
+      <div className="panel">
+        <BarraLateral rol={u.rol} nombre={u.nombre} />
+        <main className="contenedor">{children}</main>
+        <BarraInferior rol={u.rol} />
+      </div>
       <RegistrarSW />
     </ProveedorFlotante>
   );

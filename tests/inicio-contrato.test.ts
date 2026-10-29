@@ -21,4 +21,11 @@ describe("lista Hoy de Inicio", () => {
     expect(estadoDe("2026-10-29", "2026-10-29")).toBe("hoy");
     expect(estadoDe("2026-11-02", "2026-10-29")).toBe("proximo");
   });
+  it("el seguimiento con WhatsApp y mensaje trae el enlace listo para escribir", () => {
+    const r = armarHoy({ hoy: "2026-10-29", seguimientos: [{ id: 1, nombre: "Posada", ciudad: "Catia", proximoSeguimiento: "2026-10-29", whatsapp: "584121112233", mensaje: "Hola Posada, ¿pudo ver la propuesta?" }], cobros: [], hitos: [] });
+    expect(r[0].enlaceWhatsApp).toBe("https://wa.me/584121112233?text=" + encodeURIComponent("Hola Posada, ¿pudo ver la propuesta?"));
+    const sin = armarHoy({ hoy: "2026-10-29", seguimientos: [{ id: 1, nombre: "A", ciudad: "", proximoSeguimiento: "2026-10-29" }], cobros: [], hitos: [] });
+    expect(sin[0].enlaceWhatsApp).toBeUndefined();
+  });
 });
+

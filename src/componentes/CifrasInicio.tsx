@@ -7,7 +7,7 @@ import type { CifrasInicio as Cifras } from "@/lib/inicio-contrato";
 export function CifrasInicio({ cifras }: { cifras: Cifras }) {
   return (
     <div className="cifras-inicio">
-      <Link href="/prospectos?etapa=enviado" className="cifra">
+      <Link href="/prospectos" className="cifra">
         <b>{cifras.leadsActivos}</b>
         <span>Leads activos</span>
         {cifras.conVencido > 0 && <small className="cifra__alerta">{cifras.conVencido} con seguimiento vencido</small>}

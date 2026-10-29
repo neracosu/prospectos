@@ -30,6 +30,7 @@ describe.runIf(DB_HABILITADA)("datos de Inicio", () => {
     await prisma.pendiente.create({ data: { proyectoId: proyecto.id, texto: "Sin fecha" } });
     // Un prospecto enviado con seguimiento vencido (la siembra basica no trae prospectos)
     await prisma.prospecto.create({ data: { nichoId: ids.nichoId, nombre: "Posada Faro", ciudad: "Catia La Mar", whatsapp: "584121112233", fuentes: [], codigo: "p".repeat(22), clave: "posada faro|catia la mar", etapa: "enviado", proximoSeguimiento: "2026-10-28" } });
+    await prisma.prospecto.create({ data: { nichoId: ids.nichoId, nombre: "Hotel Charla", ciudad: "Caracas", whatsapp: "584120000000", fuentes: [], codigo: "q".repeat(22), clave: "hotel charla|caracas", etapa: "respondio", proximoSeguimiento: "2026-10-27" } });
   });
   it("cobrosQueVencen e hitosQueTocan miran 7 dias y omiten lo lejano o sin fecha", async () => {
     const c = await cobrosQueVencen(hoy, 7);
@@ -47,6 +48,10 @@ describe.runIf(DB_HABILITADA)("datos de Inicio", () => {
     expect(d.hoyLista.map((x) => x.tipo)).toContain("cobro");
     expect(d.hoyLista.map((x) => x.tipo)).toContain("hito");
     expect(d.hoyLista.map((x) => x.tipo)).toContain("seguimiento");
+    // La lista cuenta lo mismo que la cifra: enviado, respondio y reunion con fecha vencida
+    expect(d.hoyLista.filter((x) => x.tipo === "seguimiento").map((x) => x.titulo).sort()).toEqual(["Hotel Charla", "Posada Faro"]);
+    expect(d.cifras.conVencido).toBe(2);
+    expect(d.hoyLista.find((x) => x.titulo === "Posada Faro")!.enlaceWhatsApp).toMatch(/^https:\/\/wa\.me\/584121112233\?text=/);
     expect(d.ultimas.length).toBeLessThanOrEqual(3);
   });
 });

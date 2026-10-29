@@ -213,7 +213,8 @@ button, input, select, textarea { font: inherit; }
    Panel CRM, fase 1 (29-oct-2026): esqueleto. Niveles de titulo, cabecera de pagina, tabla, barra lateral
    (escritorio, desde 1024 px) y hoja «Mas» de la barra inferior (telefono).
    ============================================================ */
-.contenedor h1 { font-size: 24px; margin: 0; line-height: 1.2; }
+.contenedor h1 { font-size: 24px; line-height: 1.2; }
+.cabecera-pagina h1 { margin: 0; }
 .contenedor h2 { font-size: 18px; margin: 20px 0 10px; line-height: 1.25; }
 .contenedor h3 { font-size: 15px; margin: 14px 0 8px; }
 .contenedor h2.titulo { font-size: 18px; }
@@ -261,8 +262,9 @@ button, input, select, textarea { font: inherit; }
   .lateral__pie { margin-top: auto; padding: 12px; border-top: 1px solid var(--borde); display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 14px; color: var(--tinta-suave); }
   .lateral__usuario { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .lateral__salir { color: var(--tinta-suave); }
-  .contenedor { margin-left: var(--lateral-ancho); max-width: none; padding: 24px 32px 48px; }
-  .contenedor > * { max-width: 1280px; }
+  /* solo dentro del panel: /entrar y /sin-conexion usan .contenedor sin barra lateral y siguen centradas */
+  .panel .contenedor { margin-left: var(--lateral-ancho); max-width: none; padding: 24px 32px 48px; }
+  .panel .contenedor > * { max-width: 1280px; }
   .cabecera-pagina { position: sticky; top: 0; z-index: 20; background: var(--fondo); padding: 4px 0 12px; margin: -4px 0 16px; }
   .contenedor h1 { font-size: 26px; }
   .tabla thead { display: table-header-group; }

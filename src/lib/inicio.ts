@@ -9,10 +9,12 @@ import { armarHoy, type CifrasInicio, type ItemHoy } from "@/lib/inicio-contrato
 const ETAPAS_ACTIVAS = ["enviado", "respondio", "reunion"];
 
 export async function datosInicio(hoy: string): Promise<{ cifras: CifrasInicio; hoyLista: ItemHoy[]; ultimas: SolicitudFila[] }> {
-  const [leadsActivos, conVencido, seguimientos, cobros, hitos, mes, solicitudes, personasWeb, ultimas] = await Promise.all([
+  const [leadsActivos, conVencido, enviados, conversando, cobros, hitos, mes, solicitudes, personasWeb, ultimas] = await Promise.all([
     prisma.prospecto.count({ where: { etapa: { in: ETAPAS_ACTIVAS } } }),
     prisma.prospecto.count({ where: { etapa: { in: ETAPAS_ACTIVAS }, proximoSeguimiento: { lt: hoy } } }),
     seguimientosQueTocan(hoy),
+    // Respondio o en demo con una fecha puesta a mano desde la ficha: cuentan igual que un enviado
+    prisma.prospecto.findMany({ where: { etapa: { in: ["respondio", "reunion"] }, proximoSeguimiento: { lte: hoy } }, select: { id: true, nombre: true, ciudad: true, whatsapp: true, proximoSeguimiento: true }, orderBy: { proximoSeguimiento: "asc" }, take: 50 }),
     cobrosQueVencen(hoy, 7),
     hitosQueTocan(hoy, 7),
     resumenMes(hoy),
@@ -22,7 +24,10 @@ export async function datosInicio(hoy: string): Promise<{ cifras: CifrasInicio; 
   ]);
   return {
     cifras: { leadsActivos, conVencido, solicitudes, porCobrar: mes.porCobrar, vencido: mes.vencido, personasWeb },
-    hoyLista: armarHoy({ hoy, seguimientos: seguimientos.map((s) => ({ id: s.id, nombre: s.nombre, ciudad: s.ciudad, proximoSeguimiento: s.proximoSeguimiento, whatsapp: s.whatsapp })), cobros, hitos }),
+    hoyLista: armarHoy({ hoy, seguimientos: [
+      ...enviados.map((s) => ({ id: s.id, nombre: s.nombre, ciudad: s.ciudad, proximoSeguimiento: s.proximoSeguimiento, whatsapp: s.whatsapp, mensaje: s.mensaje })),
+      ...conversando.map((s) => ({ id: s.id, nombre: s.nombre, ciudad: s.ciudad, proximoSeguimiento: s.proximoSeguimiento, whatsapp: s.whatsapp })),
+    ], cobros, hitos }),
     ultimas,
   };
 }

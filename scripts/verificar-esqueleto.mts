@@ -69,7 +69,18 @@ try {
   // ---------- escritorio: 1280 y 1024 ----------
   for (const ancho of [1280, 1024]) {
     const { ctx, pg } = await pagina(b, ancho, 800, false);
+    if (ancho === 1280) {
+      await pg.goto(`${BASE}/entrar`); await pg.waitForLoadState("networkidle");
+      const m = await pg.locator("main").first().boundingBox();
+      revisar(!!m && Math.abs((m.x + m.width / 2) - 640) < 8 && m.width <= 700, `1280: /entrar centrado sin barra lateral (x=${Math.round(m?.x ?? -1)}, ancho=${Math.round(m?.width ?? -1)})`);
+      revisar(!(await visible(pg, "nav.lateral")), "1280: /entrar sin barra lateral");
+    }
     await entrar(pg, PIN_DUENO);
+    if (ancho === 1280) {
+      await pg.goto(`${BASE}/prospectos/nuevo`); await pg.waitForLoadState("networkidle");
+      const mb = await pg.locator("h1.titulo").first().evaluate((e) => getComputedStyle(e).marginBottom);
+      revisar(mb === "12px", `1280: h1.titulo de una pagina vieja conserva su margen (${mb})`);
+    }
     await pg.goto(`${BASE}/prospectos`); await pg.waitForLoadState("networkidle");
     revisar(await visible(pg, "nav.lateral"), `${ancho}: barra lateral visible`);
     revisar((await pg.locator("nav.lateral .lateral__item").count()) === 7, `${ancho}: lateral con 7 secciones (${await pg.locator("nav.lateral .lateral__item").count()})`);
@@ -124,7 +135,10 @@ try {
       const tipos = await filas.evaluateAll((xs) => xs.map((x) => x.getAttribute("data-tipo")));
       revisar(tipos[0] === "seguimiento" && tipos.includes("cobro"), `390: Hoy ordenada por fecha (vencido primero): ${tipos.join(",")}`);
       revisar((await filas.first().locator("a[href*='wa.me']").count()) === 1, "390: el seguimiento trae boton de WhatsApp");
-      revisar(!(await pg.locator("text=Por contactar").count()), "390: el dueno no ve la cola masiva en Inicio");
+      revisar((await pg.locator("details#cola:not([open])").count()) === 1, "390: el dueno tiene la cola de prospeccion plegada al final de Inicio");
+      revisar((await pg.locator("details#cola .tarjeta").count()) === 0 || !(await pg.locator("details#cola .tarjeta").first().isVisible()), "390: la cola plegada no muestra tarjetas");
+      await pg.locator("details#cola > summary").click();
+      revisar((await pg.locator("details#cola").getByText(`Hotel Cola ${marca}`).count()) === 1, "390: al abrir la cola aparece el prospecto por contactar");
       await pg.screenshot({ path: `${SALIDA}/inicio-390.png`, fullPage: true });
     }
     if (!process.env.SIN_SOLICITUDES) {

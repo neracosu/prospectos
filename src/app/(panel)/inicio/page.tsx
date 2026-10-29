@@ -34,7 +34,7 @@ export default async function Inicio() {
                   <span className="suave">{i.sub}</span>
                 </Link>
                 <span className={`hoy-item__fecha hoy-item__fecha--${i.estado}`}>{ESTADO_TEXTO[i.estado] || fechaVisible(i.fecha)}</span>
-                {i.tipo === "seguimiento" && i.whatsapp && <a className="boton boton--primario mini" href={`https://wa.me/${i.whatsapp}`} target="_blank" rel="noopener noreferrer">WhatsApp</a>}
+                {i.tipo === "seguimiento" && (i.enlaceWhatsApp ? <a className="boton boton--primario mini" href={i.enlaceWhatsApp} target="_blank" rel="noopener noreferrer">WhatsApp</a> : <Link className="boton mini" href={i.href}>Ver ficha</Link>)}
                 {i.tipo === "cobro" && <Link className="boton mini" href={i.href}>Ver cobro</Link>}
                 {i.tipo === "hito" && <Link className="boton mini" href={i.href}>Ver proyecto</Link>}
               </li>
@@ -61,6 +61,12 @@ export default async function Inicio() {
         )}
         {ultimas.length > 0 && <p><Link href="/solicitudes">Ver todas las solicitudes</Link></p>}
       </section>
+
+      {/* La prospeccion masiva sale de la portada pero no del panel: plegada al final hasta que exista Directorio (fase 2). */}
+      <details className="acordeon" id="cola">
+        <summary><span>Cola de prospección</span><span className="suave">los 10 del día, seguimientos y el embudo</span></summary>
+        <div className="acordeon__cuerpo"><InicioProspectador usuario={{ id: u.id, nombre: u.nombre }} /></div>
+      </details>
     </>
   );
 }
