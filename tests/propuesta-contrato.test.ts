@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { renderPropuesta, nombreSeguro } from "@/lib/propuesta-contrato";
+import { renderPropuesta, nombreSeguro, GANCHOS_SIN_PDF } from "@/lib/propuesta-contrato";
 
 const plantilla = readFileSync(path.join(import.meta.dirname, "..", "plantillas", "hoteles.html"), "utf8");
 
@@ -75,5 +75,33 @@ describe("renderPropuesta", () => {
     expect(() => renderPropuesta("<html><body>sin nada util</body></html>", "X", "/p/x/pdf")).toThrow(
       "PLANTILLA_SIN_MARCADORES",
     );
+  });
+  it("con gancho deja el bloque si:gancho con el texto escapado; sin gancho lo quita entero", () => {
+    const plantilla = `<title>x</title><style></style><div class="documento"><!--si:gancho--><p>{{gancho}}</p><!--fin:gancho--><p>resto</p><button class="boton" id="descargar-pdf" type="button">PDF</button></div>`;
+    const con = renderPropuesta(plantilla, "Bar Uno", "/p/x/pdf", { gancho: "<b>x</b> & \"y\"" });
+    expect(con).toContain("<p>&lt;b&gt;x&lt;/b&gt; &amp; &quot;y&quot;</p>");
+    expect(con).not.toContain("{{gancho}}");
+    expect(con).not.toContain("si:gancho");
+    for (const extra of [{}, { gancho: "" }, { gancho: "   " }]) {
+      const sin = renderPropuesta(plantilla, "Bar Uno", "/p/x/pdf", extra);
+      expect(sin).not.toContain("<p></p>");
+      expect(sin).not.toContain("{{gancho}}");
+      expect(sin).toContain("<p>resto</p>");
+    }
+  });
+  it("las nueve plantillas llevan el bloque si:gancho una sola vez, y ninguna propone llamadas", () => {
+    for (const f of ["hoteles", "hoteles-estadia", "restaurantes-y-bares", "reservas", "comercio-y-tienda", "cobros-y-pagos", "cobros-y-pagos-co", "citas-y-servicios"]) {
+      const h = readFileSync(path.join(import.meta.dirname, "..", "plantillas", `${f}.html`), "utf8");
+      expect(h.match(/<!--si:gancho--><p>\{\{gancho\}\}<\/p><!--fin:gancho-->/g), f).toHaveLength(1);
+    }
+  });
+  it("en el PDF las plantillas de GANCHOS_SIN_PDF no llevan gancho; en linea y hoteles si", () => {
+    const pl = `<title>x</title><style></style><div class="documento"><!--si:gancho--><p>{{gancho}}</p><!--fin:gancho--><button class="boton" id="descargar-pdf" type="button">PDF</button></div>`;
+    for (const s of GANCHOS_SIN_PDF) {
+      expect(renderPropuesta(pl, "A", "#", { gancho: "Vi que X", paraPdf: true, plantilla: s })).not.toContain("Vi que X");
+      expect(renderPropuesta(pl, "A", "#", { gancho: "Vi que X", plantilla: s })).toContain("Vi que X");
+    }
+    expect(renderPropuesta(pl, "A", "#", { gancho: "Vi que X", paraPdf: true, plantilla: "cobros-y-pagos-co" })).not.toContain("Vi que X");
+    expect(renderPropuesta(pl, "A", "#", { gancho: "Vi que X", paraPdf: true, plantilla: "hoteles" })).toContain("Vi que X");
   });
 });

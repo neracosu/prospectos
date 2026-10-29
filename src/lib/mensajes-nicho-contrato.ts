@@ -16,6 +16,37 @@ export const PREGUNTA_POR_ARQUETIPO: Record<string, string> = {
   "": "cómo opera hoy",
 };
 
+// Para la carta y el correo de propuesta (29-oct-2026), por arquetipo: lo que se promete en una linea, la credencial
+// (copiada de la frase «Mis sistemas funcionan…» del primer mensaje de un nicho de cada arquetipo en
+// scripts/sembrar-nichos.mjs) y el antetitulo. Ninguna propone llamadas.
+export const PROMESA_POR_ARQUETIPO: Record<string, string> = {
+  "hoteles": "la caja y los turnos cerrados cada día",
+  "hoteles-estadia": "reservas que se cobran solas por WhatsApp",
+  "restaurantes-y-bares": "comandas y caja sin cuaderno",
+  "reservas": "reservas con anticipo que no se caen",
+  "comercio-y-tienda": "inventario que cuadra y tienda que cobra sola",
+  "cobros-y-pagos": "mensualidades que se cobran solas",
+  "citas-y-servicios": "su agenda, con el precio ya definido",
+};
+export const CREDENCIAL_POR_ARQUETIPO: Record<string, string> = {
+  "hoteles": "Mis sistemas funcionan en empresas de Caracas, Valencia y el exterior, y uno de ellos controla desde el teléfono las habitaciones, la caja en bolívares y divisas y los turnos de recepción de un hotel.",
+  "hoteles-estadia": "Mis sistemas funcionan en empresas de Caracas, Valencia y el exterior: para el Hotel VIP La Guaira construí el bot de WhatsApp que hoy atiende a sus huéspedes, reserva y cobra el anticipo solo, conectado a su página y al sistema que ya usaban; y para un hotel de Valencia la caja en bolívares y divisas y los turnos de recepción.",
+  "restaurantes-y-bares": "Mis sistemas funcionan en empresas de Caracas, Valencia y el exterior. Para restaurantes y bares tengo un sistema propio de comandas, caja en bolívares y divisas con la tasa del día y cierre por turno, con un pago único de adaptación y un servicio mensual, y queda a su nombre.",
+  "reservas": "Mis sistemas funcionan en empresas de Caracas, Valencia y el exterior. Para canchas y espacios que se alquilan por hora tengo un sistema propio de reservas con calendario, cupo retenido y pago validado, con un pago único de adaptación y un servicio mensual, y queda a su nombre.",
+  "comercio-y-tienda": "Mis sistemas funcionan en empresas de Caracas, Valencia y el exterior. Para tiendas con inventario tengo un sistema propio de tienda en línea, catálogo, inventario y cobro en bolívares y divisas con la tasa del día, con un pago único de adaptación y un servicio mensual, y queda a su nombre.",
+  "cobros-y-pagos": "Mis sistemas funcionan en empresas de Caracas, Valencia y el exterior. Para gimnasios y academias deportivas tengo un sistema propio de mensualidades con recordatorio automático, pago móvil validado contra el banco y control de quién está al día, que se paga una sola vez y queda a su nombre.",
+  "citas-y-servicios": "Mis sistemas funcionan en empresas de Caracas, Valencia y el exterior. Para clínicas y consultorios médicos estoy armando un sistema propio de citas con agenda por profesional, recordatorio al cliente y cobro validado, con un pago único y un servicio mensual, y queda a su nombre.",
+};
+export const ANTETITULO_POR_ARQUETIPO: Record<string, string> = {
+  "hoteles": "Hoteles de alta rotación",
+  "hoteles-estadia": "Hoteles que venden por noche",
+  "restaurantes-y-bares": "Restaurantes y bares",
+  "reservas": "Canchas, salones y espacios",
+  "comercio-y-tienda": "Tiendas y comercios",
+  "cobros-y-pagos": "Gimnasios, academias e institutos",
+  "citas-y-servicios": "Citas y servicios por profesional",
+};
+
 function pregunta(arquetipo: string | null): string {
   return PREGUNTA_POR_ARQUETIPO[arquetipo ?? ""] ?? PREGUNTA_POR_ARQUETIPO[""];
 }

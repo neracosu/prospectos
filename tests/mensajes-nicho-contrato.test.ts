@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
-import { cierreInicial, cierreSeguimiento, pasarAlEnganche, PREGUNTA_POR_ARQUETIPO } from "@/lib/mensajes-nicho-contrato";
+import { ANTETITULO_POR_ARQUETIPO, CREDENCIAL_POR_ARQUETIPO, PROMESA_POR_ARQUETIPO, cierreInicial, cierreSeguimiento, pasarAlEnganche, PREGUNTA_POR_ARQUETIPO } from "@/lib/mensajes-nicho-contrato";
 import { mensajeDeProspecto } from "@/lib/plantilla-mensaje";
 import { fraseDePromo } from "@/lib/propuesta-contrato";
 import { MENSAJE_CO_INICIAL, MENSAJE_CO_INICIAL_CON_PROPUESTA, MENSAJE_CO_SEGUIMIENTO, MENSAJE_CO_SEGUIMIENTO_CON_PROPUESTA } from "@/lib/colombia-contrato";
@@ -80,5 +80,19 @@ describe("la semilla de nichos y los mensajes de Colombia ya traen el enganche",
       expect(m).not.toMatch(PROHIBIDO);
       expect(m).toContain("diagnóstico gratis");
     }
+  });
+});
+
+describe("promesa, credencial y antetitulo por arquetipo", () => {
+  const SIETE = ["hoteles", "hoteles-estadia", "restaurantes-y-bares", "reservas", "comercio-y-tienda", "cobros-y-pagos", "citas-y-servicios"];
+  it("existen para los 7 arquetipos y no proponen llamadas", () => {
+    for (const lista of [PROMESA_POR_ARQUETIPO, CREDENCIAL_POR_ARQUETIPO, ANTETITULO_POR_ARQUETIPO]) {
+      expect(Object.keys(lista).sort()).toEqual([...SIETE].sort());
+      for (const a of SIETE) {
+        expect(lista[a], a).toBeTruthy();
+        expect(lista[a], a).not.toMatch(PROHIBIDO);
+      }
+    }
+    for (const a of SIETE) expect(CREDENCIAL_POR_ARQUETIPO[a]).toMatch(/^Mis sistemas funcionan/);
   });
 });

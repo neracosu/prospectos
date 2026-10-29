@@ -16,8 +16,11 @@ for (const slug of slugs) {
   const plantilla = readFileSync(path.join(DIR, `${slug}.html`), "utf8");
   // Una plantilla <slug>-co es solo de Colombia; las demas se arman para los dos paises si traen bloques si:co.
   const paises = slug.endsWith("-co") ? (["CO"] as const) : plantilla.includes("<!--si:co-->") ? (["VE", "CO"] as const) : (["VE"] as const);
-  for (const pais of paises) for (const conWeb of [true, false]) {
-    const html = renderPropuesta(plantilla, "Restaurante El Ejemplo Largo de Nombre C.A.", "#", { ciudad: "Valencia", rubro: "restaurantes y bares", conWeb, fecha: "2026-11-20", hoy: "2026-11-20", pais });
+  // Segunda pasada con un gancho de 280 caracteres (el maximo que deja la ficha), armada como la arma el PDF
+  // (paraPdf): la hoja de la carta no debe desbordarse; las de GANCHOS_SIN_PDF lo dejan fuera.
+  const GANCHO_MAX = ("Vi que su local abre hasta tarde los fines de semana y que varias resenas hablan de la espera para cerrar la cuenta; ".repeat(4)).slice(0, 280);
+  for (const pais of paises) for (const conWeb of [true, false]) for (const gancho of ["", GANCHO_MAX]) {
+    const html = renderPropuesta(plantilla, "Restaurante El Ejemplo Largo de Nombre C.A.", "#", { ciudad: "Valencia", rubro: "restaurantes y bares", conWeb, fecha: "2026-11-20", hoy: "2026-11-20", pais, gancho, paraPdf: true, plantilla: slug });
     await pg.setContent(html, { waitUntil: "networkidle" });
     await pg.evaluate(async () => { await (document as Document & { fonts: FontFaceSet }).fonts.ready; });
     await pg.emulateMedia({ media: "print" });
@@ -26,7 +29,7 @@ for (const slug of slugs) {
     const hojas = await pg.$$eval(".hoja", (hs) => hs.length);
     const estado = sobras.length || tokens ? "FALLA" : "ok";
     if (estado === "FALLA") fallas++;
-    console.log(`${estado.padEnd(6)} ${slug.padEnd(24)} ${pais} web=${conWeb ? "si" : "no"} hojas ${hojas}${sobras.length ? `  desbordadas (hoja, px): ${JSON.stringify(sobras)}` : ""}${tokens ? `  tokens sin rellenar: ${tokens}` : ""}`);
+    console.log(`${estado.padEnd(6)} ${slug.padEnd(24)} ${pais} web=${conWeb ? "si" : "no"} gancho=${gancho ? "si" : "no"} hojas ${hojas}${sobras.length ? `  desbordadas (hoja, px): ${JSON.stringify(sobras)}` : ""}${tokens ? `  tokens sin rellenar: ${tokens}` : ""}`);
   }
 }
 await b.close();

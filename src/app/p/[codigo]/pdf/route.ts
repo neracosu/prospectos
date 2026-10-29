@@ -6,6 +6,7 @@ import { ipCliente } from "@/lib/ip";
 import { leerPlantillaPara, generarPdf, hashDe, fechaDePropuesta } from "@/lib/propuesta";
 import { renderPropuesta } from "@/lib/propuesta-contrato";
 import { CODIGO_VALIDO } from "@/lib/codigo";
+import { leerFicha } from "@/lib/fichas";
 
 // Nombre de archivo seguro para el header (ASCII, sin comillas ni barras);
 // la version completa con acentos y demas va aparte en filename* (UTF-8).
@@ -36,7 +37,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ codigo: string
   const plantilla = await leerPlantillaPara(p.nicho.plantillaPropuesta, paisDeCiudad(p.ciudad));
   if (!plantilla) return new Response("No encontrado", { status: 404 });
   try {
-    const html = renderPropuesta(plantilla, p.nombre, "#", { ciudad: p.ciudad, rubro: p.nicho.nombre.toLowerCase(), conWeb: !!p.web, fecha: await fechaDePropuesta(p.id), pais: paisDeCiudad(p.ciudad) });
+    const html = renderPropuesta(plantilla, p.nombre, "#", { ciudad: p.ciudad, rubro: p.nicho.nombre.toLowerCase(), conWeb: !!p.web, fecha: await fechaDePropuesta(p.id), pais: paisDeCiudad(p.ciudad), gancho: (await leerFicha(p.id))?.gancho ?? "", paraPdf: true, plantilla: p.nicho.plantillaPropuesta });
     const ruta = await generarPdf(codigo, html, hashDe(html));
     const bytes = await readFile(ruta);
     const nombreArchivo = `Propuesta-NERACOSU-${saneado(p.nombre) || "Propuesta"}.pdf`;

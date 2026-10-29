@@ -9,6 +9,7 @@ import { ipCliente } from "@/lib/ip";
 import { leerPlantillaPara, fechaDePropuesta } from "@/lib/propuesta";
 import { renderPropuesta } from "@/lib/propuesta-contrato";
 import { CODIGO_VALIDO } from "@/lib/codigo";
+import { leerFicha } from "@/lib/fichas";
 
 const MINUTOS_DEDUPE = 30;
 
@@ -39,7 +40,7 @@ async function encontrarProspecto(codigo: string) {
   const plantilla = await leerPlantillaPara(p.nicho.plantillaPropuesta, paisDeCiudad(p.ciudad));
   if (!plantilla) return null;
   // Lo unico del prospecto que sale a la propuesta publica: nombre, ciudad, rubro y si tiene web. Nada de contacto.
-  return { id: p.id, nombre: p.nombre, plantilla, extra: { ciudad: p.ciudad, rubro: p.nicho.nombre.toLowerCase(), conWeb: !!p.web, fecha: await fechaDePropuesta(p.id), pais: paisDeCiudad(p.ciudad) } };
+  return { id: p.id, nombre: p.nombre, plantilla, extra: { ciudad: p.ciudad, rubro: p.nicho.nombre.toLowerCase(), conWeb: !!p.web, fecha: await fechaDePropuesta(p.id), pais: paisDeCiudad(p.ciudad), gancho: (await leerFicha(p.id))?.gancho ?? "" } };
 }
 
 // Deja un Evento "abierto", salvo que quien abre tenga sesion (Neri revisando
