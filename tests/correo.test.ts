@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { armarCorreo, limpiarCabecera } from "@/lib/correo";
 
-const d = { nombre: "José Núñez", correo: "jose@posada.com", whatsapp: "+58 412-123.4567", tipo: "Software a Medida", presupuesto: "", mensaje: "Hola\nNecesito un sistema", pagina: "/para/hoteles.html", sesion: "" };
+const d = { nombre: "José Núñez", correo: "jose@posada.com", whatsapp: "+58 412-123.4567", tipo: "Software a Medida", presupuesto: "", mensaje: "Hola\nNecesito un sistema", pagina: "/para/hoteles.html", sesion: "", respuestas: "", calificacion: "" as const, origen: "" };
 
 describe("armarCorreo", () => {
   it("lleva Reply-To del visitante, asunto codificado y enlace a WhatsApp", () => {

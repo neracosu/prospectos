@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
-  origenPermitido, esBot, normalizarEvento, normalizarSolicitud, rutaLimpia, clasificarOrigen, resumirWeb,
+  origenPermitido, esBot, normalizarEvento, normalizarSolicitud, rutaLimpia, clasificarOrigen, resumirWeb, respuestasLegibles,
   type EventoParaResumen,
 } from "@/lib/web-contrato";
 
@@ -155,5 +155,50 @@ describe("resumirWeb", () => {
     const v = resumirWeb([], 0);
     expect(v.personas).toBe(0);
     expect(v.home.secciones.every((s) => s.personas === 0)).toBe(true);
+  });
+});
+
+describe("embudo /empezar", () => {
+  it("normalizarEvento acepta paso con un detalle conocido y descarta p9", () => {
+    expect(normalizarEvento({ s: "sesion12345", t: "paso", r: "/empezar.html", d: "p1" })).toMatchObject({ tipo: "paso", detalle: "p1" });
+    expect(normalizarEvento({ s: "sesion12345", t: "paso", r: "/empezar.html", d: "p9" })).toBeNull();
+  });
+  it("una solicitud de embudo guarda respuestas, calificacion y origen", () => {
+    const r = normalizarSolicitud({ nombre: "Ana", phone: "04121234567", type: "embudo", message: "", respuestas: { rubro: "hoteles", actual: "manual", objetivo: "cobros", tamano: "1", sistema: "hoteles", extra: "x" }, calificacion: "demo", origen: "TikTok" });
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(JSON.parse(r.datos.respuestas)).toEqual({ rubro: "hoteles", actual: "manual", objetivo: "cobros", tamano: "1", sistema: "hoteles" });
+      expect(r.datos.calificacion).toBe("demo");
+      expect(r.datos.origen).toBe("tiktok");
+      expect(r.datos.mensaje.length).toBeGreaterThanOrEqual(5);
+    }
+  });
+  it("sin campos nuevos (la home de hoy) sigue pasando con cadenas vacias", () => {
+    const r = normalizarSolicitud({ nombre: "Ana Pérez", email: "ana@hotel.com", type: "Software a Medida", message: "Necesito un sistema" });
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.datos).toMatchObject({ respuestas: "", calificacion: "", origen: "" });
+  });
+  it("respuestas raras no rompen: se recortan y una calificacion desconocida queda vacia", () => {
+    const r = normalizarSolicitud({ nombre: "Ana", phone: "04121234567", type: "embudo", respuestas: { rubro: "x".repeat(500), tamano: 7 }, calificacion: "vip" });
+    expect(r.ok).toBe(true);
+    if (r.ok) { expect(r.datos.respuestas.length).toBeLessThanOrEqual(400); expect(r.datos.calificacion).toBe(""); }
+  });
+  it("respuestasLegibles traduce y tolera JSON roto", () => {
+    expect(respuestasLegibles('{"rubro":"hoteles","tamano":"1"}')).toEqual([{ clave: "Rubro", valor: "hoteles" }, { clave: "Tamaño", valor: "1" }]);
+    expect(respuestasLegibles("{no es json")).toEqual([]);
+    expect(respuestasLegibles("")).toEqual([]);
+  });
+  it("resumirWeb arma el embudo de /empezar por paso y por origen", () => {
+    const t = new Date("2026-10-28T12:00:00Z");
+    const ev = (sesion: string, tipo: string, detalle = "", origen = "", ruta = "/empezar.html"): EventoParaResumen => ({ sesion, tipo, ruta, detalle, origen, movil: true, creadoEn: t });
+    const r = resumirWeb([
+      ev("aaaaaaaa", "vista", "", "tiktok"), ev("aaaaaaaa", "paso", "p1"), ev("aaaaaaaa", "paso", "p4"), ev("aaaaaaaa", "paso", "enviado"),
+      ev("bbbbbbbb", "vista", "", "tiktok", "/empezar"), ev("bbbbbbbb", "paso", "p1"),
+      ev("cccccccc", "vista", "", "", "/"),
+    ], 1);
+    expect(r.empezar.personas).toBe(2);
+    expect(r.empezar.pasos.find((p) => p.id === "p1")?.personas).toBe(2);
+    expect(r.empezar.pasos.find((p) => p.id === "enviado")?.personas).toBe(1);
+    expect(r.empezar.origenes).toEqual([{ nombre: "TikTok", personas: 2, enviaron: 1 }]);
   });
 });

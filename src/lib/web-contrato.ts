@@ -10,7 +10,25 @@ export function origenPermitido(origin: string | null): string | null {
 }
 
 // Lo que la web puede mandar. Un clic o una seccion fuera de estas listas se descarta.
-export const TIPOS_EVENTO = ["vista", "clic", "seccion"] as const;
+export const TIPOS_EVENTO = ["vista", "clic", "seccion", "paso"] as const;
+// Embudo /empezar (29-oct): cada paso se manda una vez por visita. La landing se mide como /empezar.html
+// (medir.js agrega .html), pero se acepta tambien /empezar por si alguien la manda limpia.
+export const PASOS_EMBUDO = [
+  { id: "p1", nombre: "Respondieron la 1" },
+  { id: "p2", nombre: "Respondieron la 2" },
+  { id: "p3", nombre: "Respondieron la 3" },
+  { id: "p4", nombre: "Respondieron la 4" },
+  { id: "resultado", nombre: "Vieron su recomendación" },
+  { id: "datos", nombre: "Abrieron el formulario" },
+  { id: "enviado", nombre: "Dejaron sus datos" },
+] as const;
+const IDS_PASO: readonly string[] = PASOS_EMBUDO.map((p) => p.id);
+const RUTAS_EMPEZAR = ["/empezar.html", "/empezar"];
+export const CALIFICACIONES = ["demo", "diagnostico"] as const;
+export const CLAVES_RESPUESTAS = ["rubro", "actual", "objetivo", "tamano", "sistema"] as const;
+const NOMBRES_RESPUESTA: Record<(typeof CLAVES_RESPUESTAS)[number], string> = {
+  rubro: "Rubro", actual: "Hoy trabaja con", objetivo: "Quiere lograr", tamano: "Tamaño", sistema: "Sistema recomendado",
+};
 export const CLICS = ["whatsapp", "calculadora", "para", "correo", "telefono"] as const;
 export const SECCIONES_HOME = [
   { id: "industrias", nombre: "Rubros (enlaces a /para/)" },
@@ -54,6 +72,9 @@ export function normalizarEvento(x: unknown): EventoNormal | null {
   } else if (tipo === "seccion") {
     detalle = texto(o.d);
     if (!IDS_SECCION.includes(detalle)) return null;
+  } else if (tipo === "paso") {
+    detalle = texto(o.d);
+    if (!IDS_PASO.includes(detalle)) return null;
   }
   const origen = tipo === "vista" ? texto(o.o).toLowerCase().replace(/[^a-z0-9.\-]/g, "").slice(0, 120) : "";
   return { sesion, tipo, ruta, detalle, origen, movil: o.m === true };
@@ -61,7 +82,39 @@ export function normalizarEvento(x: unknown): EventoNormal | null {
 
 export type SolicitudNormal = {
   nombre: string; correo: string; whatsapp: string; tipo: string; presupuesto: string; mensaje: string; pagina: string; sesion: string;
+  // Embudo /empezar: JSON de {rubro, actual, objetivo, tamano, sistema} ("" si no vino), demo|diagnostico|"", y el ?de= del enlace.
+  respuestas: string; calificacion: "" | "demo" | "diagnostico"; origen: string;
 };
+
+const limpiarOrigen = (x: unknown) => texto(x).toLowerCase().replace(/[^a-z0-9.\-]/g, "").slice(0, 120);
+
+// Solo las claves conocidas, valores como texto corto; si aun asi pasa de 400 caracteres, se recorta mas y, si no cabe, va vacio.
+function limpiarRespuestas(x: unknown): string {
+  if (!x || typeof x !== "object") return "";
+  const o = x as Record<string, unknown>;
+  for (const largo of [40, 20]) {
+    const r: Record<string, string> = {};
+    for (const k of CLAVES_RESPUESTAS) {
+      const v = o[k];
+      if (v === undefined || v === null) continue;
+      const t = String(v).trim().slice(0, largo);
+      if (t) r[k] = t;
+    }
+    if (Object.keys(r).length === 0) return "";
+    const json = JSON.stringify(r);
+    if (json.length <= 400) return json;
+  }
+  return "";
+}
+
+export function respuestasLegibles(json: string): { clave: string; valor: string }[] {
+  if (!json) return [];
+  let o: unknown;
+  try { o = JSON.parse(json); } catch { return []; }
+  if (!o || typeof o !== "object") return [];
+  const r = o as Record<string, unknown>;
+  return CLAVES_RESPUESTAS.filter((k) => typeof r[k] === "string" && r[k]).map((k) => ({ clave: NOMBRES_RESPUESTA[k], valor: r[k] as string }));
+}
 type ResultadoSolicitud = { ok: true; datos: SolicitudNormal } | { ok: false; mensaje: string; robot?: boolean };
 
 const CORREO = /^[^\s@<>"]+@[^\s@<>"]+\.[^\s@<>"]{2,}$/;
@@ -77,7 +130,12 @@ export function normalizarSolicitud(x: unknown): ResultadoSolicitud {
   const whatsapp = texto(o.phone);
   const tipo = texto(o.type);
   const presupuesto = texto(o.budget);
-  const mensaje = texto(o.message);
+  // El embudo manda el resumen como mensaje; si viene vacio, igual tiene que guardarse.
+  const mensaje = texto(o.message) || (tipo === "embudo" ? "Embudo /empezar" : "");
+  const respuestas = limpiarRespuestas(o.respuestas);
+  const cal = texto(o.calificacion);
+  const calificacion = (CALIFICACIONES as readonly string[]).includes(cal) ? (cal as SolicitudNormal["calificacion"]) : "";
+  const origen = limpiarOrigen(o.origen);
   if (nombre.length < 2 || nombre.length > 120) return { ok: false, mensaje: "Escriba su nombre." };
   if (correo && (correo.length > 191 || !CORREO.test(correo))) return { ok: false, mensaje: "Revise su correo: parece mal escrito." };
   if (whatsapp && (!WHATSAPP.test(whatsapp) || whatsapp.replace(/\D/g, "").length < 7)) return { ok: false, mensaje: "Revise su número de WhatsApp." };
@@ -89,7 +147,7 @@ export function normalizarSolicitud(x: unknown): ResultadoSolicitud {
   const sesion = texto(o.sesion);
   return {
     ok: true,
-    datos: { nombre, correo, whatsapp, tipo, presupuesto, mensaje, pagina: rutaLimpia(o.pagina) ?? "", sesion: SESION.test(sesion) ? sesion : "" },
+    datos: { nombre, correo, whatsapp, tipo, presupuesto, mensaje, pagina: rutaLimpia(o.pagina) ?? "", sesion: SESION.test(sesion) ? sesion : "", respuestas, calificacion, origen },
   };
 }
 
@@ -101,6 +159,7 @@ export function clasificarOrigen(origen: string): string {
   if (o.includes("facebook") || o === "fb") return "Facebook";
   if (o.includes("instagram") || o === "ig") return "Instagram";
   if (o.includes("whatsapp") || o === "wa") return "WhatsApp";
+  if (o.includes("tiktok")) return "TikTok";
   if (o.includes("linkedin")) return "LinkedIn";
   if (o.includes("bing")) return "Bing";
   if (o.includes("chatgpt") || o.includes("openai")) return "ChatGPT";
@@ -121,6 +180,7 @@ export type ResumenWeb = {
   embudo: { paso: string; personas: number }[];
   clics: { destino: string; personas: number }[];
   home: { personas: number; secciones: { id: string; nombre: string; personas: number }[] };
+  empezar: { personas: number; pasos: { id: string; nombre: string; personas: number }[]; origenes: { nombre: string; personas: number; enviaron: number }[] };
 };
 
 const NOMBRE_CLIC: Record<string, string> = { whatsapp: "WhatsApp", calculadora: "Calculadora", para: "Precios por rubro (/para/)", correo: "Correo", telefono: "Teléfono" };
@@ -130,13 +190,13 @@ function ordenar<T extends { personas: number }>(xs: T[], clave: (x: T) => strin
 }
 
 export function resumirWeb(eventos: EventoParaResumen[], solicitudes: number): ResumenWeb {
-  type Persona = { primera?: EventoParaResumen; rutas: Set<string>; clics: Set<string>; secciones: Set<string>; dias: Set<string>; movil: boolean };
+  type Persona = { primera?: EventoParaResumen; rutas: Set<string>; clics: Set<string>; secciones: Set<string>; pasos: Set<string>; dias: Set<string>; movil: boolean };
   const gente = new Map<string, Persona>();
   let vistas = 0;
   const orden = [...eventos].sort((a, b) => a.creadoEn.getTime() - b.creadoEn.getTime());
   for (const e of orden) {
     let p = gente.get(e.sesion);
-    if (!p) { p = { rutas: new Set(), clics: new Set(), secciones: new Set(), dias: new Set(), movil: false }; gente.set(e.sesion, p); }
+    if (!p) { p = { rutas: new Set(), clics: new Set(), secciones: new Set(), pasos: new Set(), dias: new Set(), movil: false }; gente.set(e.sesion, p); }
     p.dias.add(hoyCaracas(e.creadoEn));
     if (e.tipo === "vista") {
       vistas++;
@@ -145,6 +205,7 @@ export function resumirWeb(eventos: EventoParaResumen[], solicitudes: number): R
       if (e.movil) p.movil = true;
     } else if (e.tipo === "clic") p.clics.add(e.detalle);
     else if (e.tipo === "seccion") p.secciones.add(e.detalle);
+    else if (e.tipo === "paso") p.pasos.add(e.detalle);
   }
   // Solo cuenta como persona quien tuvo al menos una vista (un clic suelto sin vista no se entiende).
   const personas = [...gente.values()].filter((p) => p.primera);
@@ -158,6 +219,14 @@ export function resumirWeb(eventos: EventoParaResumen[], solicitudes: number): R
     contar(p.clics, clics);
   }
   const vieronHome = personas.filter((p) => p.rutas.has("/"));
+  const empezar = personas.filter((p) => RUTAS_EMPEZAR.some((r) => p.rutas.has(r)));
+  const porOrigen = new Map<string, { personas: number; enviaron: number }>();
+  for (const p of empezar) {
+    const k = clasificarOrigen(p.primera!.origen);
+    const v = porOrigen.get(k) ?? { personas: 0, enviaron: 0 };
+    v.personas++; if (p.pasos.has("enviado")) v.enviaron++;
+    porOrigen.set(k, v);
+  }
   const cuantos = (f: (p: Persona) => boolean) => personas.filter(f).length;
 
   return {
@@ -179,6 +248,11 @@ export function resumirWeb(eventos: EventoParaResumen[], solicitudes: number): R
     home: {
       personas: vieronHome.length,
       secciones: SECCIONES_HOME.map((s) => ({ id: s.id, nombre: s.nombre, personas: vieronHome.filter((p) => p.secciones.has(s.id)).length })),
+    },
+    empezar: {
+      personas: empezar.length,
+      pasos: PASOS_EMBUDO.map((x) => ({ id: x.id, nombre: x.nombre, personas: empezar.filter((p) => p.pasos.has(x.id)).length })),
+      origenes: ordenar([...porOrigen].map(([nombre, v]) => ({ nombre, ...v })), (x) => x.nombre),
     },
   };
 }
