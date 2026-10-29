@@ -70,13 +70,14 @@ export async function resumenHoy(hoy: string): Promise<{ embudo: Record<Etapa, n
   return { embudo, porUsuario };
 }
 
-export type FiltrosProspectos = { q?: string; nichoId?: number; etapa?: Etapa; ciudad?: string };
+export type FiltrosProspectos = { q?: string; nichoId?: number; etapa?: Etapa; ciudad?: string; soloDirectorio?: boolean };
 export const POR_PAGINA_PROSPECTOS = 100;
 
 // Los mismos filtros para la lista y para los totales: lo que se cuenta es lo que se lista.
 function whereDe(f: FiltrosProspectos): Prisma.ProspectoWhereInput {
   const q = f.q?.trim();
   return {
+    ...(f.soloDirectorio ? { esLead: false } : {}),
     ...(f.nichoId ? { nichoId: f.nichoId } : {}),
     ...(f.etapa ? { etapa: f.etapa } : {}),
     ...(f.ciudad ? { ciudad: f.ciudad } : {}),

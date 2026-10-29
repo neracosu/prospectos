@@ -24,7 +24,7 @@ const Id = z.number().int().positive();
 const Lote = z.string().min(8).max(64);
 
 function refrescar() {
-  revalidatePath("/buscar");
+  revalidatePath("/buscar"); revalidatePath("/directorio");
   revalidatePath("/inicio");
   revalidatePath("/prospectos");
 }

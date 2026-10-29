@@ -53,7 +53,7 @@ const MAX_EMAIL = 120; // el mismo tope que el alta manual (src/acciones/prospec
 type Resumen = { lote: string; nuevos: number; repetidos: number; errores: number };
 
 function refrescar() {
-  revalidatePath("/buscar");
+  revalidatePath("/buscar"); revalidatePath("/directorio");
 }
 
 async function loteDesdeEntradas(

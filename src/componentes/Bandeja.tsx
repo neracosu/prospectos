@@ -165,7 +165,7 @@ export function Bandeja({ lote: loteDelServidor }: { lote: LoteDetalle }) {
               {corriendo === "lote" ? "Descartando…" : `Descartar ${lote.descartables} repetidos sin nada nuevo`}
             </button>
           )}
-          <Link className="boton" href="/buscar?t=bandeja">
+          <Link className="boton" href="/directorio?t=bandeja">
             Otros lotes
           </Link>
         </div>

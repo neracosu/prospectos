@@ -1,5 +1,7 @@
 import React from "react";
+import Link from "next/link";
 import { BotonAtender } from "@/componentes/BotonAtender";
+import { BotonConvertir } from "@/componentes/BotonConvertir";
 import { fechaVisible, hoyCaracas } from "@/lib/fecha-caracas";
 import { clasificarOrigen, respuestasLegibles } from "@/lib/web-contrato";
 import type { SolicitudFila } from "@/lib/web";
@@ -29,6 +31,7 @@ export function TarjetaSolicitud({ s }: { s: SolicitudFila }) {
       <div className="fila-botones">
         {wa && <a className="boton boton--primario mini" href={`https://wa.me/${wa}`} target="_blank" rel="noopener noreferrer">WhatsApp</a>}
         {s.correo && <a className="boton mini" href={`mailto:${s.correo}`}>Correo</a>}
+        {s.prospectoId ? <Link className="boton boton--primario mini" href={`/leads/${s.prospectoId}`}>Ver lead</Link> : <BotonConvertir id={s.id} />}
         <BotonAtender id={s.id} atendida={!!s.atendidaEn} />
       </div>
     </article>

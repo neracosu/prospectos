@@ -2,7 +2,7 @@ import type { MetadataRoute } from "next";
 
 // Manifiesto minimo para dos cosas: que el panel se pueda instalar en el
 // telefono y que aparezca en "Compartir" de Android. Al compartir una ficha de
-// Google Maps, el enlace llega por GET a /buscar en ?url= (algunas apps lo
+// Google Maps, el enlace llega por GET a /directorio en ?url= (algunas apps lo
 // mandan dentro de ?text=, y la pantalla lo saca de ahi).
 export default function manifest(): MetadataRoute.Manifest {
   return {
@@ -24,7 +24,7 @@ export default function manifest(): MetadataRoute.Manifest {
       { src: "/icono-512.png", sizes: "512x512", type: "image/png", purpose: "any maskable" },
     ],
     share_target: {
-      action: "/buscar",
+      action: "/directorio",
       method: "GET",
       params: { url: "url", text: "text", title: "title" },
     },

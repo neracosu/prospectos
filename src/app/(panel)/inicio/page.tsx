@@ -62,11 +62,7 @@ export default async function Inicio() {
         {ultimas.length > 0 && <p><Link href="/solicitudes">Ver todas las solicitudes</Link></p>}
       </section>
 
-      {/* La prospeccion masiva sale de la portada pero no del panel: plegada al final hasta que exista Directorio (fase 2). */}
-      <details className="acordeon" id="cola">
-        <summary><span>Cola de prospección</span><span className="suave">los 10 del día, seguimientos y el embudo</span></summary>
-        <div className="acordeon__cuerpo"><InicioProspectador usuario={{ id: u.id, nombre: u.nombre }} /></div>
-      </details>
+      <p className="suave"><Link href="/directorio?t=cola">Cola de prospección: los 10 del día, seguimientos y el embudo →</Link></p>
     </>
   );
 }
