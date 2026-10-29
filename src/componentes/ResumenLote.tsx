@@ -52,7 +52,7 @@ export function ResumenLote({
       {children}
       <p className="suave">Nada entra al panel hasta que lo apruebes una por una en la bandeja.</p>
       <div className="fila-botones">
-        <Link className="boton boton--primario" href={`/buscar?t=bandeja&lote=${lote}`}>
+        <Link className="boton boton--primario" href={`/directorio?t=bandeja&lote=${lote}`}>
           Revisar en la bandeja
         </Link>
       </div>

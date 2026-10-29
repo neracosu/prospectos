@@ -21,7 +21,7 @@ export async function InicioProspectador({ usuario }: { usuario: { id: number; n
       {seguimientos.length === 0 && <p className="suave">Ninguno hoy.</p>}
       {seguimientos.map((p) => <TarjetaSeguimiento key={p.id} p={p} hoy={hoy} />)}
       <h2 className="titulo" tabIndex={-1}>Por contactar</h2>
-      {cola.length === 0 && <p className="suave">La cola está vacía. <Link href="/prospectos/nuevo">Agrega un prospecto</Link>.</p>}
+      {cola.length === 0 && <p className="suave">La cola está vacía. <Link href="/directorio?t=buscar">Busca negocios</Link> o <Link href="/directorio?t=importar">importa una lista</Link>.</p>}
       {cola.map((p) => <TarjetaCola key={p.id} p={p} />)}
     </ProveedorHoy>
   );

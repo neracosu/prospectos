@@ -40,6 +40,10 @@ const NuevoLead = z.object({
   valorEstimado: z.string().trim().default("").refine((s) => s === "" || MONTO_TEXTO.test(s), "monto"),
   propuestaUrl: z.string().trim().max(300).default(""),
   nota: z.string().trim().max(2000).default(""),
+  // Alta a mano desde Maps («Cargarlo a mano»): telefono, web y la URL de donde salio el dato
+  telefono: z.string().trim().max(80).default(""),
+  web: z.string().trim().max(200).default(""),
+  fuente: z.string().trim().max(300).default(""),
 });
 
 export async function crearLead(formData: FormData): Promise<Resultado<{ id: number }>> {
@@ -48,17 +52,22 @@ export async function crearLead(formData: FormData): Promise<Resultado<{ id: num
   if (!e.success) return fallo("Revisa el nombre, la fuente, el nicho, la fecha y el valor.");
   const d = e.data;
   const whatsapp = normalizarCelular(d.whatsapp);
+  if (d.whatsapp && !whatsapp) return fallo("Ese WhatsApp no parece un celular de Venezuela o Colombia. Si es de otro país, ponlo en la nota y deja otro contacto.");
   const instagram = normalizarRed(d.instagram, "instagram");
   const correo = d.correo.toLowerCase();
-  if (!whatsapp && !instagram && !correo) return fallo("Deja al menos un contacto: WhatsApp, Instagram o correo.");
-  const contacto = whatsapp || correo || instagram;
+  if (!whatsapp && !instagram && !correo && !d.telefono) return fallo("Deja al menos un contacto: WhatsApp, Instagram o correo.");
+  const contacto = whatsapp || correo || instagram || d.telefono;
+  // Cada dato con su fuente: si el alta trae de donde salio (Maps, una web), se guarda para cada contacto presente
+  const fuente = /^https?:\/\//i.test(d.fuente) ? d.fuente : "";
+  const fuentesPorCampo: Record<string, string> = {};
+  if (fuente) for (const [k, v] of Object.entries({ whatsapp, instagram, email: correo, telefono: d.telefono, web: d.web })) if (v) fuentesPorCampo[k] = fuente;
   const clave = claveLead(d.nombre, d.ciudad, contacto);
   if (clave.length > TOPES.clave) return fallo("El nombre y la ciudad son muy largos.");
   try {
     const p = await prisma.prospecto.create({
       data: {
-        nichoId: d.nichoId, nombre: d.nombre, ciudad: d.ciudad, whatsapp, instagram, email: correo, nota: d.nota,
-        fuentes: [], fuentesPorCampo: {}, origen: "manual", esLead: true, fuenteLead: d.fuenteLead,
+        nichoId: d.nichoId, nombre: d.nombre, ciudad: d.ciudad, whatsapp, instagram, email: correo, telefono: d.telefono, web: d.web, nota: d.nota,
+        fuentes: fuente ? [fuente] : [], fuentesPorCampo, origen: "manual", esLead: true, fuenteLead: d.fuenteLead,
         valorEstimado: d.valorEstimado ? montoDesdeTexto(d.valorEstimado) : null,
         proximoPaso: d.proximoPaso, proximoSeguimiento: d.proximoSeguimiento || null, propuestaUrl: d.propuestaUrl,
         codigo: generarCodigo(), clave, ordenCola: 0,
@@ -81,9 +90,10 @@ export async function moverLead(prospectoId: number, a: Etapa, motivo = ""): Pro
   if (!e.success) return fallo(ERROR);
   if (e.data.a === "descartado" && e.data.motivo.length < 2) return fallo("Escribe el motivo.");
   try {
-    const p = await prisma.prospecto.findUnique({ where: { id: e.data.id }, select: { etapa: true, esLead: true } });
+    const p = await prisma.prospecto.findUnique({ where: { id: e.data.id }, select: { etapa: true, esLead: true, fuenteLead: true } });
     if (!p) return fallo(ERROR);
     if (!p.esLead) return fallo("Este prospecto no es un lead: se mueve desde la cola del Directorio.");
+    if (u.rol !== "dueno" && p.fuenteLead !== "directorio") return fallo("Ese lead no es del directorio.");
     const de = p.etapa as Etapa;
     if (!puedePasarLead(de, e.data.a)) return fallo(`Un lead no pasa de «${ETIQUETA_ETAPA_LEAD[de]}» a «${ETIQUETA_ETAPA_LEAD[e.data.a]}».`);
     // Condicionado a la etapa leida: dos toques no mueven dos veces. No toca proximoSeguimiento ni proximoPaso.
@@ -105,7 +115,8 @@ export async function guardarSiguientePaso(prospectoId: number, texto: string, f
   if (!e.success) return fallo("Revisa el texto (hasta 160 letras).");
   if (e.data.fecha !== "" && !esFechaIso(e.data.fecha)) return fallo("Revisa la fecha.");
   try {
-    const r = await prisma.prospecto.updateMany({ where: { id: e.data.id, esLead: true }, data: { proximoPaso: e.data.texto, proximoSeguimiento: e.data.fecha || null } });
+    // El prospectador solo toca leads del directorio
+    const r = await prisma.prospecto.updateMany({ where: { id: e.data.id, esLead: true, ...(u.rol !== "dueno" ? { fuenteLead: "directorio" } : {}) }, data: { proximoPaso: e.data.texto, proximoSeguimiento: e.data.fecha || null } });
     if (r.count === 0) return fallo(ERROR);
     await prisma.evento.create({ data: { prospectoId: e.data.id, usuarioId: u.id, tipo: "nota", texto: `Siguiente paso: ${e.data.texto || "(sin texto)"}${e.data.fecha ? " · " + e.data.fecha : ""}` } });
     refrescar(e.data.id);
@@ -155,12 +166,14 @@ export async function convertirSolicitud(solicitudId: number): Promise<Resultado
       const nicho = (await tx.nicho.findUnique({ where: { slug }, select: { id: true } })) ?? (await tx.nicho.findUnique({ where: { slug: "otro" }, select: { id: true } }));
       if (!nicho) throw new Error("falta el nicho otro: correr scripts/sembrar-nichos.mjs");
       const whatsapp = normalizarCelular(s.whatsapp);
+      // Un numero que no es celular VE/CO (fijo, extranjero) no se pierde: va como telefono y en la nota
+      const telefono = s.whatsapp && !whatsapp ? s.whatsapp.trim().slice(0, 80) : "";
       const correo = s.correo.toLowerCase();
       const legibles = respuestasLegibles(s.respuestas).map((r) => `${r.clave}: ${r.valor}`).join("\n");
-      const nota = [s.mensaje, legibles ? "\nRespuestas del embudo:\n" + legibles : ""].join("\n").trim().slice(0, 16000);
-      const clave = claveLead(s.nombre, "", whatsapp || correo);
+      const nota = [s.mensaje, telefono ? `\nTeléfono tal como lo escribió: ${telefono}` : "", legibles ? "\nRespuestas del embudo:\n" + legibles : ""].join("\n").trim().slice(0, 16000);
+      const clave = claveLead(s.nombre.slice(0, TOPES.nombre), "", whatsapp || correo || telefono);
       const datos = {
-        nichoId: nicho.id, nombre: s.nombre.slice(0, TOPES.nombre), ciudad: "", whatsapp, email: correo, nota,
+        nichoId: nicho.id, nombre: s.nombre.slice(0, TOPES.nombre), ciudad: "", whatsapp, telefono, email: correo, nota,
         fuentes: [] as string[], fuentesPorCampo: {}, origen: "solicitud", esLead: true, fuenteLead: fuenteDesdeSolicitud(s),
         proximoPaso: "escribirle", proximoSeguimiento: hoyCaracas(), codigo: generarCodigo(), clave, ordenCola: 0,
       };

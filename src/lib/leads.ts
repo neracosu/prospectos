@@ -26,8 +26,10 @@ function whereDe(f: FiltrosLeads): Prisma.ProspectoWhereInput {
   const q = f.q?.trim();
   return {
     esLead: true,
+    // El prospectador solo ve lo que salio del directorio: si pide otra fuente por la URL, las dos condiciones se
+    // suman y no ve nada (no se le abre la otra fuente en silencio)
     ...(f.rol === "prospectador" ? { fuenteLead: "directorio" } : {}),
-    ...(f.fuente ? { fuenteLead: f.fuente } : {}),
+    ...(f.fuente ? { AND: [{ fuenteLead: f.fuente }] } : {}),
     ...(f.nichoId ? { nichoId: f.nichoId } : {}),
     ...(q ? { OR: [{ nombre: { contains: q } }, { ciudad: { contains: q } }, { whatsapp: { contains: q } }, { instagram: { contains: q } }, { email: { contains: q } }] } : {}),
   };

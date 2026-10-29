@@ -71,7 +71,7 @@ export function FormMaps({ nichos, urlInicial }: { nichos: { id: number; nombre:
             Quedó en la bandeja con el enlace como fuente. Revísala antes de que entre al panel.
           </p>
           <div className="fila-botones">
-            <Link className="boton boton--primario" href={`/buscar?t=bandeja&lote=${lote}`}>
+            <Link className="boton boton--primario" href={`/directorio?t=bandeja&lote=${lote}`}>
               Revisar en la bandeja
             </Link>
           </div>

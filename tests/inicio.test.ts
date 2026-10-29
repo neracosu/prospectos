@@ -35,6 +35,8 @@ describe.runIf(DB_HABILITADA)("datos de Inicio", () => {
     await prisma.prospecto.updateMany({ where: { nombre: { in: ["Posada Faro", "Hotel Charla"] } }, data: { esLead: true, fuenteLead: "web" } });
     await prisma.prospecto.create({ data: { nichoId: ids.nichoId, nombre: "Hotel Cola", ciudad: "Caracas", whatsapp: "584120000009", fuentes: [], codigo: "r".repeat(22), clave: "hotel cola|caracas", etapa: "enviado", proximoSeguimiento: "2026-10-27", esLead: true, fuenteLead: "directorio" } });
     await prisma.prospecto.create({ data: { nichoId: ids.nichoId, nombre: "Solo enviado", ciudad: "Caracas", whatsapp: "584120000010", fuentes: [], codigo: "s".repeat(22), clave: "solo enviado|caracas", etapa: "enviado", proximoSeguimiento: "2026-10-27", esLead: false } });
+    // Un lead Nuevo (recien convertido de una solicitud) con paso para hoy entra en el Hoy del dueno
+    await prisma.prospecto.create({ data: { nichoId: ids.nichoId, nombre: "Recien Convertido", ciudad: "", whatsapp: "584120000011", fuentes: [], codigo: "t".repeat(22), clave: "recien convertido||584120000011", origen: "solicitud", etapa: "por_contactar", proximoSeguimiento: hoy, proximoPaso: "escribirle", esLead: true, fuenteLead: "embudo" } });
   });
   it("cobrosQueVencen e hitosQueTocan miran 7 dias y omiten lo lejano o sin fecha", async () => {
     const c = await cobrosQueVencen(hoy, 7);
@@ -45,16 +47,16 @@ describe.runIf(DB_HABILITADA)("datos de Inicio", () => {
   });
   it("datosInicio trae cifras, la lista Hoy y hasta tres solicitudes", async () => {
     const d = await datosInicio(hoy);
-    const activos = await prisma.prospecto.count({ where: { esLead: true, etapa: { in: ["enviado", "respondio", "reunion"] } } });
+    const activos = await prisma.prospecto.count({ where: { esLead: true, etapa: { in: ["por_contactar", "enviado", "respondio", "reunion"] } } });
     expect(d.cifras.leadsActivos).toBe(activos);
-    expect(activos).toBe(3);
+    expect(activos).toBe(4);
     expect(d.cifras.conVencido).toBeGreaterThanOrEqual(1);
     expect(d.cifras.porCobrar).toBe(100);
     expect(d.hoyLista.map((x) => x.tipo)).toContain("cobro");
     expect(d.hoyLista.map((x) => x.tipo)).toContain("hito");
     expect(d.hoyLista.map((x) => x.tipo)).toContain("seguimiento");
     // La lista cuenta lo mismo que la cifra: enviado, respondio y reunion con fecha vencida
-    expect(d.hoyLista.filter((x) => x.tipo === "seguimiento").map((x) => x.titulo).sort()).toEqual(["Hotel Charla", "Posada Faro"]);
+    expect(d.hoyLista.filter((x) => x.tipo === "seguimiento").map((x) => x.titulo).sort()).toEqual(["Hotel Charla", "Posada Faro", "Recien Convertido"]);
     expect(d.cifras.conVencido).toBe(2); // Hotel Cola (directorio en Propuesta enviada) no cuenta como vencido del dueno
     expect(d.hoyLista.find((x) => x.titulo === "Posada Faro")!.enlaceWhatsApp).toMatch(/^https:\/\/wa\.me\/584121112233\?text=/);
     expect(d.ultimas.length).toBeLessThanOrEqual(3);

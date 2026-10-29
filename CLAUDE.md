@@ -46,8 +46,21 @@ directorio, otro), `valorEstimado`, `proximoPaso`, `propuestaUrl` (migración a 
   Las acciones de buscar/revisión revalidan también `/directorio`.
 - Inicio del dueño: cifras por `esLead`; en «Hoy» no entran los seguimientos de directorio en «Propuesta enviada» (viven
   en Directorio › Cola); la cola dejó de estar plegada en Inicio: es un enlace.
-- Recorrido real: `scripts/verificar-leads.mts` (32 comprobaciones; tablero con 30 leads en una columna y 0 en otra,
-  Mover a, alta sin ciudad, ficha, convertir solicitud, Directorio, redirecciones, prospectador). Suite 603 con base.
+- **Lo que es del directorio** (`DEL_DIRECTORIO` en `src/lib/prospectos.ts`: `esLead: false` o `fuenteLead: directorio`)
+  es lo único que entra en la cola del día, en «Seguimientos que tocan» del prospectador y en el embudo de `resumenHoy`:
+  un lead de la web o referido jamás recibe el mensaje masivo. El Inicio del dueño pide `seguimientosQueTocan(hoy,
+  "todos")` y mete en Hoy los leads propios en cualquier etapa activa (Nuevo incluido) con paso para hoy o vencido.
+- **El prospectador no ve montos ni «Nuevo lead»**, y de los leads solo los de `fuenteLead = directorio`: `/leads?fuente=web`
+  le devuelve vacío (las dos condiciones se suman), `/leads/<id>` de otro lead es `notFound()` y `moverLead` /
+  `guardarSiguientePaso` le exigen directorio.
+- `/leads/nuevo` acepta el prellenado de «Cargarlo a mano» desde Maps (`nichoId` o `nicho`, `fuente`, `nombre`, `web`,
+  `telefono`, `nota`); `crearLead` guarda la `fuente` (URL) en `fuentes` y `fuentesPorCampo` de cada contacto presente.
+  Un WhatsApp que no normaliza a celular VE/CO devuelve error en el alta; en `convertirSolicitud` va crudo a `telefono` y
+  a la nota.
+- Recorrido real: `scripts/verificar-leads.mts` (41 comprobaciones a 1280, 1024 y 390; tablero con 30 leads en una
+  columna y 0 en otra, nada sobresale de las tarjetas, prellenado, Mover a, alta sin ciudad, ficha, convertir solicitud,
+  Directorio, redirecciones, prospectador sin leads ajenos). ⚠️ Con `loading.tsx` el `notFound()` llega en streaming con
+  estado 200: se comprueba por el cuerpo. Suite 608 con base.
 - Carga de los prospectos reales: hecha a mano con un script fuera del repo (los nombres y contactos no entran aquí).
 - Pendiente (fase 3): `/cobros`, tabla de proyectos, ficha de proyecto a dos columnas, `/web` solo medición.
 

@@ -45,21 +45,26 @@ function aTarjeta(f: FilaProspecto, abrio: boolean, plantilla: "inicial" | "segu
   };
 }
 
+// Lo que es del directorio: filas sin ascender o leads que salieron de el. Los leads reales (web, referido…) no entran en la
+// cola masiva ni en sus seguimientos (fase 2).
+export const DEL_DIRECTORIO: Prisma.ProspectoWhereInput = { OR: [{ esLead: false }, { fuenteLead: "directorio" }] };
+
 export async function colaDelDia(limite = 10): Promise<ProspectoTarjeta[]> {
-  const filas = await prisma.prospecto.findMany({ where: { etapa: "por_contactar" }, select: SELECT, orderBy: { ordenCola: "asc" }, take: 500 });
+  const filas = await prisma.prospecto.findMany({ where: { etapa: "por_contactar", esLead: false }, select: SELECT, orderBy: { ordenCola: "asc" }, take: 500 });
   return ordenarCola(filas.map((f) => aTarjeta(f, false, "inicial"))).slice(0, limite);
 }
 
-export async function seguimientosQueTocan(hoy: string): Promise<ProspectoTarjeta[]> {
+export async function seguimientosQueTocan(hoy: string, ambito: "directorio" | "todos" = "directorio"): Promise<ProspectoTarjeta[]> {
   const filas = await prisma.prospecto.findMany({
-    where: { etapa: "enviado", proximoSeguimiento: { lte: hoy } }, select: SELECT, orderBy: { proximoSeguimiento: "asc" }, take: 50,
+    where: { etapa: "enviado", proximoSeguimiento: { lte: hoy }, ...(ambito === "directorio" ? DEL_DIRECTORIO : {}) }, select: SELECT, orderBy: { proximoSeguimiento: "asc" }, take: 50,
   });
   const ab = await abrieron(filas.map((f) => f.id));
   return filas.map((f) => aTarjeta(f, ab.has(f.id), "seguimiento"));
 }
 
 export async function resumenHoy(hoy: string): Promise<{ embudo: Record<Etapa, number>; porUsuario: { id: number; nombre: string; enviados: number; meta: number }[] }> {
-  const grupos = await prisma.prospecto.groupBy({ by: ["etapa"], _count: { _all: true } });
+  // El embudo del equipo es el del directorio: los leads propios del dueno no entran
+  const grupos = await prisma.prospecto.groupBy({ by: ["etapa"], where: DEL_DIRECTORIO, _count: { _all: true } });
   const embudo = Object.fromEntries(ETAPAS.map((e) => [e, 0])) as Record<Etapa, number>;
   for (const g of grupos) if (g.etapa in embudo) embudo[g.etapa as Etapa] = g._count._all;
   // Enviados de hoy (dia de Caracas): eventos `enviado` entre 00:00 y 24:00 Caracas.

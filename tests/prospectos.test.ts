@@ -2,6 +2,7 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { prisma } from "@/lib/db";
 import { DB_HABILITADA, limpiarBase, sembrarBasico, crearProspectoDePrueba } from "./ayuda-db";
 import { colaDelDia, seguimientosQueTocan, resumenHoy, buscarProspectos, fichaProspecto, resumenProspectos } from "@/lib/prospectos";
+import { hoyCaracas } from "@/lib/fecha-caracas";
 
 describe.runIf(DB_HABILITADA)("consultas de prospectos", () => {
   let ids: Awaited<ReturnType<typeof sembrarBasico>>;
@@ -98,4 +99,19 @@ describe.runIf(DB_HABILITADA)("consultas de prospectos", () => {
     expect(f?.tienePropuesta).toBe(false);
     expect(f?.mensaje).not.toContain("/p/");
   });
+
+  it("la cola del dia y los seguimientos del directorio no traen leads (fase 2)", async () => {
+    const hoy = hoyCaracas();
+    const leadNuevo = await prisma.prospecto.create({ data: { nichoId: ids.nichoId, nombre: "Lead Nuevo", ciudad: "", whatsapp: "584129990001", fuentes: [], codigo: "n".repeat(22), clave: "leadnuevo||584129990001", origen: "manual", esLead: true, fuenteLead: "web", etapa: "por_contactar", ordenCola: 0 } });
+    const leadEnviado = await prisma.prospecto.create({ data: { nichoId: ids.nichoId, nombre: "Lead Enviado", ciudad: "", whatsapp: "584129990002", fuentes: [], codigo: "e".repeat(22), clave: "leadenviado||584129990002", origen: "manual", esLead: true, fuenteLead: "referido", etapa: "enviado", proximoSeguimiento: hoy } });
+    const ascendido = await prisma.prospecto.create({ data: { nichoId: ids.nichoId, nombre: "Ascendido", ciudad: "Caracas", whatsapp: "584129990003", fuentes: [], codigo: "a".repeat(22), clave: "ascendido|caracas", origen: "importado", esLead: true, fuenteLead: "directorio", etapa: "enviado", proximoSeguimiento: hoy } });
+    expect((await colaDelDia(50)).map((p) => p.id)).not.toContain(leadNuevo.id);
+    const seg = (await seguimientosQueTocan(hoy)).map((p) => p.id);
+    expect(seg).not.toContain(leadEnviado.id);
+    expect(seg).toContain(ascendido.id);
+    const todos = (await seguimientosQueTocan(hoy, "todos")).map((p) => p.id);
+    expect(todos).toContain(leadEnviado.id);
+    expect((await resumenHoy(hoy)).embudo.enviado).toBe((await prisma.prospecto.count({ where: { etapa: "enviado", OR: [{ esLead: false }, { fuenteLead: "directorio" }] } })));
+  });
 });
+

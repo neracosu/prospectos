@@ -38,4 +38,8 @@ describe.runIf(DB_HABILITADA)("consultas de leads", () => {
     expect((await listarLeads({ rol: "dueno", fuente: "web" }, hoy)).columnas.flatMap((c) => c.leads).map((l) => l.nombre)).toEqual(["Alma web"]);
     expect((await listarLeads({ rol: "dueno", q: "moto" }, hoy)).columnas.flatMap((c) => c.leads).map((l) => l.nombre)).toEqual(["Moto wa"]);
   });
+  it("el prospectador no alcanza otras fuentes aunque las pida por la URL", async () => {
+    expect((await listarLeads({ rol: "prospectador", fuente: "web" }, hoy)).columnas.flatMap((c) => c.leads).map((l) => l.nombre)).toEqual([]);
+  });
 });
+

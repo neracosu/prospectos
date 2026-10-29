@@ -25,8 +25,8 @@ const ERROR = "No se pudo guardar. Intenta de nuevo.";
 const UMBRAL_DOBLE_TOQUE_MS = 2 * 60 * 1000;
 
 function refrescar(id?: number) {
-  revalidatePath("/inicio"); revalidatePath("/prospectos");
-  if (id) revalidatePath(`/prospectos/${id}`);
+  revalidatePath("/inicio"); revalidatePath("/prospectos"); revalidatePath("/directorio"); revalidatePath("/leads");
+  if (id) { revalidatePath(`/prospectos/${id}`); revalidatePath(`/leads/${id}`); }
 }
 
 async function nichoDe(id: number) {

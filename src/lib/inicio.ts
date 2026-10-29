@@ -7,18 +7,20 @@ import { resumenMes, cobrosQueVencen, hitosQueTocan } from "@/lib/proyectos";
 import { solicitudesSinAtender, personasSemana, listarSolicitudes, type SolicitudFila } from "@/lib/web";
 import { armarHoy, type CifrasInicio, type ItemHoy } from "@/lib/inicio-contrato";
 
-const ETAPAS_ACTIVAS = ["enviado", "respondio", "reunion"];
+const ETAPAS_ACTIVAS = ["por_contactar", "enviado", "respondio", "reunion"];
+// Lo que entra en el Hoy del dueno: leads propios (no del directorio) en cualquier etapa activa, y los del directorio que ya respondieron
+const PROPIO_O_RESPONDIO = { OR: [{ fuenteLead: { not: "directorio" } }, { etapa: { in: ["respondio", "reunion"] } }] };
 
 export async function datosInicio(hoy: string): Promise<{ cifras: CifrasInicio; hoyLista: ItemHoy[]; ultimas: SolicitudFila[] }> {
   const [leadsActivos, conVencido, enviados, conversando, cobros, hitos, mes, solicitudes, personasWeb, ultimas] = await Promise.all([
     prisma.prospecto.count({ where: { esLead: true, etapa: { in: ETAPAS_ACTIVAS } } }),
-    prisma.prospecto.count({ where: { esLead: true, etapa: { in: ETAPAS_ACTIVAS }, proximoSeguimiento: { lt: hoy }, OR: [{ fuenteLead: { not: "directorio" } }, { etapa: { in: ["respondio", "reunion"] } }] } }),
-    seguimientosQueTocan(hoy).then(async (xs) => {
+    prisma.prospecto.count({ where: { esLead: true, etapa: { in: ETAPAS_ACTIVAS }, proximoSeguimiento: { lt: hoy }, ...PROPIO_O_RESPONDIO } }),
+    seguimientosQueTocan(hoy, "todos").then(async (xs) => {
       const propios = new Set((await prisma.prospecto.findMany({ where: { id: { in: xs.map((x) => x.id) }, esLead: true, fuenteLead: { not: "directorio" } }, select: { id: true } })).map((p) => p.id));
       return xs.filter((x) => propios.has(x.id));
     }),
-    // Respondio o en demo con una fecha puesta a mano desde la ficha: cuentan igual que un enviado
-    prisma.prospecto.findMany({ where: { esLead: true, etapa: { in: ["respondio", "reunion"] }, proximoSeguimiento: { lte: hoy } }, select: { id: true, nombre: true, ciudad: true, whatsapp: true, proximoSeguimiento: true }, orderBy: { proximoSeguimiento: "asc" }, take: 50 }),
+    // Nuevos propios (p. ej. recien convertidos, con paso para hoy), y respondio/en demo de cualquier fuente
+    prisma.prospecto.findMany({ where: { esLead: true, proximoSeguimiento: { lte: hoy }, OR: [{ etapa: "por_contactar", fuenteLead: { not: "directorio" } }, { etapa: { in: ["respondio", "reunion"] } }] }, select: { id: true, nombre: true, ciudad: true, whatsapp: true, proximoSeguimiento: true }, orderBy: { proximoSeguimiento: "asc" }, take: 50 }),
     cobrosQueVencen(hoy, 7),
     hitosQueTocan(hoy, 7),
     resumenMes(hoy),

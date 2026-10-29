@@ -79,6 +79,18 @@ try {
     revisar((await conv.locator(".tablero__titulo").innerText()).includes("$3.000,00") || (await conv.locator(".tablero__titulo").innerText()).includes("$3,000.00"), `1280: total de valor por columna (${(await conv.locator(".tablero__titulo").innerText()).replace(/\n/g, " ")})`);
     revisar((await conv.locator(".lead").first().innerText()).includes("Lead 00"), "1280: dentro de la columna, el mas vencido primero");
     await pg.screenshot({ path: `${SALIDA}/leads-1280.png` });
+    const sobresalen = async () => pg.evaluate(() => [...document.querySelectorAll(".lead")].flatMap((l) => { const r = l.getBoundingClientRect(); return [...l.querySelectorAll("*")].filter((h) => h.getBoundingClientRect().right > r.right + 1).map((h) => h.className || h.tagName); }));
+    const fuera1280 = await sobresalen();
+    revisar(fuera1280.length === 0, `1280: ningun hijo de .lead sobresale (${fuera1280.slice(0, 3).join(", ")})`);
+    await pg.setViewportSize({ width: 1024, height: 800 }); await pg.waitForTimeout(300);
+    const fuera1024 = await sobresalen();
+    revisar(fuera1024.length === 0, `1024: ningun hijo de .lead sobresale (${fuera1024.slice(0, 3).join(", ")})`);
+    revisar((await pg.locator(".tablero__columna:visible").count()) === 5, "1024: cinco columnas visibles");
+    await pg.screenshot({ path: `${SALIDA}/leads-1024.png` });
+    await pg.setViewportSize({ width: 1280, height: 800 });
+    await pg.goto(`${BASE}/leads/nuevo?nichoId=${comercio.id}&nombre=${encodeURIComponent("Bodega Maps")}&telefono=02121234567&web=https://bodega.example&fuente=${encodeURIComponent("https://maps.google.com/?cid=1")}&nota=${encodeURIComponent("vista en Maps")}`); await pg.waitForLoadState("networkidle");
+    revisar((await pg.inputValue('input[name="nombre"]')) === "Bodega Maps" && (await pg.inputValue('input[name="telefono"]')) === "02121234567" && (await pg.inputValue('input[name="web"]')) === "https://bodega.example" && (await pg.inputValue('input[name="fuente"]')) === "https://maps.google.com/?cid=1" && (await pg.inputValue('textarea[name="nota"]')) === "vista en Maps" && (await pg.inputValue('select[name="nichoId"]')) === String(comercio.id), "1280: /leads/nuevo prellena nombre, telefono, web, fuente, nota y nicho desde la URL (Maps)");
+    await pg.goto(`${BASE}/leads?q=${encodeURIComponent(String(sello))}`); await pg.waitForLoadState("networkidle");
     // Mover a
     const tarjeta = pg.locator(`.lead[data-id="${nuevo.id}"]`);
     await tarjeta.locator("button", { hasText: "Mover a" }).click();
@@ -144,6 +156,7 @@ try {
       revisar((await pg.locator(".pestanas a").count()) >= 5, `directorio: pestanas (${await pg.locator(".pestanas a").count()})`);
       await pg.goto(`${BASE}/directorio?t=cola`); await pg.waitForLoadState("networkidle");
       revisar((await pg.locator("text=Por contactar").count()) >= 1, "directorio: la cola del dia vive en ?t=cola");
+      revisar((await pg.locator(`text=Posada Faro ${marca}`).count()) === 0, "directorio: un lead en Nuevo no entra en la cola del dia");
       await pg.goto(`${BASE}/directorio?t=lista&q=${encodeURIComponent(String(sello))}`); await pg.waitForLoadState("networkidle");
       revisar((await pg.locator(`text=Tienda Directorio ${marca}`).count()) === 1 && (await pg.locator(`text=Posada Faro ${marca}`).count()) === 0, "directorio: la lista trae el directorio y no los leads");
       await pg.goto(`${BASE}/prospectos?etapa=enviado`); await pg.waitForLoadState("networkidle");
@@ -165,6 +178,15 @@ try {
     const nombres = await pg.locator(".lead__nombre").allInnerTexts();
     revisar(nombres.length === 1 && nombres[0].startsWith("Hotel Cola"), `prospectador: solo ve los leads que salieron del directorio (${nombres.length})`);
     revisar((await pg.locator("nav.barra a").allInnerTexts()).join("|").includes("Directorio"), "prospectador: la barra lleva Directorio");
+    revisar(!(await pg.locator(".lead__valor").count()) && !(await pg.locator("a[href='/leads/nuevo']").count()), "prospectador: sin valores en USD ni «Nuevo lead»");
+    await pg.goto(`${BASE}/leads?fuente=web&q=${encodeURIComponent(String(sello))}`); await pg.waitForLoadState("networkidle");
+    revisar((await pg.locator(".lead__nombre").count()) === 0, "prospectador: ?fuente=web no le abre los leads de la web");
+    // Con loading.tsx la respuesta va en streaming (cabeceras 200 antes del notFound): se mira el cuerpo, no el estado
+    await pg.goto(`${BASE}/leads/${conversando[0]}`); await pg.waitForLoadState("networkidle");
+    const cuerpo404 = await pg.locator("body").innerText();
+    revisar(!cuerpo404.includes(`Lead 00 ${marca}`) && /404|no se encontr|could not be found/i.test(cuerpo404), "prospectador: la ficha de un lead de la web sale como no encontrada");
+    await pg.goto(`${BASE}/inicio`); await pg.waitForLoadState("networkidle");
+    revisar((await pg.locator(`text=Posada Faro ${marca}`).count()) === 0 && (await pg.locator(`text=Tienda Directorio ${marca}`).count()) === 1, "prospectador: su cola trae el directorio y no el lead nuevo");
     await ctx.close();
   }
 } catch (e) {

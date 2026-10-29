@@ -19,7 +19,7 @@ export default async function Inicio() {
   const { cifras, hoyLista, ultimas } = await datosInicio(hoy);
   return (
     <>
-      <CabeceraPagina titulo="Inicio" accion={<Link href="/prospectos/nuevo" className="boton boton--primario">Nuevo prospecto</Link>} />
+      <CabeceraPagina titulo="Inicio" accion={<Link href="/leads/nuevo" className="boton boton--primario">Nuevo lead</Link>} />
       <CifrasInicio cifras={cifras} />
 
       <section aria-labelledby="hoy-titulo">

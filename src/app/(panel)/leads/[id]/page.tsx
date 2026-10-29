@@ -22,6 +22,9 @@ export default async function FichaLead({ params }: { params: Promise<{ id: stri
   const p = Number.isInteger(id) ? await fichaProspecto(id) : null;
   if (!p) notFound();
   if (!p.esLead) redirect(`/prospectos/${id}`);
+  // El prospectador solo abre leads que salieron del directorio; lo demas, como si no existiera
+  if (u.rol !== "dueno" && p.fuenteLead !== "directorio") notFound();
+  const conValor = u.rol === "dueno" && p.valorEstimado !== null;
   const nichos = await listarNichos();
   const contacto: [string, string][] = [
     ["WhatsApp", p.whatsapp ? `https://wa.me/${p.whatsapp}` : ""], ["Teléfono", p.telefono ? `tel:${p.telefono.replace(/[^\d+]/g, "")}` : ""],
@@ -42,7 +45,7 @@ export default async function FichaLead({ params }: { params: Promise<{ id: stri
   return (
     <>
       <CabeceraPagina titulo={p.nombre}
-        cifra={<><span className={`etiqueta etiqueta--${p.etapa}`}>{ETIQUETA_ETAPA_LEAD[p.etapa]}</span> {ETIQUETA_FUENTE[p.fuenteLead as FuenteLead] ?? p.fuenteLead} · {p.nichoNombre}{p.ciudad ? ` · ${p.ciudad}` : ""}{p.valorEstimado !== null ? <> · <b className="cifra__dinero">{formatoUSD(p.valorEstimado)}</b></> : null}</>}
+        cifra={<><span className={`etiqueta etiqueta--${p.etapa}`}>{ETIQUETA_ETAPA_LEAD[p.etapa]}</span> {ETIQUETA_FUENTE[p.fuenteLead as FuenteLead] ?? p.fuenteLead} · {p.nichoNombre}{p.ciudad ? ` · ${p.ciudad}` : ""}{conValor ? <> · <b className="cifra__dinero">{formatoUSD(p.valorEstimado!)}</b></> : null}</>}
         accion={wa ? <a className="boton boton--primario" href={wa} target="_blank" rel="noopener noreferrer">WhatsApp</a> : undefined} />
       <div className="ficha">
         <div className="ficha__principal">

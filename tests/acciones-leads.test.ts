@@ -96,4 +96,33 @@ describe.runIf(DB_HABILITADA)("acciones de leads", () => {
     sesionFalsa.actual = { id: ids.prospectadorId, nombre: "María", rol: "prospectador" };
     await expect(convertirSolicitud(1)).rejects.toThrow("REDIRECT:/inicio");
   });
+  it("un WhatsApp que no es celular de Venezuela o Colombia se avisa en vez de perderse", async () => {
+    const r = await crearLead(fd({ nombre: "Tienda Miami", fuenteLead: "web", nichoId: String(otroId), whatsapp: "+1 305 555 1234" }));
+    expect(r).toEqual({ ok: false, mensaje: expect.stringContaining("WhatsApp") });
+    const s = await prisma.solicitudWeb.create({ data: { nombre: "Ana Madrid", whatsapp: "+34 600 111 222", tipo: "Software a Medida", mensaje: "Quiero una tienda" } });
+    const c = await convertirSolicitud(s.id);
+    expect(c.ok).toBe(true);
+    if (!c.ok) return;
+    const p = await prisma.prospecto.findUniqueOrThrow({ where: { id: c.datos.id } });
+    expect(p.whatsapp).toBe(""); expect(p.telefono).toBe("+34 600 111 222"); expect(p.nota).toMatch(/\+34 600 111 222/);
+  });
+  it("el prospectador solo mueve y edita leads del directorio", async () => {
+    const web = await crearLead(fd({ nombre: "Lead Web", fuenteLead: "web", nichoId: String(otroId), whatsapp: "04140000031" }));
+    const dir = await crearLead(fd({ nombre: "Lead Dir", fuenteLead: "whatsapp", nichoId: String(otroId), whatsapp: "04140000032" }));
+    if (!web.ok || !dir.ok) throw new Error("siembra");
+    await prisma.prospecto.update({ where: { id: dir.datos.id }, data: { fuenteLead: "directorio" } });
+    sesionFalsa.actual = { id: ids.prospectadorId, nombre: "María", rol: "prospectador" };
+    expect((await moverLead(web.datos.id, "respondio")).ok).toBe(false);
+    expect((await guardarSiguientePaso(web.datos.id, "x", "")).ok).toBe(false);
+    expect((await moverLead(dir.datos.id, "respondio")).ok).toBe(true);
+    expect((await guardarSiguientePaso(dir.datos.id, "llamar no: escribirle", "")).ok).toBe(true);
+  });
+  it("crearLead guarda la fuente del dato cuando viene (alta a mano desde Maps)", async () => {
+    const r = await crearLead(fd({ nombre: "Panadería Maps", fuenteLead: "otro", nichoId: String(otroId), whatsapp: "04140000033", fuente: "https://maps.app.goo.gl/abc" }));
+    if (!r.ok) throw new Error(r.mensaje);
+    const p = await prisma.prospecto.findUniqueOrThrow({ where: { id: r.datos.id } });
+    expect(p.fuentes).toEqual(["https://maps.app.goo.gl/abc"]);
+    expect(p.fuentesPorCampo).toMatchObject({ whatsapp: "https://maps.app.goo.gl/abc" });
+  });
 });
+

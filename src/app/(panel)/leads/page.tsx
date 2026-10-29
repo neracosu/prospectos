@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { exigirSesion } from "@/lib/sesion";
 import { hoyCaracas } from "@/lib/fecha-caracas";
-import { listarLeads, listarDescartados, COLUMNAS } from "@/lib/leads";
+import { listarLeads, listarDescartados } from "@/lib/leads";
 import { listarNichos } from "@/lib/prospectos";
 import { esEtapa } from "@/lib/embudo-contrato";
 import { ETIQUETA_ETAPA_LEAD, ETIQUETA_FUENTE, FUENTES_LEAD, esFuenteLead } from "@/lib/leads-contrato";
@@ -30,7 +30,7 @@ export default async function Leads({ searchParams }: { searchParams: Promise<Re
 
   return (
     <>
-      <CabeceraPagina titulo="Leads" cifra={`${r.total} activos${r.valorTotal ? ` · ${formatoUSD(r.valorTotal)}` : ""}`} accion={<Link href="/leads/nuevo" className="boton boton--primario">Nuevo lead</Link>} />
+      <CabeceraPagina titulo="Leads" cifra={`${r.total} en el tablero${u.rol === "dueno" && r.valorTotal ? ` · ${formatoUSD(r.valorTotal)}` : ""}`} accion={u.rol === "dueno" ? <Link href="/leads/nuevo" className="boton boton--primario">Nuevo lead</Link> : undefined} />
 
       {u.rol === "dueno" && (
         <details className="acordeon acordeon--filtros" open={hayFiltro}>
@@ -61,23 +61,22 @@ export default async function Leads({ searchParams }: { searchParams: Promise<Re
           <section key={c.etapa} className="tablero__columna" data-etapa={c.etapa} aria-label={ETIQUETA_ETAPA_LEAD[c.etapa]}>
             <header className="tablero__titulo">
               <span>{ETIQUETA_ETAPA_LEAD[c.etapa]} <b>{c.leads.length}</b></span>
-              {c.valor > 0 && <span className="suave">{formatoUSD(c.valor)}</span>}
+              {u.rol === "dueno" && c.valor > 0 && <span className="suave">{formatoUSD(c.valor)}</span>}
             </header>
             <div className="tablero__lista">
               {c.leads.length === 0 && <p className="suave tablero__vacio">Nada aquí.</p>}
-              {c.leads.map((l) => <TarjetaLead key={l.id} lead={l} />)}
+              {c.leads.map((l) => <TarjetaLead key={l.id} lead={l} conValor={u.rol === "dueno"} />)}
             </div>
           </section>
         ))}
         {verDescartados && (
           <section className="tablero__columna" data-etapa="descartado" aria-label="Descartados">
             <header className="tablero__titulo"><span>Descartados <b>{descartados.length}</b></span></header>
-            <div className="tablero__lista">{descartados.map((l) => <TarjetaLead key={l.id} lead={l} />)}</div>
+            <div className="tablero__lista">{descartados.map((l) => <TarjetaLead key={l.id} lead={l} conValor={u.rol === "dueno"} />)}</div>
           </section>
         )}
       </div>
       <p className="suave">{verDescartados ? <Link href={con("etapa", "")}>Volver al tablero</Link> : <Link href={con("etapa", "descartado")}>Descartados ({r.descartados})</Link>}</p>
-      {COLUMNAS.length === 0 && null}
     </>
   );
 }
