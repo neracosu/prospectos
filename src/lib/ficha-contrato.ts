@@ -29,7 +29,7 @@ export const GANCHO_MAX = 280;
 
 // ---------- descarga ----------
 
-const REDES = /(^|\.)(instagram\.com|facebook\.com|fb\.com|fb\.me|linktr\.ee|wa\.me|tiktok\.com)(\/|$|\?)/i;
+const REDES = /(^|\.)(instagram\.com|facebook\.com|fb\.com|fb\.me|linktr\.ee|wa\.me|tiktok\.com|twitter\.com|x\.com|t\.me|beacons\.ai)(\/|$|\?)/i;
 
 export function esWebRedSocial(url: string): boolean {
   const limpio = (url || "").trim().replace(/^[a-z]+:\/\//i, "").replace(/^www\./i, "");
@@ -213,11 +213,14 @@ export function analizarWeb(html: string, urlFinal: string, nombre: string, esta
 const VARIAS_SEDES = /\bvarias\s+(sedes|sucursales|locales)\b|\b([2-9]|\d{2,}|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez)\s+(sedes|sucursales|locales)\b|\bsucursales\b/i;
 
 // Solo los campos de la base, uno por uno: el prospecto trae id, correo, nicho y la ficha previa, que no van aqui.
+// web y nombre son opcionales: con nombre, el campo instagram se reemplaza por el usuario validado ("" si no vale).
 export function hallazgosDeBase(p: {
   tipo: string; tamano: string; nota: string; instagram: string; facebook: string; telefono: string; whatsapp: string;
+  web?: string; nombre?: string;
 }): HallazgosBase {
+  const instagram = p.nombre === undefined ? p.instagram : usuarioInstagramValido(p.instagram, p.web ?? "", p.nombre);
   return {
-    tipo: p.tipo, tamano: p.tamano, nota: p.nota, instagram: p.instagram, facebook: p.facebook, telefono: p.telefono,
+    tipo: p.tipo, tamano: p.tamano, nota: p.nota, instagram, facebook: p.facebook, telefono: p.telefono,
     whatsapp: p.whatsapp, variasSedes: VARIAS_SEDES.test(`${p.nota} ${p.tamano}`),
   };
 }
@@ -261,7 +264,32 @@ function reglaDeGancho(h: Hallazgos, arq: string): Regla | "" {
   if (w && w.menuEnPdf && arq === "comercio-y-tienda") return "carta_pdf";
   if (w && w.motorExterno && arq === "hoteles-estadia") return "motor";
   if (h.base.variasSedes && arq !== "hoteles") return "sedes";
-  if (sinWebPropia(h) && h.base.instagram.trim() && ARQ_INSTAGRAM.includes(arq)) return "instagram";
+  if (sinWebPropia(h) && usuarioInstagram(h.base.instagram) && !RUTAS_IG.has(usuarioInstagram(h.base.instagram).toLowerCase()) && ARQ_INSTAGRAM.includes(arq)) return "instagram";
+  return "";
+}
+
+const RUTAS_IG = new Set(["p", "reel", "reels", "explore", "popular", "whatsapp", "accounts", "stories", "tv", "directory", "about", "legal", "developer", "web", "share"]);
+
+function ultimoSegmentoIg(s: string): string {
+  const limpio = (s ?? "").trim().replace(/[?#].*$/, "").replace(/\/+$/, "");
+  return (limpio.split("/").pop() ?? "").replace(/^@/, "").trim();
+}
+
+export function usuarioInstagramValido(instagram: string, web: string, nombre: string): string {
+  let u = ultimoSegmentoIg(instagram);
+  if (!u || RUTAS_IG.has(u.toLowerCase())) {
+    u = /instagram\.com\//i.test(web ?? "") ? ultimoSegmentoIg(web) : "";
+    if (RUTAS_IG.has(u.toLowerCase())) u = "";
+  }
+  if (!u) return "";
+  const n = sinAcentos(nombre ?? "");
+  const uu = sinAcentos(u);
+  const palabras = n.split(/[^a-z0-9]+/).filter((x) => x.length >= 4);
+  if (palabras.some((x) => uu.includes(x))) return u;
+  const nAplastado = n.replace(/[^a-z0-9]/g, "");
+  const uAplastado = uu.replace(/[^a-z0-9]/g, "");
+  if (uAplastado.length >= 5 && nAplastado.includes(uAplastado)) return u;
+  if (nAplastado.length >= 5 && uu.includes(nAplastado)) return u;
   return "";
 }
 
@@ -393,7 +421,7 @@ export function estadoDeFicha(h: Hallazgos, gancho: string): EstadoFicha {
   // No se pudo leer la web: se trata como web existente sin hallazgos, lista para el correo sin gancho de web.
   if (w && w.estado === "desconocida") return "lista";
   if (gancho.trim() || (w && w.estado === "viva")) return "lista";
-  if (w || h.overture) return "borrador";
+  if (w || h.overture) return "lista";
   return "sin_hallazgos";
 }
 

@@ -55,7 +55,7 @@ export async function investigarProspecto(id: number, deps: Deps = {}): Promise<
   const bajar = deps.descargar ?? descargar;
   const p = await prisma.prospecto.findUniqueOrThrow({ where: { id }, include: { nicho: { select: { slug: true, plantillaPropuesta: true } }, ficha: true } });
   const arquetipo = p.nicho.plantillaPropuesta ?? "";
-  const hallazgos: Hallazgos = { base: hallazgosDeBase(p) };
+  const hallazgos: Hallazgos = { base: hallazgosDeBase({ ...p, web: p.web, nombre: p.nombre }) };
   const fuentes: string[] = [];
 
   const web = p.web.trim();

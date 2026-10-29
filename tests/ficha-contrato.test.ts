@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import {
   analizarWeb, armarGancho, armarResumen, estadoDeFicha, estadoDeDescarga, enlacesInternos, hallazgosDeBase,
-  depurarUniverso, normalizarCorreo, esWebRedSocial, GANCHO_MAX, WEB_NO_ABRE,
+  depurarUniverso, normalizarCorreo, esWebRedSocial, usuarioInstagramValido, GANCHO_MAX, WEB_NO_ABRE,
   type Hallazgos, type HallazgosBase, type FilaUniverso,
 } from "@/lib/ficha-contrato";
 
@@ -264,5 +264,53 @@ describe("ola final de la revision", () => {
     expect(wa("Capacitación")).toBe(false);
     expect(wa("Reservas por WhatsApp")).toBe(true);
     expect(wa("Pide tu cita")).toBe(true);
+  });
+});
+
+describe("estadoDeFicha: borrador solo con nombre que no coincide", () => {
+  const ov = { id: "o1", direccion: "x", categoriaBase: "a", categoriaFina: "b" };
+  const wb = analizarWeb("", URL, "Casa Sol", "red_social");
+  it("Overture sin web es lista", () => {
+    expect(estadoDeFicha({ overture: ov, base: vacia }, "")).toBe("lista");
+  });
+  it("red_social con nombre ok es lista", () => {
+    expect(estadoDeFicha({ web: { ...wb, nombreCoincide: true }, base: vacia }, "")).toBe("lista");
+  });
+  it("viva con nombre que no coincide es borrador", () => {
+    const w = { ...analizarWeb(fx("consultorio-wordpress.html"), URL, "Chino", "viva"), nombreCoincide: false };
+    expect(estadoDeFicha({ web: w, base: vacia }, "")).toBe("borrador");
+  });
+  it("nada es sin_hallazgos", () => {
+    expect(estadoDeFicha({ base: vacia }, "")).toBe("sin_hallazgos");
+  });
+});
+
+describe("usuarioInstagramValido", () => {
+  it("toma el usuario de web si el campo trae ruta reservada", () => {
+    expect(usuarioInstagramValido("https://www.instagram.com/popular/", "https://www.instagram.com/viverocafejardin/", "Vivero Café Jardín")).toBe("viverocafejardin");
+  });
+  it("cuenta ajena da vacio", () => {
+    expect(usuarioInstagramValido("https://instagram.com/bcodevenezuela/", "", "Restaurant Xin Du CA")).toBe("");
+  });
+  it("nombre aplastado con puntos", () => {
+    expect(usuarioInstagramValido("https://instagram.com/kome.koko/", "", "KomeKoKo Cocadas")).toBe("kome.koko");
+  });
+  it("palabra compartida", () => {
+    expect(usuarioInstagramValido("https://instagram.com/hotelwladimir/", "", "Hotel Wladimir")).toBe("hotelwladimir");
+  });
+  it("whatsapp reservado y web no instagram da vacio", () => {
+    expect(usuarioInstagramValido("https://instagram.com/whatsapp/", "https://wa.me/584141234567", "Clínica Los Colorados")).toBe("");
+  });
+  it("sin usuario valido no hay gancho de Instagram", () => {
+    const base = hallazgosDeBase({ tipo: "", tamano: "", nota: "", instagram: "https://instagram.com/popular/", facebook: "", telefono: "", whatsapp: "", web: "", nombre: "Clinica Sol" });
+    expect(armarGancho({ base }, "citas-y-servicios")).toBe("");
+    expect(armarGancho({ base }, "citas-y-servicios")).not.toContain("popular");
+  });
+});
+
+describe("esWebRedSocial: twitter, x, telegram, beacons", () => {
+  it("las reconoce", () => {
+    for (const u of ["https://twitter.com/foo", "https://x.com/foo", "https://www.x.com/foo", "https://t.me/foo", "https://beacons.ai/foo"]) expect(esWebRedSocial(u)).toBe(true);
+    expect(esWebRedSocial("https://box.com/foo")).toBe(false);
   });
 });

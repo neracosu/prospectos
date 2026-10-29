@@ -72,7 +72,7 @@ describe.runIf(DB_HABILITADA)("fichas de negocio", () => {
     const f = await prisma.fichaNegocio.findUniqueOrThrow({ where: { prospectoId: p.id } });
     const base = (f.hallazgos as { base: Record<string, unknown> }).base;
     expect(Object.keys(base).sort()).toEqual(["facebook", "instagram", "nota", "tamano", "telefono", "tipo", "variasSedes", "whatsapp"]);
-    expect(base).toMatchObject({ tipo: "pizzeria", nota: "4 sedes", instagram: "@forma", variasSedes: true });
+    expect(base).toMatchObject({ tipo: "pizzeria", nota: "4 sedes", instagram: "forma", variasSedes: true });
   });
 
   it("sin web ni redes queda sin_hallazgos con el resumen de la base", async () => {
