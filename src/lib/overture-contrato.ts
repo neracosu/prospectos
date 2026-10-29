@@ -41,7 +41,7 @@ export function reglaDeNicho(slug: string): ReglaNicho | undefined {
   return Object.hasOwn(REGLAS_NICHO, slug) ? REGLAS_NICHO[slug] : undefined;
 }
 
-function coincideNicho(r: ReglaNicho, l: Pick<LugarOverture, "categoriaBase" | "categoriaFina">): boolean {
+export function coincideNicho(r: ReglaNicho, l: Pick<LugarOverture, "categoriaBase" | "categoriaFina">): boolean {
   if (!r.bases.includes(l.categoriaBase)) return false;
   if (r.finas && !r.finas.includes(l.categoriaFina)) return false;
   return !r.sinFinas?.includes(l.categoriaFina);
