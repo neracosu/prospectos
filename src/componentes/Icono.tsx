@@ -5,6 +5,7 @@ const TRAZOS: Record<NombreIcono | "mas", string> = {
   inicio: "M3 11 12 3l9 8M5 10v10h5v-6h4v6h5V10",
   leads: "M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8",
   solicitudes: "M4 4h16v12H7l-3 3zM8 9h8M8 12h5",
+  cobros: "M3 6h18v12H3zM3 10h18M7 15h3",
   proyectos: "M3 7h18v13H3zM8 7V4h8v3M3 12h18",
   directorio: "M4 4h16v16H4zM4 9h16M4 14h16M9 4v16",
   web: "M3 3v18h18M7 15l4-4 3 3 5-6",

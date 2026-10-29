@@ -16,7 +16,7 @@ export function CifrasInicio({ cifras }: { cifras: Cifras }) {
         <b>{cifras.solicitudes}</b>
         <span>Solicitudes sin atender</span>
       </Link>
-      <Link href="/proyectos" className="cifra">
+      <Link href="/cobros" className="cifra">
         <b className="cifra__dinero">{formatoUSD(cifras.porCobrar)}</b>
         <span>Por cobrar este mes</span>
         {cifras.vencido > 0 && <small className="cifra__alerta">{formatoUSD(cifras.vencido)} vencido</small>}

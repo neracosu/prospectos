@@ -375,3 +375,23 @@ button, input, select, textarea { font: inherit; }
   .ficha__historial h2 { margin: 0 0 8px; font-size: 15px; }
   .ficha__grilla { grid-template-columns: 1fr 1fr; }
 }
+
+/* Cobros (panel CRM, fase 3): tres cifras y la tabla de todos los proyectos */
+.cifras-inicio--tres > .cifra:last-child { grid-column: 1 / -1; }
+.cifra--activa { border-color: var(--tinta-suave); }
+.cifra__rojo { color: var(--rojo); }
+.tabla__acciones { display: flex; flex-wrap: wrap; gap: 8px; }
+.tabla__detalle td { display: block; padding: 0 0 10px; }
+.tabla .pregunta { margin: 0 0 8px; }
+.cobro-fila--vencido td:first-child { box-shadow: inset 3px 0 0 var(--rojo); }
+.cobro-fila--por_vencer td:first-child { box-shadow: inset 3px 0 0 var(--ambar); }
+.cobro-fila--pagado td:first-child { box-shadow: inset 3px 0 0 var(--verde); }
+.cobro-fila td:first-child { padding-left: 10px; }
+.tabla td a { color: var(--tinta); }
+@media (min-width: 1024px) {
+  .cifras-inicio--tres { grid-template-columns: repeat(3, 1fr); }
+  .cifras-inicio--tres > .cifra:last-child { grid-column: auto; }
+  .tabla__detalle > td { display: table-cell; padding: 8px 10px 12px; }
+  .tabla__acciones { justify-content: flex-end; }
+  .tabla .boton.mini { min-height: 36px; }
+}

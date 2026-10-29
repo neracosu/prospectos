@@ -35,7 +35,7 @@ export function armarHoy(e: EntradaHoy): ItemHoy[] {
   }
   for (const c of e.cobros) {
     if (!esFechaIso(c.vence)) continue;
-    items.push({ tipo: "cobro", id: `c${c.id}`, titulo: `${CONCEPTO[c.concepto] ?? c.concepto} ${formatoUSD(c.monto)}`, sub: c.proyectoNombre, fecha: c.vence, estado: estadoDe(c.vence, e.hoy), href: `/proyectos/${c.proyectoId}?t=cobros` });
+    items.push({ tipo: "cobro", id: `c${c.id}`, titulo: `${CONCEPTO[c.concepto] ?? c.concepto} ${formatoUSD(c.monto)}`, sub: c.proyectoNombre, fecha: c.vence, estado: estadoDe(c.vence, e.hoy), href: "/cobros" });
   }
   for (const h of e.hitos) {
     if (!h.fechaEstimada || !esFechaIso(h.fechaEstimada)) continue;

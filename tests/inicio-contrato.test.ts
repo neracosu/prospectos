@@ -9,7 +9,7 @@ describe("lista Hoy de Inicio", () => {
       hitos: [{ id: 5, proyectoId: 2, proyectoNombre: "Tienda", texto: "Entregar", fechaEstimada: "2026-10-28" }] });
     expect(r.map((x) => x.tipo)).toEqual(["hito", "cobro", "seguimiento"]);
     expect(r[0].estado).toBe("vencido"); expect(r[1].estado).toBe("hoy");
-    expect(r[1].href).toBe("/proyectos/2?t=cobros"); expect(r[2].href).toBe("/prospectos/1");
+    expect(r[1].href).toBe("/cobros"); expect(r[2].href).toBe("/prospectos/1");
     expect(r[1].titulo).toMatch(/100/);
   });
   it("fechas raras se omiten sin reventar", () => {

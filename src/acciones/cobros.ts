@@ -18,7 +18,7 @@ import { mensajeAvisoCobro, quienRecibe } from "@/lib/avisos-contrato";
 const ERROR = "No se pudo guardar. Intenta de nuevo.";
 const COBRO_YA_RESUELTO = "COBRO_YA_RESUELTO";
 const Id = z.number().int().positive();
-function refrescar(proyectoId: number) { revalidatePath("/proyectos"); revalidatePath(`/proyectos/${proyectoId}`); revalidatePath("/inicio"); }
+function refrescar(proyectoId: number) { revalidatePath("/proyectos"); revalidatePath(`/proyectos/${proyectoId}`); revalidatePath("/inicio"); revalidatePath("/cobros"); }
 
 const PagoZ = z.object({
   cobroId: z.coerce.number().int().positive(),
