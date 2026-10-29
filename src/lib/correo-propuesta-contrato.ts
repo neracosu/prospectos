@@ -189,7 +189,7 @@ export function ventanaDeEnvio(ahora: Date): boolean {
   return ["lun", "mar", "mie", "mié", "jue", "vie"].includes(dia) && hora >= 9 && hora <= 16;
 }
 
-// Cuantos manda cada pasada del cron (9 pasadas al dia): el tope diario repartido en ocho.
+// Cuantos manda cada pasada del cron (8 pasadas al dia): el tope diario repartido en ocho.
 export function tamanoLote(tope: number): number {
   return Math.max(1, Math.ceil(tope / 8));
 }

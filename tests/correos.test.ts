@@ -2,9 +2,10 @@ import { vi } from "vitest";
 import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
+const pdfFalso = vi.hoisted(() => ({ ocupado: false }));
 vi.mock("@/lib/propuesta", async (orig) => {
   const real = await orig<typeof import("@/lib/propuesta")>();
-  return { ...real, generarPdf: async (codigo: string) => { const r = path.join(mkdtempSync(path.join(tmpdir(), "pdf-")), `${codigo}.pdf`); writeFileSync(r, "%PDF-1.4 falso"); return r; } };
+  return { ...real, generarPdf: async (codigo: string) => { if (pdfFalso.ocupado) throw new Error("PDF_OCUPADO"); const r = path.join(mkdtempSync(path.join(tmpdir(), "pdf-")), `${codigo}.pdf`); writeFileSync(r, "%PDF-1.4 falso"); return r; } };
 });
 
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
@@ -34,7 +35,7 @@ describe.runIf(DB_HABILITADA)("correos: preparar, enviar a mano, cola y cifras",
   beforeEach(async () => {
     await prisma.evento.deleteMany(); await prisma.envioCorreo.deleteMany(); await prisma.correoBloqueado.deleteMany(); await prisma.fichaNegocio.deleteMany();
     await prisma.prospecto.deleteMany();
-    salidos.length = 0; fallar = false;
+    salidos.length = 0; fallar = false; pdfFalso.ocupado = false;
     _transporteParaTests({ sendMail: async (o) => { if (fallar) throw new Error("smtp caido"); salidos.push(o); return { messageId: "m1" }; } });
   });
   afterAll(async () => { _transporteParaTests(null); await limpiarBase(); await prisma.$disconnect(); });
@@ -141,6 +142,56 @@ describe.runIf(DB_HABILITADA)("correos: preparar, enviar a mano, cola y cifras",
     expect(salidos).toHaveLength(0);
     expect((await enviarA(n.id, "inicial", ids.usuarioId, { modo: "manual" })).ok).toBe(true);
     expect(salidos).toHaveLength(1);
+  });
+
+  it("el seguimiento sale sin adjunto; el inicial con un PDF", async () => {
+    const p = await nuevo();
+    expect((await enviarA(p.id, "inicial", null)).ok).toBe(true);
+    expect((salidos[0].attachments as unknown[] | undefined) ?? []).toHaveLength(1);
+    await prisma.prospecto.update({ where: { id: p.id }, data: { proximoSeguimiento: hoy } });
+    pdfFalso.ocupado = true; // si el seguimiento intentara generar el PDF, fallaria
+    expect((await enviarA(p.id, "seguimiento", null)).ok).toBe(true);
+    expect(salidos).toHaveLength(2);
+    expect((salidos[1].attachments as unknown[] | undefined) ?? []).toHaveLength(0);
+    const r = await prepararEnvio((await nuevo()).id, "seguimiento");
+    if ("error" in r) throw new Error(r.error);
+    expect(r.pdf).toBeNull();
+  });
+
+  it("PDF_OCUPADO: la fila queda con fallo y aparece en fallidas", async () => {
+    const p = await nuevo();
+    pdfFalso.ocupado = true;
+    const r = await enviarA(p.id, "inicial", null);
+    expect(r).toEqual({ ok: false, mensaje: "El servidor está ocupado generando otro PDF. Intente en unos segundos." });
+    expect((await prisma.envioCorreo.findFirstOrThrow({ where: { prospectoId: p.id } })).fallo).toBe("pdf ocupado");
+    expect((await colaCorreo(hoy, { estado: "fallidas" })).map((f) => f.prospectoId)).toContain(p.id);
+    expect(salidos).toHaveLength(0);
+  });
+
+  it("dondeCorreo por el host de la fuente del correo", async () => {
+    const donde = async (fuente: string, web = "https://hotelx.test") => {
+      const p = await nuevo({ web });
+      await prisma.prospecto.update({ where: { id: p.id }, data: { fuentesPorCampo: fuente ? { email: fuente } : {} } });
+      const r = await prepararEnvio(p.id, "inicial");
+      if ("error" in r) throw new Error(r.error);
+      return r.datos.dondeCorreo;
+    };
+    expect(await donde("https://www.facebook.com/hotelx")).toBe("su página de Facebook");
+    expect(await donde("https://m.facebook.com/hotelx", "")).toBe("su página de Facebook");
+    expect(await donde("https://instagram.com/hotelx/")).toBe("su página de Instagram");
+    expect(await donde("https://www.hotelx.test/contacto")).toBe("su página hotelx.test");
+    expect(await donde("")).toBe("un directorio público");
+    expect(await donde("https://www.openstreetmap.org/node/1")).toBe("un directorio público");
+    expect(await donde("https://otro.test/lista")).toBe("un directorio público");
+  });
+
+  it("listas deja fuera la direccion que ya recibio un envio de otro prospecto, aunque ese no este en la cola", async () => {
+    const a = await nuevo({ email: "comun@ejemplo.test" });
+    const lead = await crearProspectoDePrueba(ids.nichoId, { email: "otra@ejemplo.test" });
+    await prisma.envioCorreo.create({ data: { prospectoId: lead.id, tipo: "inicial", asunto: "x", para: "comun@ejemplo.test", token: "c".repeat(22), fallo: "" } });
+    expect((await colaCorreo(hoy, { estado: "listas" })).map((f) => f.prospectoId)).not.toContain(a.id);
+    const b = await nuevo({ email: "sola@ejemplo.test" });
+    expect((await colaCorreo(hoy, { estado: "listas" })).map((f) => f.prospectoId)).toContain(b.id);
   });
 
   it("colaCorreo ordena: con gancho primero, luego comercio antes que citas", async () => {

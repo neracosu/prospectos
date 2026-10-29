@@ -107,6 +107,25 @@ describe.runIf(DB_HABILITADA)("enviarAutomatico y su ruta", () => {
     expect(await prisma.envioCorreo.count({ where: { prospectoId: ok.id } })).toBe(1);
   });
 
+  it("el rechazo «ya recibio una propuesta de otro negocio» no cuenta como fallo seguido", async () => {
+    const [a, b, c, d] = [await nuevo(), await nuevo(), await nuevo(), await nuevo()];
+    const otro = await crearProspectoDePrueba(ids.nichoId, { email: "otro@ejemplo.test" });
+    let primero = true;
+    // Al mandar el primero, otro negocio «recibe» las direcciones de b y c: la cola ya estaba armada.
+    _transporteParaTests({ sendMail: async (o) => {
+      if (primero) {
+        primero = false;
+        await prisma.envioCorreo.createMany({ data: [b, c].map((q, i) => ({ prospectoId: otro.id, tipo: "inicial", asunto: "x", para: q.email, token: `o${i}`.padEnd(22, "x"), fallo: "" })) });
+      }
+      salidos.push(o); return { messageId: "m1" };
+    } });
+    const r = await enviarAutomatico(LUNES_MEDIODIA);
+    expect(r.motivo).not.toBe("fallos");
+    expect(await prisma.envioCorreo.count({ where: { prospectoId: a.id, fallo: "" } })).toBe(1);
+    expect(await prisma.envioCorreo.count({ where: { prospectoId: d.id, fallo: "" } })).toBe(1);
+    expect(r.enviados).toBe(2);
+  });
+
   it("la ruta sin secreto responde 404 y no manda", async () => {
     process.env.PROSPECTOS_CRON_SECRET = "secreto-de-prueba";
     await nuevo();

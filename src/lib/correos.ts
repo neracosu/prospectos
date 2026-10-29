@@ -21,6 +21,7 @@ export const TOKEN_VALIDO = CODIGO_VALIDO;
 // Una reserva (fila creada antes de generar el PDF y mandar) lleva fallo "en curso". Cuenta como envio bueno solo
 // mientras tenga menos de 10 minutos: si el proceso muere a medias, pasa a "interrumpido" y se puede reintentar.
 const EN_CURSO = "en curso";
+const YA_RECIBIO = "Ese correo ya recibió una propuesta de otro negocio.";
 const VIGENCIA_MS = 10 * 60_000;
 const buenoPrisma = (): Prisma.EnvioCorreoWhereInput => ({ OR: [{ fallo: "" }, { fallo: EN_CURSO, enviadoEn: { gte: new Date(Date.now() - VIGENCIA_MS) } }] });
 const esBueno = (e: { fallo: string; enviadoEn: Date }): boolean => e.fallo === "" || (e.fallo === EN_CURSO && e.enviadoEn.getTime() >= Date.now() - VIGENCIA_MS);
@@ -97,6 +98,13 @@ export async function colaCorreo(hoy: string, filtro: FiltroCola = {}): Promise<
   const ve = ps.filter((p) => paisDeCiudad(p.ciudad) === "VE");
   const bloq = await prisma.correoBloqueado.findMany({ where: { email: { in: ve.map((p) => normalizarCorreo(p.email)) } }, select: { email: true, motivo: true } });
   const motivos = new Map(bloq.map((b) => [b.email, b.motivo]));
+  // Direcciones que ya recibieron un envio bueno, de cualquier prospecto (tambien de los que no estan en esta cola).
+  const correosVe = [...new Set(ve.map((p) => normalizarCorreo(p.email)))];
+  const yaRecibidas = new Map<string, Set<number>>();
+  for (const e of await prisma.envioCorreo.findMany({ where: { para: { in: correosVe }, ...buenoPrisma() }, select: { para: true, prospectoId: true } })) {
+    yaRecibidas.set(e.para, (yaRecibidas.get(e.para) ?? new Set()).add(e.prospectoId));
+  }
+  const deOtro = (f: FilaCola) => [...(yaRecibidas.get(normalizarCorreo(f.email)) ?? [])].some((id) => id !== f.prospectoId);
   const conEnviado = new Set((await prisma.evento.findMany({ where: { tipo: "enviado", prospectoId: { in: ve.map((p) => p.id) } }, select: { prospectoId: true }, distinct: ["prospectoId"] })).map((e) => e.prospectoId));
   const filas = ve.map((p): FilaCola & { yaSeEnvio: boolean } => {
     const ficha = p.ficha!;
@@ -120,7 +128,7 @@ export async function colaCorreo(hoy: string, filtro: FiltroCola = {}): Promise<
     const enviada = conExito.has(f.prospectoId);
     switch (filtro.estado) {
       // Sin plantilla no hay propuesta que mandar: fuera de «listas» (y por tanto del automatico).
-      case "listas": return f.arquetipo !== "" && !enviada && !f.bloqueado && !(f.envio && !esBueno(f.envio)) && f.etapa === "por_contactar" && !f.yaSeEnvio && !motivoDeCorreo(normalizarCorreo(f.email), f.ciudad, paisDeCiudad);
+      case "listas": return f.arquetipo !== "" && !enviada && !f.bloqueado && !(f.envio && !esBueno(f.envio)) && f.etapa === "por_contactar" && !f.yaSeEnvio && !deOtro(f) && !motivoDeCorreo(normalizarCorreo(f.email), f.ciudad, paisDeCiudad);
       case "enviadas": return enviada;
       case "seguimiento": return f.tocaSeguimiento;
       case "bloqueadas": return !!f.bloqueado;
@@ -164,6 +172,20 @@ function hostDe(url: string): string {
   try { return new URL(/^https?:\/\//i.test(url) ? url : `https://${url}`).hostname.replace(/^www\./, ""); } catch { return ""; }
 }
 
+const esDe = (host: string, dominio: string) => host === dominio || host.endsWith(`.${dominio}`);
+
+// De donde salio el correo, para el pie («Le escribo porque … publica este correo en …»). Solo se dice «su pagina»
+// cuando la fuente es su Facebook, su Instagram o su propia web; cualquier otra cosa es un directorio.
+export function dondeCorreo(fuenteEmail: string, web: string): string {
+  const host = fuenteEmail ? hostDe(fuenteEmail) : "";
+  if (!host) return "un directorio público";
+  if (esDe(host, "facebook.com")) return "su página de Facebook";
+  if (esDe(host, "instagram.com")) return "su página de Instagram";
+  const hostWeb = web ? hostDe(web) : "";
+  if (hostWeb && host === hostWeb) return `su página ${hostWeb}`;
+  return "un directorio público";
+}
+
 type Preparado = { datos: DatosCorreo; correo: ReturnType<typeof armarCorreoPropuesta>; pdf: { ruta: string; nombre: string } | null; token: string };
 
 type Reserva = { reenviar?: boolean; tope?: number };
@@ -178,7 +200,7 @@ async function reservar(d: { prospectoId: number; tipo: "inicial" | "seguimiento
     const propios = await tx.envioCorreo.findMany({ where: { prospectoId: d.prospectoId, ...buenoPrisma() }, select: { tipo: true } });
     if (d.tipo === "inicial" && !o.reenviar && propios.some((e) => e.tipo === "inicial")) return { error: "A este negocio ya se le envió la propuesta." };
     if (d.tipo === "seguimiento" && propios.some((e) => e.tipo === "seguimiento")) return { error: "A este negocio ya se le envió el seguimiento." };
-    if (await tx.envioCorreo.count({ where: { para: d.para, ...buenoPrisma(), prospectoId: { not: d.prospectoId } } })) return { error: "Ese correo ya recibió una propuesta de otro negocio." };
+    if (await tx.envioCorreo.count({ where: { para: d.para, ...buenoPrisma(), prospectoId: { not: d.prospectoId } } })) return { error: YA_RECIBIO };
     if (o.tope !== undefined) {
       const desde = new Date(`${hoy}T04:00:00.000Z`);
       const n = await tx.envioCorreo.count({ where: { ...buenoPrisma(), enviadoEn: { gte: desde, lt: new Date(desde.getTime() + 86_400_000) } } });
@@ -211,12 +233,9 @@ async function cargarCorreo(prospectoId: number, tipo: "inicial" | "seguimiento"
   const gancho = ficha?.gancho ?? "";
   const hoy = hoyCaracas();
   const fuenteEmail = String((p.fuentesPorCampo as Record<string, unknown> | null)?.email ?? "");
-  const hostWeb = p.web ? hostDe(p.web) : "";
-  // «su pagina» solo con web y una fuente del correo que apunte a ese mismo host; si no, directorio.
-  const deSuWeb = !!hostWeb && !!fuenteEmail && hostDe(fuenteEmail) === hostWeb;
   const datos: DatosCorreo = {
     nombre: p.nombre, ciudad: p.ciudad, arquetipo, codigo: p.codigo, token: "", gancho,
-    hojas: (plantilla.match(/<section class="hoja/g) ?? []).length, hoy, dondeCorreo: deSuWeb ? `su página ${hostWeb}` : "un directorio público", tipo,
+    hojas: (plantilla.match(/<section class="hoja/g) ?? []).length, hoy, dondeCorreo: dondeCorreo(fuenteEmail, p.web), tipo,
     ...(tipo === "seguimiento" && p.envios[0] ? { enviadoAnteriorEn: hoyCaracas(p.envios[0].enviadoEn) } : {}),
   };
   return { p, arquetipo, pais, plantilla, para, ficha, gancho, hoy, datos };
@@ -236,6 +255,11 @@ export async function prepararEnvio(prospectoId: number, tipo: "inicial" | "segu
   const reserva = await reservar({ prospectoId: p.id, tipo, asunto: armarCorreoPropuesta({ ...datos, token: "x".repeat(22) }).asunto, para }, opc, hoy);
   if ("error" in reserva) return reserva;
   const { token } = reserva;
+  // El seguimiento es corto y va sin adjunto (spec §4): solo el enlace.
+  if (tipo === "seguimiento") {
+    const final = { ...datos, token };
+    return { datos: final, correo: armarCorreoPropuesta(final), pdf: null, token };
+  }
   try {
     // Mismo camino que /p/<codigo>/pdf (mismo html, mismo hash): comparten cache.
     const html = renderPropuesta(plantilla, p.nombre, "#", { ciudad: p.ciudad, rubro: p.nicho.nombre.toLowerCase(), conWeb: webUsable(!!p.web, ficha?.hallazgos.web?.estado), fecha: await fechaDePropuesta(p.id), pais, gancho, paraPdf: true, plantilla: arquetipo });
@@ -322,6 +346,8 @@ export async function enviarAutomatico(ahora: Date = new Date()): Promise<Result
       try { r = await enviarA(f.prospectoId, "inicial", null, { tope, modo: "automatico" }); }
       catch (e) { console.error("[correos]", f.prospectoId, e); r = { ok: false, mensaje: "excepcion" }; }
       if (r.ok) { enviados++; seguidos = 0; continue; }
+      // Otro negocio ya recibio esa direccion (la cola se armo antes): no se mando nada, no es un fallo.
+      if (r.mensaje === YA_RECIBIO) { intentos--; continue; }
       if (r.mensaje.startsWith("Hoy ya salieron")) { motivo = "tope"; break; }
       if (++seguidos >= 2) { motivo = "fallos"; break; }
     }
