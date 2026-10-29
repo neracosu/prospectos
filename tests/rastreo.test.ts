@@ -80,6 +80,15 @@ describe.runIf(DB_HABILITADA)("rastreo de correos", () => {
     expect(espia).not.toHaveBeenCalled();
   });
 
+  it("la ruta del pixel cuenta la apertura con la URL del correo (<token>.png)", async () => {
+    const { token } = await nuevo();
+    // Next entrega el segmento entero: "<token>.png", que es lo que lleva el <img> del correo (enlacesDe)
+    const r = await pixel(new Request(`http://x/api/correo/a/${token}.png`), ctx(`${token}.png`));
+    expect(r.status).toBe(200);
+    expect((await prisma.envioCorreo.findUniqueOrThrow({ where: { token } })).abiertoEn).not.toBeNull();
+    expect(await eventos("correo_abierto")).toBe(1);
+  });
+
   it("la ruta del pixel responde png 1x1 con token basura y no escribe nada", async () => {
     const r = await pixel(new Request("http://x/api/correo/a/" + BASURA), ctx(BASURA));
     expect(r.status).toBe(200);
