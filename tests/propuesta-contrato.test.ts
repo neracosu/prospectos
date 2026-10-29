@@ -122,6 +122,7 @@ describe("renderPropuesta", () => {
     expect(webUsable(true, undefined)).toBe(true);
     expect(webUsable(true, "caida")).toBe(false);
     expect(webUsable(true, "vendida")).toBe(false);
+    expect(webUsable(true, "desconocida")).toBe(true);
     expect(webUsable(false, "viva")).toBe(false);
   });
 });

@@ -1,6 +1,5 @@
 "use client";
 import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { guardarGancho, reinvestigar, bloquearCorreo, ponerAlAutomatico } from "@/acciones/correos";
 import { Campo } from "@/componentes/Campo";
 import { useFlotante } from "@/componentes/LineaFlotante";
@@ -19,6 +18,7 @@ const PLATAFORMA: Record<string, string> = {
 const ESTADO_WEB: Record<string, string> = {
   viva: "En línea", caida: "No responde", vendida: "Dominio en venta", en_mantenimiento: "En mantenimiento",
   red_social: "Solo una red social", sin_web: "Sin web",
+  desconocida: "No se pudo leer la web; se mantiene como web existente",
 };
 const MOTIVO: Record<string, string> = { no_quiere: "pidió que no le escriban", rebote: "el correo rebotó" };
 
@@ -55,13 +55,12 @@ export function FichaNegocioBloque({ prospectoId, ficha, correoBloqueado, tieneC
   const [error, setError] = useState("");
   const [pendiente, empezar] = useTransition();
   const avisar = useFlotante();
-  const router = useRouter();
 
   const correr = (texto: string, fn: () => Promise<{ ok: boolean; mensaje?: string }>) =>
     empezar(async () => {
       setError("");
       const r = await fn();
-      if (r.ok) { avisar({ texto }); router.refresh(); }
+      if (r.ok) avisar({ texto }); // revalidatePath de la accion ya trae el arbol nuevo
       else setError(r.mensaje ?? "No se pudo completar.");
     });
 
@@ -100,7 +99,7 @@ export function FichaNegocioBloque({ prospectoId, ficha, correoBloqueado, tieneC
       {esDueno && (
         <form onSubmit={guardar} key={`${ficha?.revisadaEn?.toString() ?? ""}${ficha?.generadaEn?.toString() ?? ""}`}>
           <Campo etiqueta="Gancho de la propuesta" nombre="gancho" control="textarea" rows={3} maxLength={GANCHO_MAX}
-            regla={{ tipo: "texto", max: GANCHO_MAX }} defaultValue={ficha?.gancho ?? ""} />
+            regla={{ tipo: "linea", max: GANCHO_MAX }} defaultValue={ficha?.gancho ?? ""} />
           <Campo etiqueta="Resumen" nombre="resumen" control="textarea" rows={4} maxLength={1000}
             regla={{ tipo: "texto", max: 1000 }} defaultValue={ficha?.resumen ?? ""} />
           <div className="fila-botones">

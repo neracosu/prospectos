@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { DB_HABILITADA, limpiarBase, sembrarBasico, crearProspectoDePrueba } from "./ayuda-db";
 import { investigarProspecto, leerFicha, guardarFicha, depurarYMarcar } from "@/lib/fichas";
 import type { descargar } from "@/lib/red-segura";
+import { webUsable } from "@/lib/propuesta-contrato";
 
 const fx = (n: string) => readFileSync(path.join(import.meta.dirname, "fixtures", "webs", n), "utf8");
 // descargar falso: nunca sale a internet; lo que no esta en el mapa "no abre"
@@ -37,6 +38,41 @@ describe.runIf(DB_HABILITADA)("fichas de negocio", () => {
     const f = await leerFicha(p.id);
     expect(f?.gancho).toBe("Gancho de Neri."); expect(f?.resumen).toBe("Resumen de Neri."); expect(f?.estado).toBe("revisada");
     expect(f?.revisadaEn).not.toBeNull();
+  });
+
+  it("web que no responde por plazo: reintenta una vez, queda desconocida, sin gancho y conWeb intacto", async () => {
+    const p = await crearProspectoDePrueba(nichoRestaurantes, { nombre: "Lenta", email: "lenta@x.test", web: "https://lenta.test/" });
+    let llamadas = 0;
+    const bajar = (async () => { llamadas++; return { ok: false, motivo: "Tiempo de espera agotado" }; }) as unknown as typeof descargar;
+    const r = await investigarProspecto(p.id, { descargar: bajar, cruzar: () => null, pausaMs: 0, reintentoMs: 0 });
+    expect(llamadas).toBe(2);
+    expect(r.gancho).toBe(""); expect(r.estado).toBe("lista");
+    const f = await leerFicha(p.id);
+    expect(f?.hallazgos.web?.estado).toBe("desconocida");
+    expect(webUsable(true, f?.hallazgos.web?.estado)).toBe(true);
+  });
+
+  it("dominio que no resuelve: caida sin reintento, gancho «hoy no abre»", async () => {
+    const p = await crearProspectoDePrueba(nichoRestaurantes, { nombre: "Caida", email: "caida@x.test", web: "https://caida.test/" });
+    let llamadas = 0;
+    const bajar = (async () => { llamadas++; return { ok: false, motivo: "No se pudo resolver el dominio" }; }) as unknown as typeof descargar;
+    const r = await investigarProspecto(p.id, { descargar: bajar, cruzar: () => null, pausaMs: 0, reintentoMs: 0 });
+    expect(llamadas).toBe(1);
+    expect(r.gancho).toContain("hoy no abre");
+    const f = await leerFicha(p.id);
+    expect(f?.hallazgos.web?.estado).toBe("caida");
+    expect(webUsable(true, f?.hallazgos.web?.estado)).toBe(false);
+  });
+
+  it("hallazgos.base guarda solo los campos de la base, sin id, correo, nicho ni ficha previa", async () => {
+    const p = await crearProspectoDePrueba(nichoRestaurantes, { nombre: "Forma", email: "forma@x.test", instagram: "@forma" });
+    await prisma.prospecto.update({ where: { id: p.id }, data: { tipo: "pizzeria", nota: "4 sedes" } });
+    await investigarProspecto(p.id, { descargar: falsoCon({}), cruzar: () => null, pausaMs: 0 });
+    await investigarProspecto(p.id, { descargar: falsoCon({}), cruzar: () => null, pausaMs: 0 });
+    const f = await prisma.fichaNegocio.findUniqueOrThrow({ where: { prospectoId: p.id } });
+    const base = (f.hallazgos as { base: Record<string, unknown> }).base;
+    expect(Object.keys(base).sort()).toEqual(["facebook", "instagram", "nota", "tamano", "telefono", "tipo", "variasSedes", "whatsapp"]);
+    expect(base).toMatchObject({ tipo: "pizzeria", nota: "4 sedes", instagram: "@forma", variasSedes: true });
   });
 
   it("sin web ni redes queda sin_hallazgos con el resumen de la base", async () => {

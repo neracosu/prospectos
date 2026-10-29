@@ -7,7 +7,7 @@ import { paisDeCiudad } from "./overpass-contrato";
 import type { crearCruzador } from "./overture-cruce";
 import {
   type EstadoFicha, type Hallazgos, type HallazgosWeb, type FilaUniverso, GANCHO_MAX,
-  esWebRedSocial, estadoDeDescarga, enlacesInternos, analizarWeb, hallazgosDeBase,
+  esWebRedSocial, estadoDeDescarga, MOTIVOS_CAIDA, enlacesInternos, analizarWeb, hallazgosDeBase,
   armarGancho, armarResumen, estadoDeFicha, depurarUniverso,
 } from "./ficha-contrato";
 
@@ -17,6 +17,7 @@ export type Deps = {
   ahora?: Date;
   usuarioId?: number;
   pausaMs?: number; // espera entre paginas internas del mismo sitio (1 s por defecto)
+  reintentoMs?: number; // espera antes de reintentar una portada que no respondio (3 s por defecto)
 };
 
 export type FichaFila = {
@@ -27,9 +28,14 @@ export type FichaFila = {
 const OPCIONES = { timeoutMs: 10_000, plazoTotalMs: 12_000, maxBytes: 2 * 1024 * 1024 };
 const esperar = (ms: number) => (ms > 0 ? new Promise<void>((f) => setTimeout(f, ms)) : Promise.resolve());
 
-async function leerWeb(url: string, nombre: string, bajar: typeof descargar, pausaMs: number): Promise<HallazgosWeb> {
-  const portada = await bajar(url, OPCIONES);
-  const estado = estadoDeDescarga(portada.ok ? portada : { ok: false }, url);
+async function leerWeb(url: string, nombre: string, bajar: typeof descargar, pausaMs: number, reintentoMs: number): Promise<HallazgosWeb> {
+  let portada = await bajar(url, OPCIONES);
+  // Un fallo que no prueba que la web este caida (plazo, corte, certificado) se reintenta una vez.
+  if (!portada.ok && !MOTIVOS_CAIDA.has(portada.motivo)) {
+    await esperar(reintentoMs);
+    portada = await bajar(url, OPCIONES);
+  }
+  const estado = estadoDeDescarga(portada.ok ? portada : { ok: false, motivo: portada.motivo }, url);
   if (!portada.ok) return analizarWeb("", url, nombre, estado);
   if (estado !== "viva") return analizarWeb(portada.texto, portada.urlFinal, nombre, estado);
   let html = portada.texto;
@@ -57,7 +63,7 @@ export async function investigarProspecto(id: number, deps: Deps = {}): Promise<
     const url = /^https?:\/\//i.test(web) ? web : `https://${web}`;
     if (esWebRedSocial(url)) hallazgos.web = analizarWeb("", url, p.nombre, "red_social");
     else {
-      hallazgos.web = await leerWeb(url, p.nombre, bajar, deps.pausaMs ?? 1000);
+      hallazgos.web = await leerWeb(url, p.nombre, bajar, deps.pausaMs ?? 1000, deps.reintentoMs ?? 3000);
       fuentes.push(...(hallazgos.web.estado === "viva" ? hallazgos.web.paginasLeidas : [url]));
     }
   }

@@ -2,7 +2,9 @@
 // que se encontro, redacta el gancho y el resumen por reglas y depura el universo de
 // prospectos con correo. Sin base, sin red y sin node: lo importan tareas con base y el navegador.
 
-export type EstadoWeb = "viva" | "caida" | "vendida" | "en_mantenimiento" | "red_social" | "sin_web";
+// desconocida: la descarga fallo por algo que no prueba que la web este caida (plazo, corte, certificado):
+// se mantiene como web existente y no genera gancho de web.
+export type EstadoWeb = "viva" | "caida" | "vendida" | "en_mantenimiento" | "red_social" | "sin_web" | "desconocida";
 export type Plataforma = "wordpress" | "woocommerce" | "shopify" | "wix" | "tiendanube" | "otra" | "";
 
 export type HallazgosWeb = {
@@ -45,9 +47,13 @@ function senalMantenimiento(html: string): boolean {
   return visible.length < 400 && MANTENIMIENTO.test(visible);
 }
 
-export function estadoDeDescarga(r: { ok: boolean; estado?: number; texto?: string }, urlPedida: string): EstadoWeb {
+// Motivos de red-segura que si prueban que la web no abre (el dominio no resuelve o nadie atiende).
+export const MOTIVOS_CAIDA = new Set(["No se pudo resolver el dominio", "No se pudo conectar"]);
+
+export function estadoDeDescarga(r: { ok: boolean; estado?: number; texto?: string; motivo?: string }, urlPedida: string): EstadoWeb {
   if (esWebRedSocial(urlPedida)) return "red_social";
-  if (!r.ok || (r.estado !== undefined && r.estado >= 500)) return "caida";
+  if (!r.ok) return MOTIVOS_CAIDA.has(r.motivo ?? "") ? "caida" : "desconocida";
+  if (r.estado !== undefined && r.estado >= 500) return "caida";
   const t = r.texto ?? "";
   if (/domain is for sale|dominio en venta|hugedomains|sedo\b/i.test(t)) return "vendida";
   if (/ConnectYourDomain|not connected to a website/i.test(t)) return "caida";
@@ -117,13 +123,13 @@ function hrefs(html: string): { href: string; texto: string }[] {
 }
 
 const ENLACE_WHATSAPP = /wa\.me\/|api\.whatsapp\.com|whatsapp\.com\/send/i;
-const VERBOS_RESERVA = /reserv|cita|agend|turno/i;
+const VERBOS_RESERVA = /\b(reserv\w*|citas?|agend\w*|turnos?)\b/i;
 const VERBOS_PEDIDO = /pedid|pedir|ordenar|delivery/i;
 
-// "pedir informacion" no es un pedido
+// "pedir/solicitar informacion o presupuesto" no es un pedido ni una reserva
 function detectarWhatsApp(enlaces: { href: string; texto: string }[], verbos: RegExp): boolean {
   return enlaces.some((e) => ENLACE_WHATSAPP.test(e.href)
-    && verbos.test((e.href + " " + e.texto).replace(/pedir\s+informaci[oó]n/gi, " ")));
+    && verbos.test((e.href + " " + e.texto).replace(/(pedir|solicitar)\s+(informaci[oó]n|presupuesto)/gi, " ")));
 }
 
 function detectarMenuEnPdf(enlaces: { href: string; texto: string }[]): boolean {
@@ -203,10 +209,17 @@ export function analizarWeb(html: string, urlFinal: string, nombre: string, esta
   };
 }
 
+// Plural o numero >= 2: «1 sede», «una sede» y «comidas locales» no son varias sedes.
+const VARIAS_SEDES = /\bvarias\s+(sedes|sucursales|locales)\b|\b([2-9]|\d{2,}|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez)\s+(sedes|sucursales|locales)\b|\bsucursales\b/i;
+
+// Solo los campos de la base, uno por uno: el prospecto trae id, correo, nicho y la ficha previa, que no van aqui.
 export function hallazgosDeBase(p: {
   tipo: string; tamano: string; nota: string; instagram: string; facebook: string; telefono: string; whatsapp: string;
 }): HallazgosBase {
-  return { ...p, variasSedes: /sede|sucursal|locales/i.test(`${p.nota} ${p.tamano}`) };
+  return {
+    tipo: p.tipo, tamano: p.tamano, nota: p.nota, instagram: p.instagram, facebook: p.facebook, telefono: p.telefono,
+    whatsapp: p.whatsapp, variasSedes: VARIAS_SEDES.test(`${p.nota} ${p.tamano}`),
+  };
 }
 
 // ---------- gancho ----------
@@ -216,7 +229,10 @@ type Regla = "web_caida" | "mantenimiento" | "whatsapp" | "tienda_a_mano" | "car
 const ARQ_WHATSAPP = ["hoteles-estadia", "reservas", "restaurantes-y-bares", "citas-y-servicios"];
 const ARQ_INSTAGRAM = ["comercio-y-tienda", "restaurantes-y-bares", "citas-y-servicios", "reservas", "hoteles-estadia"];
 
-const WEB_NO_ABRE = new Set<EstadoWeb>(["caida", "vendida"]);
+// Web que no abre: gancho «hoy no abre» y la propuesta va como sin web (lo usa webUsable).
+export const WEB_NO_ABRE: ReadonlySet<string> = new Set<EstadoWeb>(["caida", "vendida"]);
+// Solo estos arquetipos venden la pagina propia como reemplazo; en los demas lo propuesto no depende de la web.
+const ARQ_PAGINA_PROPIA = ["hoteles", "hoteles-estadia", "reservas", "comercio-y-tienda"];
 const ARQUETIPOS = [
   "hoteles", "hoteles-estadia", "restaurantes-y-bares", "reservas", "comercio-y-tienda", "citas-y-servicios", "cobros-y-pagos",
 ];
@@ -255,12 +271,18 @@ function usuarioInstagram(s: string): string {
   return ultimo.replace(/^@/, "");
 }
 
+function segundaDeWeb(arq: string): string {
+  return ARQ_PAGINA_PROPIA.includes(arq)
+    ? "El sistema trae su propia página, en su dominio, lista para vender y cobrar."
+    : "Lo que le propongo no depende de ella.";
+}
+
 function textoGancho(regla: Regla, h: Hallazgos, arq: string): string {
   switch (regla) {
     case "mantenimiento":
-      return "Vi que su página está en mantenimiento. El sistema trae su propia página, en su dominio, lista para vender y cobrar.";
+      return `Vi que su página está en mantenimiento. ${segundaDeWeb(arq)}`;
     case "web_caida":
-      return "Vi que su dirección web hoy no abre. El sistema trae su propia página, en su dominio, lista para vender y cobrar.";
+      return `Vi que su dirección web hoy no abre. ${segundaDeWeb(arq)}`;
     case "whatsapp":
       if (arq === "restaurantes-y-bares") {
         return h.web?.reservaPorWhatsApp
@@ -282,6 +304,9 @@ function textoGancho(regla: Regla, h: Hallazgos, arq: string): string {
     case "sedes":
       return "Vi que atienden en varias sedes. El sistema las ve todas desde un solo panel, con lo de cada una por separado.";
     case "instagram":
+      if (arq === "citas-y-servicios") {
+        return `Vi que atienden por Instagram (@${usuarioInstagram(h.base.instagram)}) y la cita se pide por mensaje. Eso es lo primero que el diagnóstico mira: cómo se aparta la hora y cómo se cobra.`;
+      }
       return `Vi que atienden por Instagram (@${usuarioInstagram(h.base.instagram)}). El sistema le da una página propia que vende y cobra sola, sin depender de que alguien conteste el mensaje.`;
   }
 }
@@ -319,6 +344,7 @@ function lineaMontado(h: Hallazgos): string {
   const w = h.web;
   if (w && WEB_NO_ABRE.has(w.estado)) return "Su dirección web hoy no abre.";
   if (w && w.estado === "en_mantenimiento") return "Su página está en mantenimiento.";
+  if (w && w.estado === "desconocida") return "No se pudo leer la web; se mantiene como web existente.";
   if (w && w.estado === "viva") {
     const hechos = hechosDeWeb(w);
     return hechos.length ? `Tiene web: ${hechos.join("; ")}.` : "Tiene web, sin señales claras de reservas, pedidos ni cobro.";
@@ -364,6 +390,8 @@ function webSinSenales(w: HallazgosWeb): boolean {
 export function estadoDeFicha(h: Hallazgos, gancho: string): EstadoFicha {
   const w = h.web && h.web.estado !== "sin_web" && (h.web.estado !== "viva" || !webSinSenales(h.web)) ? h.web : undefined;
   if (w && w.nombreCoincide === false) return "borrador";
+  // No se pudo leer la web: se trata como web existente sin hallazgos, lista para el correo sin gancho de web.
+  if (w && w.estado === "desconocida") return "lista";
   if (gancho.trim() || (w && w.estado === "viva")) return "lista";
   if (w || h.overture) return "borrador";
   return "sin_hallazgos";

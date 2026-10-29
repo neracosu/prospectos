@@ -3,6 +3,7 @@
 // el cuerpo), como la lee pdf.cjs. Aqui se envuelve en un documento completo y se
 // personaliza igual que alla: data-nombre en .documento, que el script de la
 // plantilla reparte a cada [data-hotel].
+import { WEB_NO_ABRE } from "@/lib/ficha-contrato";
 import { esFechaIso, hoyCaracas, sumarDias } from "@/lib/fecha-caracas";
 
 export function nombreSeguro(nombre: string): string {
@@ -83,7 +84,7 @@ export const GANCHOS_SIN_PDF = ["hoteles-estadia"];
 
 // Web caida o vendida segun la ficha: la propuesta va como sin web (no se le dice «ya tiene pagina» a quien no abre).
 export function webUsable(tieneWeb: boolean, estadoFicha?: string): boolean {
-  return tieneWeb && estadoFicha !== "caida" && estadoFicha !== "vendida";
+  return tieneWeb && !WEB_NO_ABRE.has(estadoFicha ?? "");
 }
 
 export const DIAS_VIGENCIA = 30;

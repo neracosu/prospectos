@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import {
   analizarWeb, armarGancho, armarResumen, estadoDeFicha, estadoDeDescarga, enlacesInternos, hallazgosDeBase,
-  depurarUniverso, normalizarCorreo, esWebRedSocial, GANCHO_MAX,
+  depurarUniverso, normalizarCorreo, esWebRedSocial, GANCHO_MAX, WEB_NO_ABRE,
   type Hallazgos, type HallazgosBase, type FilaUniverso,
 } from "@/lib/ficha-contrato";
 
@@ -53,7 +53,7 @@ describe("analizarWeb y armarGancho", () => {
   });
 
   it("estadoDeDescarga cubre caidas, mantenimiento y redes", () => {
-    expect(estadoDeDescarga({ ok: false }, URL)).toBe("caida");
+    expect(estadoDeDescarga({ ok: false, motivo: "No se pudo resolver el dominio" }, URL)).toBe("caida");
     expect(estadoDeDescarga({ ok: true, estado: 503, texto: "x" }, URL)).toBe("caida");
     expect(estadoDeDescarga({ ok: true, estado: 200, texto: "Sitio en mantenimiento" }, URL)).toBe("en_mantenimiento");
     expect(estadoDeDescarga({ ok: true, estado: 200, texto: "<h1>Hola</h1>" }, URL)).toBe("viva");
@@ -195,5 +195,74 @@ describe("correcciones de revision", () => {
       { id: 1, motivo: "correo_generico" }, { id: 2, motivo: "correo_generico" }, { id: 3, motivo: "correo_generico" },
     ]);
     expect(r.cola.map((x) => x.id)).toEqual([4]);
+  });
+});
+
+describe("ola final de la revision", () => {
+  const base = (nota: string, tamano = "") => hallazgosDeBase({ tipo: "", tamano, nota, instagram: "", facebook: "", telefono: "", whatsapp: "" });
+
+  it("variasSedes exige plural o numero >= 2", () => {
+    expect(base("1 sede").variasSedes).toBe(false);
+    expect(base("una sede en el centro").variasSedes).toBe(false);
+    expect(base("comidas locales").variasSedes).toBe(false);
+    expect(base("4 sedes").variasSedes).toBe(true);
+    expect(base("varias sedes").variasSedes).toBe(true);
+    expect(base("", "sucursales en Caracas").variasSedes).toBe(true);
+    expect(base("12 locales").variasSedes).toBe(true);
+  });
+
+  it("hallazgosDeBase toma solo los campos de la base", () => {
+    const p = { id: 7, email: "a@b.test", nicho: { slug: "x" }, ficha: { gancho: "viejo" }, tipo: "t", tamano: "", nota: "n",
+      instagram: "@i", facebook: "", telefono: "1", whatsapp: "2" };
+    expect(hallazgosDeBase(p)).toEqual({ tipo: "t", tamano: "", nota: "n", instagram: "@i", facebook: "", telefono: "1", whatsapp: "2", variasSedes: false });
+  });
+
+  it("estadoDeDescarga por motivo: DNS, conexion y 5xx caida; lo demas desconocida", () => {
+    expect(estadoDeDescarga({ ok: false, motivo: "No se pudo resolver el dominio" }, URL)).toBe("caida");
+    expect(estadoDeDescarga({ ok: false, motivo: "No se pudo conectar" }, URL)).toBe("caida");
+    expect(estadoDeDescarga({ ok: true, estado: 502, texto: "" }, URL)).toBe("caida");
+    for (const motivo of ["Tiempo de espera agotado", "La descarga se cortó", "Certificado inválido", "Demasiadas redirecciones", undefined]) {
+      expect(estadoDeDescarga({ ok: false, motivo }, URL)).toBe("desconocida");
+    }
+  });
+
+  it("web desconocida: sin gancho de web, ficha lista, conWeb intacto, resumen lo dice", () => {
+    const w = analizarWeb("", URL, "Casa Sol", "desconocida");
+    const h: Hallazgos = { web: w, base: vacia };
+    expect(armarGancho(h, "hoteles-estadia")).toBe("");
+    expect(estadoDeFicha(h, "")).toBe("lista");
+    expect(WEB_NO_ABRE.has("desconocida")).toBe(false);
+    expect(WEB_NO_ABRE.has("caida")).toBe(true);
+    expect(armarResumen(h, "hoteles-estadia", "Caracas")).toContain("No se pudo leer la web; se mantiene como web existente.");
+  });
+
+  it("segunda frase de web caida y mantenimiento segun el arquetipo", () => {
+    const caida = analizarWeb("", URL, "Casa Sol", "caida");
+    const mant = analizarWeb("", URL, "Casa Sol", "en_mantenimiento");
+    const pagina = "El sistema trae su propia página, en su dominio, lista para vender y cobrar.";
+    for (const arq of ["hoteles", "hoteles-estadia", "reservas", "comercio-y-tienda"]) {
+      expect(armarGancho({ web: caida, base: vacia }, arq)).toBe(`Vi que su dirección web hoy no abre. ${pagina}`);
+      expect(armarGancho({ web: mant, base: vacia }, arq)).toBe(`Vi que su página está en mantenimiento. ${pagina}`);
+    }
+    for (const arq of ["restaurantes-y-bares", "citas-y-servicios", "cobros-y-pagos"]) {
+      expect(armarGancho({ web: caida, base: vacia }, arq)).toBe("Vi que su dirección web hoy no abre. Lo que le propongo no depende de ella.");
+      expect(armarGancho({ web: mant, base: vacia }, arq)).toBe("Vi que su página está en mantenimiento. Lo que le propongo no depende de ella.");
+    }
+  });
+
+  it("Instagram en citas: version honesta, sin pagina que cobra sola", () => {
+    const solo = hallazgosDeBase({ tipo: "", tamano: "", nota: "", instagram: "@spa", facebook: "", telefono: "", whatsapp: "" });
+    expect(armarGancho({ base: solo }, "citas-y-servicios")).toBe(
+      "Vi que atienden por Instagram (@spa) y la cita se pide por mensaje. Eso es lo primero que el diagnóstico mira: cómo se aparta la hora y cómo se cobra.");
+    expect(armarGancho({ base: solo }, "comercio-y-tienda")).toContain("página propia que vende y cobra sola");
+  });
+
+  it("VERBOS_RESERVA con limites de palabra; solicitar informacion no es reserva", () => {
+    const wa = (texto: string) => analizarWeb(`<title>Casa Sol</title><a href="https://wa.me/58412">${texto}</a>`, URL, "Casa Sol", "viva").reservaPorWhatsApp;
+    expect(wa("Solicitar información")).toBe(false);
+    expect(wa("Solicitar presupuesto")).toBe(false);
+    expect(wa("Capacitación")).toBe(false);
+    expect(wa("Reservas por WhatsApp")).toBe(true);
+    expect(wa("Pide tu cita")).toBe(true);
   });
 });
