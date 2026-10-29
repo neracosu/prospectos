@@ -1,8 +1,10 @@
+import React from "react";
 import Link from "next/link";
 import { exigirRol } from "@/lib/sesion";
 import { PERIODOS, resumenWeb, listarSolicitudes, podarEventosViejos } from "@/lib/web";
 import { BotonAtender } from "@/componentes/BotonAtender";
 import { fechaVisible, hoyCaracas } from "@/lib/fecha-caracas";
+import { clasificarOrigen, respuestasLegibles } from "@/lib/web-contrato";
 
 export const dynamic = "force-dynamic";
 
@@ -39,11 +41,18 @@ export default async function Web({ searchParams }: { searchParams: Promise<{ d?
       {solicitudes.length === 0 && <p className="suave">Todavía no llega ninguna por el formulario.</p>}
       {solicitudes.map((s) => {
         const wa = s.whatsapp.replace(/\D/g, "");
+        const embudo = s.tipo === "embudo";
+        const respuestas = embudo ? respuestasLegibles(s.respuestas) : [];
         return (
           <article key={s.id} className={`tarjeta tarjeta--franja ${s.atendidaEn ? "tarjeta--decidida" : "tarjeta--verde"}`}>
-            <div className="cabecera"><b>{s.nombre}</b><span className="suave">{fechaHora(s.creadaEn)}</span></div>
+            <div className="cabecera">
+              <b>{s.nombre}{embudo && s.calificacion && <> <span className="etiqueta etiqueta--nuevo">{s.calificacion === "demo" ? "Califica para demostración" : "Diagnóstico por escrito"}</span></>}</b>
+              <span className="suave">{fechaHora(s.creadaEn)}</span>
+            </div>
             <dl className="datos">
-              <dt>Proyecto</dt><dd>{s.tipo}</dd>
+              <dt>Proyecto</dt><dd>{embudo ? "Embudo /empezar" : s.tipo}</dd>
+              {embudo && s.origen && <><dt>Llegó desde</dt><dd>{clasificarOrigen(s.origen)}</dd></>}
+              {respuestas.map((r) => <React.Fragment key={r.clave}><dt>{r.clave}</dt><dd>{r.valor}</dd></React.Fragment>)}
               {s.presupuesto && <><dt>Presupuesto</dt><dd>{s.presupuesto}</dd></>}
               {s.pagina && <><dt>Desde</dt><dd>{s.pagina}</dd></>}
             </dl>
@@ -70,6 +79,16 @@ export default async function Web({ searchParams }: { searchParams: Promise<{ d?
       <section className="tarjeta">
         <h3 className="web-sub">Del clic a la solicitud</h3>
         <Barras filas={r.embudo.map((p) => ({ nombre: p.paso, n: p.personas, de: r.personas }))} />
+      </section>
+
+      <section className="tarjeta">
+        <h3 className="web-sub">Embudo de /empezar</h3>
+        {r.empezar.personas === 0 ? <p className="suave">Nadie ha abierto /empezar en este periodo.</p> : (<>
+          <p className="suave">De {r.empezar.personas} que la abrieron.</p>
+          <Barras filas={r.empezar.pasos.map((p) => ({ nombre: p.nombre, n: p.personas, de: r.empezar.personas }))} />
+          <h4 className="web-sub">Por dónde llegaron</h4>
+          <Barras filas={r.empezar.origenes.map((o) => ({ nombre: `${o.nombre} · ${o.enviaron} dejaron datos`, n: o.personas, de: r.empezar.personas }))} />
+        </>)}
       </section>
 
       <section className="tarjeta">
