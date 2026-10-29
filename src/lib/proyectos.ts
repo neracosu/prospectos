@@ -1,6 +1,7 @@
 import { sumarDias } from "@/lib/fecha-caracas";
 // src/lib/proyectos.ts — consultas de pantalla de proyectos.
 import { prisma } from "@/lib/db";
+import type { Prisma } from "@prisma/client";
 import { estadoCobro, cifrasDelMes, mesDe, type Concepto, type EstadoCobro } from "@/lib/cobros-contrato";
 import { semaforo, porcentajeAvance, type EstadoProyecto, type Semaforo } from "@/lib/proyectos-contrato";
 import { compararSemver, type TipoCambio } from "@/lib/semver-contrato";
@@ -8,7 +9,17 @@ import { redondear2 } from "@/lib/dinero";
 import type { ClienteFila } from "@/lib/clientes";
 
 export type ProyectoResumen = { id: number; nombre: string; clienteId: number; clienteNombre: string; estado: EstadoProyecto; versionActual: string; semaforo: Semaforo; avance: number | null };
-export type CobroFila = { id: number; concepto: Concepto; detalle: string; monto: number; vence: string; estado: EstadoCobro; pagadoEn: Date | null; canal: string; referencia: string; nota: string; anuladoMotivo: string; recordadoHoy: boolean; reciboNumero: string; notaAnulacion: boolean; avisado: boolean };
+// Desde la fase 3 cada fila sabe de que proyecto es: /cobros las lista todas juntas.
+export type CobroFila = { id: number; proyectoId: number; proyectoNombre: string; concepto: Concepto; detalle: string; monto: number; vence: string; estado: EstadoCobro; pagadoEn: Date | null; canal: string; referencia: string; nota: string; anuladoMotivo: string; recordadoHoy: boolean; reciboNumero: string; notaAnulacion: boolean; avisado: boolean };
+
+type CobroCrudo = { id: number; proyectoId: number; concepto: string; detalle: string; monto: Prisma.Decimal; vence: string; pagadoEn: Date | null; anuladoEn: Date | null; canal: string; referencia: string; nota: string; anuladoMotivo: string; reciboNumero: string; notaAnulacionEn: Date | null; avisadoEn: Date | null };
+export function aCobroFila(c: CobroCrudo, hoy: string, recordadosHoy: Set<number | null>, proyectoNombre: string): CobroFila {
+  return {
+    id: c.id, proyectoId: c.proyectoId, proyectoNombre, concepto: c.concepto as Concepto, detalle: c.detalle, monto: Number(c.monto), vence: c.vence, estado: estadoCobro(c, hoy), pagadoEn: c.pagadoEn,
+    canal: c.canal, referencia: c.referencia, nota: c.nota, anuladoMotivo: c.anuladoMotivo, recordadoHoy: recordadosHoy.has(c.id),
+    reciboNumero: c.reciboNumero, notaAnulacion: c.notaAnulacionEn !== null, avisado: c.avisadoEn !== null,
+  };
+}
 export type PendienteFila = { id: number; texto: string; hecho: boolean; visibleCliente: boolean; orden: number; fechaEstimada: string | null; avisado: boolean };
 export type HorasFila = { id: number; fecha: string; horas: number; descripcion: string; usuarioNombre: string };
 export type VersionFila = { id: number; version: string; fecha: string; avisadoEn: Date | null; cambios: { id: number; tipo: TipoCambio; texto: string }[] };
@@ -86,11 +97,7 @@ export async function fichaProyecto(id: number, hoy: string): Promise<ProyectoFi
   if (!p) return null;
   const desde = new Date(`${hoy}T00:00:00-04:00`);
   const recordadosHoy = new Set((await prisma.evento.findMany({ where: { proyectoId: id, tipo: "recordatorio", creadoEn: { gte: desde } }, select: { cobroId: true } })).map((e) => e.cobroId));
-  const cobros: CobroFila[] = p.cobros.map((c) => ({
-    id: c.id, concepto: c.concepto as Concepto, detalle: c.detalle, monto: Number(c.monto), vence: c.vence, estado: estadoCobro(c, hoy), pagadoEn: c.pagadoEn,
-    canal: c.canal, referencia: c.referencia, nota: c.nota, anuladoMotivo: c.anuladoMotivo, recordadoHoy: recordadosHoy.has(c.id),
-    reciboNumero: c.reciboNumero, notaAnulacion: c.notaAnulacionEn !== null, avisado: c.avisadoEn !== null,
-  }));
+  const cobros: CobroFila[] = p.cobros.map((c) => aCobroFila(c, hoy, recordadosHoy, p.nombre));
   const versiones: VersionFila[] = [...p.versiones].sort((a, b) => compararSemver(b.version, a.version)).map((v) => ({ id: v.id, version: v.version, fecha: v.fecha, avisadoEn: v.avisadoEn, cambios: v.cambios.map((c) => ({ id: c.id, tipo: c.tipo as TipoCambio, texto: c.texto })) }));
   const { _count, ...cl } = p.cliente;
   return {

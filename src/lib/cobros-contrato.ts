@@ -97,3 +97,34 @@ export function mensualidadesQueTocan(
   }
   return salida;
 }
+
+// Seccion /cobros (panel CRM, fase 3): los cobros de todos los proyectos, por filtro.
+export const FILTROS_COBROS = ["pendientes", "vencidos", "mes", "pagados"] as const;
+export type FiltroCobros = (typeof FILTROS_COBROS)[number];
+export const ETIQUETA_FILTRO_COBROS: Record<FiltroCobros, string> = { pendientes: "Pendientes", vencidos: "Vencidos", mes: "Este mes", pagados: "Pagados" };
+export function esFiltroCobros(s: string): s is FiltroCobros {
+  return (FILTROS_COBROS as readonly string[]).includes(s);
+}
+
+// pendientes: sin pagar ni anular, de cualquier fecha. vencidos: pendientes con vence < hoy. mes: pendientes del mes
+// de hoy, vencidos incluidos (es lo que falta por entrar este mes). pagados: con pago y sin anular.
+export function filtrarCobros<T extends { vence: string; pagadoEn: Date | null; anuladoEn: Date | null }>(cobros: T[], filtro: FiltroCobros, hoy: string): T[] {
+  const mes = mesDe(hoy);
+  return cobros.filter((c) => {
+    if (c.anuladoEn) return false;
+    if (filtro === "pagados") return c.pagadoEn !== null;
+    if (c.pagadoEn) return false;
+    if (filtro === "vencidos") return c.vence < hoy;
+    if (filtro === "mes") return c.vence < hoy || mesDe(c.vence) === mes;
+    return true;
+  });
+}
+
+// Vencidos primero y luego por fecha de vencimiento; los pagados del mas reciente al mas viejo.
+export function ordenarCobros<T extends { vence: string; estado: EstadoCobro }>(cobros: T[]): T[] {
+  return [...cobros].sort((a, b) => {
+    if (a.estado === "pagado" && b.estado === "pagado") return b.vence.localeCompare(a.vence);
+    const va = a.estado === "vencido" ? 0 : 1, vb = b.estado === "vencido" ? 0 : 1;
+    return va - vb || a.vence.localeCompare(b.vence);
+  });
+}

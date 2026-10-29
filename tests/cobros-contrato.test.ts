@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { estadoCobro, cifrasDelMes, generarCuotas, mesDe, venceMensualidad, mensualidadesQueTocan } from "@/lib/cobros-contrato";
+import { estadoCobro, cifrasDelMes, generarCuotas, mesDe, venceMensualidad, mensualidadesQueTocan, filtrarCobros, ordenarCobros, esFiltroCobros } from "@/lib/cobros-contrato";
 
 const hoy = "2026-09-16";
 const base = { pagadoEn: null as Date | null, anuladoEn: null as Date | null };
@@ -84,4 +84,25 @@ describe("mensualidades", () => {
     ]);
     expect(mensualidadesQueTocan(p, "2026-11-03", ["2026-10"])).toEqual([{ mes: "2026-11", vence: "2026-11-05" }]);
   });
+});
+
+describe("filtrarCobros y ordenarCobros (fase 3)", () => {
+  const hoy = "2026-10-30";
+  const c = (vence: string, extra: Partial<{ pagadoEn: Date | null; anuladoEn: Date | null }> = {}) => ({ vence, pagadoEn: null, anuladoEn: null, ...extra });
+  const vencido = c("2026-10-20"), esteMes = c("2026-10-31"), proximo = c("2026-11-05");
+  const pagado = c("2026-10-01", { pagadoEn: new Date("2026-10-02T12:00:00-04:00") });
+  const anulado = c("2026-10-10", { anuladoEn: new Date() });
+  const anuladoPagado = c("2026-10-10", { pagadoEn: new Date(), anuladoEn: new Date() });
+  const todos = [vencido, esteMes, proximo, pagado, anulado, anuladoPagado];
+  it("pendientes = sin pagar ni anular, de cualquier fecha", () => expect(filtrarCobros(todos, "pendientes", hoy)).toEqual([vencido, esteMes, proximo]));
+  it("vencidos = pendientes con vence < hoy", () => expect(filtrarCobros(todos, "vencidos", hoy)).toEqual([vencido]));
+  it("mes = pendientes que vencen en el mes de hoy, vencidos incluidos", () => expect(filtrarCobros(todos, "mes", hoy)).toEqual([vencido, esteMes]));
+  it("pagados = con pagadoEn y sin anular", () => expect(filtrarCobros(todos, "pagados", hoy)).toEqual([pagado]));
+  it("ordenarCobros: vencidos primero y luego por fecha; pagados del mas reciente al mas viejo", () => {
+    const filas = [{ vence: "2026-11-05", estado: "por_vencer" as const }, { vence: "2026-10-20", estado: "vencido" as const }, { vence: "2026-10-31", estado: "pendiente" as const }];
+    expect(ordenarCobros(filas).map((f) => f.vence)).toEqual(["2026-10-20", "2026-10-31", "2026-11-05"]);
+    const pagados = [{ vence: "2026-09-05", estado: "pagado" as const }, { vence: "2026-10-05", estado: "pagado" as const }];
+    expect(ordenarCobros(pagados).map((f) => f.vence)).toEqual(["2026-10-05", "2026-09-05"]);
+  });
+  it("esFiltroCobros acepta solo los cuatro", () => { expect(esFiltroCobros("mes")).toBe(true); expect(esFiltroCobros("todo")).toBe(false); });
 });

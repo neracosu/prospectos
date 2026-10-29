@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import type { CobroFila, PendienteFila } from "@/lib/proyectos";
 import { aplicarCambioCobro, aplicarCambioPendiente, aplicarDecision } from "@/lib/optimista-contrato";
 
-const cobro = (id: number, extra: Partial<CobroFila> = {}): CobroFila => ({ id, concepto: "mensualidad", detalle: "Mensualidad de septiembre 2026", monto: 100, vence: "2026-09-05", estado: "vencido", pagadoEn: null, canal: "", referencia: "", nota: "", anuladoMotivo: "", recordadoHoy: false, reciboNumero: "", notaAnulacion: false, avisado: false, ...extra });
+const cobro = (id: number, extra: Partial<CobroFila> = {}): CobroFila => ({ id, proyectoId: 1, proyectoNombre: "PMS", concepto: "mensualidad", detalle: "Mensualidad de septiembre 2026", monto: 100, vence: "2026-09-05", estado: "vencido", pagadoEn: null, canal: "", referencia: "", nota: "", anuladoMotivo: "", recordadoHoy: false, reciboNumero: "", notaAnulacion: false, avisado: false, ...extra });
 const pend = (id: number, extra: Partial<PendienteFila> = {}): PendienteFila => ({ id, texto: `Pendiente ${id}`, hecho: false, visibleCliente: true, orden: id, fechaEstimada: null, avisado: false, ...extra });
 
 describe("aplicarCambioCobro", () => {
