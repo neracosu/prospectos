@@ -1,9 +1,11 @@
 import { timingSafeEqual } from "node:crypto";
 import { enviarAutomatico } from "@/lib/correos";
 
-// POST /api/correos/automatico — la llama el crontab de la cuenta cada hora en horario laboral. Sin el secreto
+// POST /api/correos/automatico — la llama el crontab de la cuenta cada hora, todos los dias.
+// El servidor esta en hora de Los Angeles; la ventana la decide el codigo en hora de Caracas (fuera de ella responde
+// fuera_de_horario y no cuesta nada). Sin el secreto
 // correcto responde 404 sin cuerpo (no revela que la ruta existe). Linea del crontab (no se instala desde el codigo):
-// 0 9-17 * * 1-5 bash -c 'set -a; . ~/.config/prospectos/env; set +a; curl -s -o /dev/null -X POST -H "x-cron-secret: $PROSPECTOS_CRON_SECRET" https://prospectos.neracosu.com/api/correos/automatico'
+// 0 * * * * bash -c 'set -a; . ~/.config/prospectos/env; set +a; curl -s -o /dev/null -X POST -H "x-cron-secret: $PROSPECTOS_CRON_SECRET" https://prospectos.neracosu.com/api/correos/automatico'
 export const dynamic = "force-dynamic";
 
 function secretoValido(recibido: string | null): boolean {

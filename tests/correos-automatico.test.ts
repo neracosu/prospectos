@@ -62,6 +62,7 @@ describe.runIf(DB_HABILITADA)("enviarAutomatico y su ruta", () => {
     const r = await enviarAutomatico(LUNES_MEDIODIA);
     expect(r).toMatchObject({ enviados: 4, delDia: 4, tope: 25, motivo: "ok" });
     expect(salidos).toHaveLength(4);
+    expect(await prisma.envioCorreo.count()).toBe(4);
     for (const q of [a, b, c, d]) expect(await prisma.envioCorreo.count({ where: { prospectoId: q.id } })).toBe(1);
     expect(await prisma.envioCorreo.count({ where: { prospectoId: e.id } })).toBe(0);
     // 24 de 25 ya salidos hoy: solo cabe uno mas
@@ -74,6 +75,14 @@ describe.runIf(DB_HABILITADA)("enviarAutomatico y su ruta", () => {
     expect(r3).toMatchObject({ enviados: 0, motivo: "tope" });
     expect(await prisma.envioCorreo.count()).toBe(25);
     void f1; void f2;
+  });
+
+  it("con el transporte caido la pasada hace como mucho 2 intentos y devuelve fallos", async () => {
+    for (let i = 0; i < 10; i++) await nuevo();
+    _transporteParaTests({ sendMail: async () => { throw new Error("smtp caido"); } });
+    const r = await enviarAutomatico(LUNES_MEDIODIA);
+    expect(r).toMatchObject({ enviados: 0, motivo: "fallos" });
+    expect(await prisma.envioCorreo.count()).toBeLessThanOrEqual(2);
   });
 
   it("apagado o fuera de horario: 0 enviados con su motivo", async () => {

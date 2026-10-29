@@ -275,7 +275,7 @@ export async function enviarA(prospectoId: number, tipo: "inicial" | "seguimient
   return exito({ token: prep.token });
 }
 
-export type ResultadoAutomatico = { enviados: number; delDia: number; tope: number; motivo: "apagado" | "fuera_de_horario" | "tope" | "sin_cola" | "ok" };
+export type ResultadoAutomatico = { enviados: number; delDia: number; tope: number; motivo: "apagado" | "fuera_de_horario" | "tope" | "sin_cola" | "fallos" | "ok" };
 
 // Una pasada del cron: manda un lote chico de la cola "listas" que Neri dejo al automatico. El tope se aplica dentro del
 // candado de enviarA, asi que ni dos pasadas solapadas ni un clic a mano lo pasan.
@@ -293,12 +293,17 @@ export async function enviarAutomatico(ahora: Date = new Date()): Promise<Result
     const cola = (await colaCorreo(hoy, { estado: "listas" })).filter((f) => f.alAutomatico && !f.nombreNoCoincide && !f.bloqueado && (f.estadoFicha === "lista" || f.estadoFicha === "revisada"));
     if (cola.length === 0) motivo = "sin_cola";
     const lote = tamanoLote(tope);
+    let intentos = 0, seguidos = 0;
     for (const f of cola) {
-      if (enviados >= lote) break;
+      if (intentos >= lote) break;
       if (await enviadosHoy(hoy) >= tope) { motivo = "tope"; break; }
-      const r = await enviarA(f.prospectoId, "inicial", null, { tope });
-      if (r.ok) enviados++;
-      else if (r.mensaje.startsWith("Hoy ya salieron")) { motivo = "tope"; break; }
+      intentos++;
+      let r: Awaited<ReturnType<typeof enviarA>>;
+      try { r = await enviarA(f.prospectoId, "inicial", null, { tope }); }
+      catch (e) { console.error("[correos]", f.prospectoId, e); r = { ok: false, mensaje: "excepcion" }; }
+      if (r.ok) { enviados++; seguidos = 0; continue; }
+      if (r.mensaje.startsWith("Hoy ya salieron")) { motivo = "tope"; break; }
+      if (++seguidos >= 2) { motivo = "fallos"; break; }
     }
     delDia = await enviadosHoy(hoy);
   }
