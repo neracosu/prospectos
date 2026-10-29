@@ -361,3 +361,15 @@ button, input, select, textarea { font: inherit; }
   .filtros .campo { margin: 0; }
   .filtros .fila-botones { margin: 0 0 4px; }
 }
+
+/* Ficha del lead (fase 2): una columna en el telefono (historial plegado), dos en escritorio (historial a la derecha) */
+.ficha__historial { display: none; }
+.ficha__grilla { display: grid; gap: 0 12px; }
+.siguiente-paso .fila-botones { margin-top: 4px; }
+@media (min-width: 1024px) {
+  .ficha { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 24px; align-items: start; }
+  .historial-plegado { display: none; }
+  .ficha__historial { display: block; position: sticky; top: 72px; background: var(--panel); border: 1px solid var(--borde); border-radius: var(--radio); padding: 14px; max-height: calc(100vh - 100px); overflow-y: auto; }
+  .ficha__historial h2 { margin: 0 0 8px; font-size: 15px; }
+  .ficha__grilla { grid-template-columns: 1fr 1fr; }
+}

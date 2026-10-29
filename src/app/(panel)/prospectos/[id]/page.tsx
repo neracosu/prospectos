@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { exigirSesion } from "@/lib/sesion";
 import { fichaProspecto } from "@/lib/prospectos";
 import { ETIQUETA_CANAL, type Canal } from "@/lib/canales-contrato";
@@ -16,6 +16,8 @@ export default async function Ficha({ params }: { params: Promise<{ id: string }
   const id = Number((await params).id);
   const p = Number.isInteger(id) ? await fichaProspecto(id) : null;
   if (!p) notFound();
+  // Un lead tiene su propia ficha (fase 2); aqui queda la fila del directorio con las acciones de la cola.
+  if (p.esLead) redirect(`/leads/${id}`);
   // [etiqueta, enlace, campo]: el campo es el que guarda fuentesPorCampo, para
   // poder mostrar al lado de cada dato donde lo publica el negocio.
   const contacto: [string, string, string][] = [
@@ -26,6 +28,7 @@ export default async function Ficha({ params }: { params: Promise<{ id: string }
   ];
   return (
     <>
+      <p className="suave" style={{ margin: 0 }}>Directorio</p>
       <h1 className="titulo">{p.nombre} <Etapa etapa={p.etapa} /></h1>
       <p className="suave">{p.ciudad} · {p.nichoNombre}{p.tipo ? ` · ${p.tipo}` : ""}{p.tamano ? ` · ${p.tamano}` : ""}</p>
       <section className="tarjeta">

@@ -14,6 +14,7 @@ import { listaDeTextos, mapaDeTextos } from "@/lib/revision";
 const SELECT = {
   id: true, nombre: true, ciudad: true, nota: true, web: true, tipo: true, tamano: true, etapa: true, proximoSeguimiento: true, codigo: true,
   whatsapp: true, telefono: true, email: true, instagram: true, facebook: true, tiktok: true, ordenCola: true,
+  nichoId: true, esLead: true, fuenteLead: true, valorEstimado: true, proximoPaso: true, propuestaUrl: true,
   nicho: { select: { nombre: true, slug: true, mensajeInicial: true, mensajeSeguimiento: true, plantillaPropuesta: true } },
 } as const;
 
@@ -97,7 +98,7 @@ export type EventoFila = { id: number; tipo: string; de: string; a: string; cana
 
 export async function fichaProspecto(
   id: number,
-): Promise<(ProspectoTarjeta & { fuentes: string[]; fuentesPorCampo: Record<string, string>; historial: EventoFila[] }) | null> {
+): Promise<(ProspectoTarjeta & { fuentes: string[]; fuentesPorCampo: Record<string, string>; historial: EventoFila[]; nichoId: number; esLead: boolean; fuenteLead: string; valorEstimado: number | null; proximoPaso: string; propuestaUrl: string }) | null> {
   const f = await prisma.prospecto.findUnique({ where: { id }, select: { ...SELECT, fuentes: true, fuentesPorCampo: true } });
   if (!f) return null;
   const eventos = await prisma.evento.findMany({ where: { prospectoId: id }, orderBy: { creadoEn: "desc" }, take: 200, include: { usuario: { select: { nombre: true } } } });
@@ -105,6 +106,8 @@ export async function fichaProspecto(
   const t = aTarjeta(f, ab.has(id), f.etapa === "por_contactar" ? "inicial" : "seguimiento");
   return {
     ...t, fuentes: listaDeTextos(f.fuentes),
+    // Campos de lead (fase 2)
+    nichoId: f.nichoId, esLead: f.esLead, fuenteLead: f.fuenteLead, valorEstimado: f.valorEstimado === null ? null : Number(f.valorEstimado), proximoPaso: f.proximoPaso, propuestaUrl: f.propuestaUrl,
     // Se lee con guarda: la columna es Json y puede traer cualquier cosa de una
     // carga vieja. Sin fuente, el dato se muestra sin enlace, no con uno roto.
     fuentesPorCampo: mapaDeTextos(f.fuentesPorCampo),
