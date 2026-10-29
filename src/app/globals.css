@@ -331,7 +331,8 @@ button, input, select, textarea { font: inherit; }
 .tablero[data-activa="descartado"] .tablero__columna[data-etapa="descartado"] { display: block; }
 .tablero__titulo { display: none; }
 .tablero__vacio { padding: 12px 0; }
-.lead { background: var(--panel); border: 1px solid var(--borde); border-radius: var(--radio); padding: 12px; margin-bottom: 10px; display: grid; gap: 6px; }
+.lead { background: var(--panel); border: 1px solid var(--borde); border-radius: var(--radio); padding: 12px; margin-bottom: 10px; display: grid; gap: 6px; min-width: 0; }
+.lead > * { min-width: 0; }
 .lead--vencido { box-shadow: inset 3px 0 0 var(--rojo); }
 .lead--hoy { box-shadow: inset 3px 0 0 var(--ambar); }
 .lead__cabecera { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
@@ -354,5 +355,9 @@ button, input, select, textarea { font: inherit; }
   /* la pagina no se desplaza por el tablero: cada columna se desplaza por dentro */
   .tablero__lista { padding: 10px; max-height: calc(100vh - 360px); overflow-y: auto; }
   .lead { padding: 10px; }
-  .lead__acciones .boton.mini { min-height: 36px; }
+  .lead__acciones .boton.mini { min-height: 36px; padding: 0 10px; font-size: 13px; }
+  /* filtros en una fila: no empujan el tablero */
+  .filtros { display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 12px; align-items: end; }
+  .filtros .campo { margin: 0; }
+  .filtros .fila-botones { margin: 0 0 4px; }
 }

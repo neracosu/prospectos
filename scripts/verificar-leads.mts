@@ -72,9 +72,9 @@ try {
     revisar((await pg.locator(".tablero__columna:visible").count()) === 5, `1280: cinco columnas visibles (${await pg.locator(".tablero__columna:visible").count()})`);
     const conv = pg.locator('.tablero__columna[data-etapa="respondio"]');
     revisar((await conv.locator(".lead").count()) === 30, `1280: Conversando con 30 leads (${await conv.locator(".lead").count()})`);
-    const scroll = await conv.locator(".tablero__lista").evaluate((e) => ({ sh: e.scrollHeight, ch: e.clientHeight, pagina: document.documentElement.scrollHeight <= innerHeight + 2 }));
+    const scroll = await conv.locator(".tablero__lista").evaluate((e) => ({ sh: e.scrollHeight, ch: e.clientHeight, dsh: document.documentElement.scrollHeight, ih: innerHeight, pie: Math.round((document.querySelector(".tablero + p") as HTMLElement).getBoundingClientRect().bottom), tab: Math.round(document.querySelector(".tablero")!.getBoundingClientRect().bottom) }));
     revisar(scroll.sh > scroll.ch, `1280: la columna llena se desplaza por dentro (${scroll.sh} > ${scroll.ch})`);
-    revisar(scroll.pagina, "1280: la pagina no se desplaza por el tablero");
+    revisar(scroll.dsh <= scroll.ih + 2, `1280: la pagina no se desplaza por el tablero (pagina ${scroll.dsh} vs visor ${scroll.ih}; tablero hasta ${scroll.tab}, pie hasta ${scroll.pie})`);
     revisar((await pg.locator('.tablero__columna[data-etapa="reunion"] .tablero__vacio').count()) === 1, "1280: la columna vacia dice «Nada aquí.»");
     revisar((await conv.locator(".tablero__titulo").innerText()).includes("$3.000,00") || (await conv.locator(".tablero__titulo").innerText()).includes("$3,000.00"), `1280: total de valor por columna (${(await conv.locator(".tablero__titulo").innerText()).replace(/\n/g, " ")})`);
     revisar((await conv.locator(".lead").first().innerText()).includes("Lead 00"), "1280: dentro de la columna, el mas vencido primero");
