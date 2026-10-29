@@ -13,6 +13,7 @@ import { DB_HABILITADA, limpiarBase, sembrarBasico, crearProspectoDePrueba } fro
 import { _transporteParaTests } from "@/lib/correo-envio";
 import { prepararEnvio, enviarA, colaCorreo, cifrasCorreo, enviadosHoy } from "@/lib/correos";
 import { hoyCaracas, sumarDias } from "@/lib/fecha-caracas";
+import { seguimientosQueTocan } from "@/lib/prospectos";
 
 type Enviado = Record<string, unknown>;
 
@@ -152,5 +153,57 @@ describe.runIf(DB_HABILITADA)("correos: preparar, enviar a mano, cola y cifras",
     expect(total).toEqual({ enviados: 3, abrieron: 2, vieron: 1, descargaron: 1, respondieron: 1 });
     expect(porArquetipo["comercio-y-tienda"]).toEqual({ enviados: 2, abrieron: 2, vieron: 1, descargaron: 1, respondieron: 1 });
     expect(porArquetipo["citas-y-servicios"]).toEqual({ enviados: 1, abrieron: 0, vieron: 0, descargaron: 0, respondieron: 0 });
+  });
+
+  it("un correo enviado no asciende a lead y el seguimiento sale de la cola de WhatsApp", async () => {
+    const p = await nuevo();
+    await prisma.prospecto.update({ where: { id: p.id }, data: { fuenteLead: "" } });
+    expect((await enviarA(p.id, "inicial", null)).ok).toBe(true);
+    const d = await prisma.prospecto.findUniqueOrThrow({ where: { id: p.id } });
+    expect(d.esLead).toBe(false);
+    expect(d.fuenteLead).toBe("");
+    await prisma.prospecto.update({ where: { id: p.id }, data: { proximoSeguimiento: hoy } });
+    expect((await seguimientosQueTocan(hoy)).map((x) => x.id)).not.toContain(p.id);
+  });
+
+  it("descartado, respondio, con envio previo por otro canal y correos del Estado o genericos no salen ni se mandan", async () => {
+    const desc = await nuevo({ etapa: "descartado" });
+    const resp = await nuevo({ etapa: "respondio" });
+    const gob = await nuevo({ email: "alcaldia@ejemplo.gob.ve" });
+    const noreply = await nuevo({ email: "noreply@ejemplo.test" });
+    const previo = await nuevo({});
+    await prisma.evento.create({ data: { prospectoId: previo.id, tipo: "enviado", canal: "whatsapp" } });
+    const listas = (await colaCorreo(hoy, { estado: "listas" })).map((f) => f.prospectoId);
+    for (const x of [desc, resp, gob, noreply, previo]) {
+      expect(listas).not.toContain(x.id);
+      expect((await enviarA(x.id, "inicial", null)).ok).toBe(false);
+    }
+    expect(salidos).toHaveLength(0);
+  });
+
+  it("dos filas con el mismo correo: la segunda se rechaza", async () => {
+    const a = await nuevo({ email: "Dup@Ejemplo.test" });
+    const b = await nuevo({ email: "dup@ejemplo.test" });
+    expect((await enviarA(a.id, "inicial", null)).ok).toBe(true);
+    expect((await enviarA(b.id, "inicial", null)).ok).toBe(false);
+    expect(salidos).toHaveLength(1);
+  });
+
+  it("dos enviarA en paralelo al mismo prospecto mandan un solo correo; y el tope se respeta en paralelo", async () => {
+    const p = await nuevo();
+    const rs = await Promise.all([enviarA(p.id, "inicial", null), enviarA(p.id, "inicial", null)]);
+    expect(rs.filter((r) => r.ok)).toHaveLength(1);
+    expect(salidos).toHaveLength(1);
+    expect(await prisma.envioCorreo.count({ where: { prospectoId: p.id, fallo: "" } })).toBe(1);
+    const [x, y, z] = [await nuevo(), await nuevo(), await nuevo()];
+    const r3 = await Promise.all([x, y, z].map((q) => enviarA(q.id, "inicial", null, { tope: 2 })));  // el primero ya conto 1
+    expect(r3.filter((r) => r.ok)).toHaveLength(1);
+  });
+
+  it("dondeCorreo: web sin fuente del correo es directorio publico", async () => {
+    const p = await nuevo({ web: "https://hotelx.test" });
+    const r = await prepararEnvio(p.id, "inicial");
+    if ("error" in r) throw new Error(r.error);
+    expect(r.datos.dondeCorreo).toBe("un directorio público");
   });
 });

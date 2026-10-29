@@ -7,9 +7,8 @@ import { exigirRol } from "@/lib/sesion";
 import { permitirIntento } from "@/lib/rate-limit";
 import { GANCHO_MAX, normalizarCorreo, type EstadoFicha } from "@/lib/ficha-contrato";
 import { guardarFicha, investigarProspecto, marcarAlAutomatico } from "@/lib/fichas";
-import { enviarA, enviadosHoy } from "@/lib/correos";
+import { enviarA } from "@/lib/correos";
 import { leerCorreosPorDia } from "@/lib/configuracion";
-import { hoyCaracas } from "@/lib/fecha-caracas";
 import { fallo, exito, type Resultado } from "@/acciones/resultado";
 
 // exigirRol() va FUERA del try/catch (redirige lanzando). Cada funcion exportada
@@ -104,9 +103,7 @@ export async function enviarPropuestaCorreo(prospectoId: number, reenviar = fals
   if (!eId.success || typeof reenviar !== "boolean") return fallo("Ese prospecto no existe.");
   try {
     const tope = await leerCorreosPorDia();
-    const n = await enviadosHoy(hoyCaracas());
-    if (n >= tope) return fallo(`Hoy ya salieron ${n} de ${tope}. Suba el tope en Ajustes o espere a mañana.`);
-    const r = await enviarA(eId.data, "inicial", u.id, { reenviar });
+    const r = await enviarA(eId.data, "inicial", u.id, { reenviar, tope });
     if (r.ok) refrescar(eId.data);
     return r;
   } catch (err) {

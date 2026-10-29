@@ -5,7 +5,7 @@ import { generarCodigo, CODIGO_VALIDO } from "@/lib/codigo";
 import { DEL_DIRECTORIO } from "@/lib/prospectos";
 import { paisDeCiudad } from "@/lib/overpass-contrato";
 import { hoyCaracas, sumarDias } from "@/lib/fecha-caracas";
-import { normalizarCorreo, type EstadoFicha } from "@/lib/ficha-contrato";
+import { normalizarCorreo, motivoDeCorreo, type EstadoFicha } from "@/lib/ficha-contrato";
 import { leerFicha } from "@/lib/fichas";
 import { leerPlantillaPara, generarPdf, hashDe, fechaDePropuesta } from "@/lib/propuesta";
 import { renderPropuesta, webUsable } from "@/lib/propuesta-contrato";
@@ -87,7 +87,8 @@ export async function colaCorreo(hoy: string, filtro: FiltroCola = {}): Promise<
   const ve = ps.filter((p) => paisDeCiudad(p.ciudad) === "VE");
   const bloq = await prisma.correoBloqueado.findMany({ where: { email: { in: ve.map((p) => normalizarCorreo(p.email)) } }, select: { email: true, motivo: true } });
   const motivos = new Map(bloq.map((b) => [b.email, b.motivo]));
-  const filas = ve.map((p): FilaCola => {
+  const conEnviado = new Set((await prisma.evento.findMany({ where: { tipo: "enviado", prospectoId: { in: ve.map((p) => p.id) } }, select: { prospectoId: true }, distinct: ["prospectoId"] })).map((e) => e.prospectoId));
+  const filas = ve.map((p): FilaCola & { yaSeEnvio: boolean } => {
     const ficha = p.ficha!;
     const hallazgos = (ficha.hallazgos ?? {}) as { web?: { nombreCoincide?: boolean } };
     const ultimo = p.envios[p.envios.length - 1] ?? null;
@@ -100,14 +101,15 @@ export async function colaCorreo(hoy: string, filtro: FiltroCola = {}): Promise<
       email: p.email, estadoFicha: ficha.estado as EstadoFicha, gancho: ficha.gancho, alAutomatico: ficha.alAutomatico,
       nombreNoCoincide: hallazgos.web?.nombreCoincide === false, bloqueado: motivos.get(normalizarCorreo(p.email)) ?? "", etapa: p.etapa,
       envio: ultimo && { id: ultimo.id, tipo: ultimo.tipo, enviadoEn: ultimo.enviadoEn, abiertoEn: ultimo.abiertoEn, clicEn: ultimo.clicEn, pdfEn: ultimo.pdfEn, fallo: ultimo.fallo },
+      yaSeEnvio: conEnviado.has(p.id),
       tocaSeguimiento: hayInicial && !haySeguimiento && sinTocar && p.etapa === "enviado" && !!p.proximoSeguimiento && p.proximoSeguimiento <= hoy,
     };
   });
   const conExito = new Set(ps.filter((p) => p.envios.some((e) => e.fallo === "")).map((p) => p.id));
-  const sirve = (f: FilaCola): boolean => {
+  const sirve = (f: FilaCola & { yaSeEnvio?: boolean }): boolean => {
     const enviada = conExito.has(f.prospectoId);
     switch (filtro.estado) {
-      case "listas": return !enviada && !f.bloqueado && !(f.envio && f.envio.fallo !== "");
+      case "listas": return !enviada && !f.bloqueado && !(f.envio && f.envio.fallo !== "") && f.etapa === "por_contactar" && !f.yaSeEnvio && !motivoDeCorreo(normalizarCorreo(f.email), f.ciudad, paisDeCiudad);
       case "enviadas": return enviada;
       case "seguimiento": return f.tocaSeguimiento;
       case "bloqueadas": return !!f.bloqueado;
@@ -115,7 +117,7 @@ export async function colaCorreo(hoy: string, filtro: FiltroCola = {}): Promise<
       default: return true;
     }
   };
-  return filas.filter(sirve).sort((a, b) =>
+  return filas.filter(sirve).map(({ yaSeEnvio: _ya, ...f }) => f).sort((a, b) =>
     Number(!!b.gancho) - Number(!!a.gancho) || rangoArquetipo(a.arquetipo) - rangoArquetipo(b.arquetipo) || a.prospectoId - b.prospectoId);
 }
 
@@ -153,7 +155,32 @@ function hostDe(url: string): string {
 
 type Preparado = { datos: DatosCorreo; correo: ReturnType<typeof armarCorreoPropuesta>; pdf: { ruta: string; nombre: string } | null; token: string };
 
-export async function prepararEnvio(prospectoId: number, tipo: "inicial" | "seguimiento"): Promise<Preparado | { error: string }> {
+type Reserva = { reenviar?: boolean; tope?: number };
+
+// Reserva el envio (fila con fallo "") dentro de una transaccion que serializa con un candado de fila: asi el segundo
+// clic o el automatico encuentran la fila en curso y el tope diario no se pasa.
+async function reservar(d: { prospectoId: number; tipo: "inicial" | "seguimiento"; asunto: string; para: string }, o: Reserva, hoy: string): Promise<{ token: string } | { error: string }> {
+  await prisma.configuracion.upsert({ where: { clave: "candado_correos" }, update: {}, create: { clave: "candado_correos", valor: "" } });
+  return prisma.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT clave FROM Configuracion WHERE clave = 'candado_correos' FOR UPDATE`;
+    const propios = await tx.envioCorreo.findMany({ where: { prospectoId: d.prospectoId, fallo: "" }, select: { tipo: true } });
+    if (d.tipo === "inicial" && !o.reenviar && propios.some((e) => e.tipo === "inicial")) return { error: "A este negocio ya se le envió la propuesta." };
+    if (d.tipo === "seguimiento" && propios.some((e) => e.tipo === "seguimiento")) return { error: "A este negocio ya se le envió el seguimiento." };
+    if (await tx.envioCorreo.count({ where: { para: d.para, fallo: "", prospectoId: { not: d.prospectoId } } })) return { error: "Ese correo ya recibió una propuesta de otro negocio." };
+    if (o.tope !== undefined) {
+      const desde = new Date(`${hoy}T04:00:00.000Z`);
+      const n = await tx.envioCorreo.count({ where: { fallo: "", enviadoEn: { gte: desde, lt: new Date(desde.getTime() + 86_400_000) } } });
+      if (n >= o.tope) return { error: `Hoy ya salieron ${n} de ${o.tope}. Suba el tope en Ajustes o espere a mañana.` };
+    }
+    const token = generarCodigo();
+    await tx.envioCorreo.create({ data: { prospectoId: d.prospectoId, tipo: d.tipo, asunto: d.asunto.slice(0, 200), para: d.para.slice(0, 120), token } });
+    return { token };
+  });
+}
+
+const marcarFallo = (token: string, motivo: string) => prisma.envioCorreo.update({ where: { token }, data: { fallo: (motivo || "error").slice(0, 300) } });
+
+export async function prepararEnvio(prospectoId: number, tipo: "inicial" | "seguimiento", opc: Reserva = {}): Promise<Preparado | { error: string }> {
   const p = await prisma.prospecto.findUnique({
     where: { id: prospectoId },
     select: { id: true, nombre: true, ciudad: true, web: true, email: true, codigo: true, fuentesPorCampo: true, nicho: { select: { plantillaPropuesta: true, nombre: true } },
@@ -169,38 +196,41 @@ export async function prepararEnvio(prospectoId: number, tipo: "inicial" | "segu
   const ficha = await leerFicha(p.id);
   const gancho = ficha?.gancho ?? "";
   const hoy = hoyCaracas();
-  // Mismo camino que /p/<codigo>/pdf (mismo html, mismo hash): comparten cache.
-  const html = renderPropuesta(plantilla, p.nombre, "#", { ciudad: p.ciudad, rubro: p.nicho.nombre.toLowerCase(), conWeb: webUsable(!!p.web, ficha?.hallazgos.web?.estado), fecha: await fechaDePropuesta(p.id), pais, gancho, paraPdf: true, plantilla: arquetipo });
-  let pdf: Preparado["pdf"] = null;
-  try {
-    const ruta = await generarPdf(p.codigo, html, hashDe(html));
-    pdf = { ruta, nombre: `Propuesta-NERACOSU-${p.nombre.replace(/[^A-Za-z0-9 _-]/g, "").trim().slice(0, 60) || "Propuesta"}.pdf` };
-  } catch (err) {
-    return { error: err instanceof Error && err.message === "PDF_OCUPADO" ? "El servidor está ocupado generando otro PDF. Intente en unos segundos." : "No se pudo generar el PDF. Intente de nuevo." };
-  }
   const fuenteEmail = String((p.fuentesPorCampo as Record<string, unknown> | null)?.email ?? "");
   const hostWeb = p.web ? hostDe(p.web) : "";
-  const deSuWeb = !!hostWeb && (!fuenteEmail || hostDe(fuenteEmail) === hostWeb);
-  const dondeCorreo = deSuWeb ? `su página ${hostWeb}` : "un directorio público";
+  // «su pagina» solo con web y una fuente del correo que apunte a ese mismo host; si no, directorio.
+  const deSuWeb = !!hostWeb && !!fuenteEmail && hostDe(fuenteEmail) === hostWeb;
   const datos: DatosCorreo = {
     nombre: p.nombre, ciudad: p.ciudad, arquetipo, codigo: p.codigo, token: "", gancho,
-    hojas: (plantilla.match(/<section class="hoja/g) ?? []).length, hoy, dondeCorreo, tipo,
+    hojas: (plantilla.match(/<section class="hoja/g) ?? []).length, hoy, dondeCorreo: deSuWeb ? `su página ${hostWeb}` : "un directorio público", tipo,
     ...(tipo === "seguimiento" && p.envios[0] ? { enviadoAnteriorEn: hoyCaracas(p.envios[0].enviadoEn) } : {}),
   };
-  // El asunto no lleva el token: se arma primero con uno provisional para crear la fila y luego con el real.
-  const provisional = armarCorreoPropuesta({ ...datos, token: "x".repeat(22) });
-  const { token } = await crearEnvio({ prospectoId: p.id, tipo, asunto: provisional.asunto, para });
-  const final = { ...datos, token };
-  return { datos: final, correo: armarCorreoPropuesta(final), pdf, token };
+  // El asunto no depende del token: se arma con uno provisional para reservar la fila ANTES de generar el PDF.
+  const reserva = await reservar({ prospectoId: p.id, tipo, asunto: armarCorreoPropuesta({ ...datos, token: "x".repeat(22) }).asunto, para }, opc, hoy);
+  if ("error" in reserva) return reserva;
+  const { token } = reserva;
+  try {
+    // Mismo camino que /p/<codigo>/pdf (mismo html, mismo hash): comparten cache.
+    const html = renderPropuesta(plantilla, p.nombre, "#", { ciudad: p.ciudad, rubro: p.nicho.nombre.toLowerCase(), conWeb: webUsable(!!p.web, ficha?.hallazgos.web?.estado), fecha: await fechaDePropuesta(p.id), pais, gancho, paraPdf: true, plantilla: arquetipo });
+    const ruta = await generarPdf(p.codigo, html, hashDe(html));
+    const pdf = { ruta, nombre: `Propuesta-NERACOSU-${p.nombre.replace(/[^A-Za-z0-9 _-]/g, "").trim().slice(0, 60) || "Propuesta"}.pdf` };
+    const final = { ...datos, token };
+    return { datos: final, correo: armarCorreoPropuesta(final), pdf, token };
+  } catch (err) {
+    const ocupado = err instanceof Error && err.message === "PDF_OCUPADO";
+    await marcarFallo(token, ocupado ? "pdf ocupado" : "pdf: " + (err instanceof Error ? err.message : String(err)));
+    return { error: ocupado ? "El servidor está ocupado generando otro PDF. Intente en unos segundos." : "No se pudo generar el PDF. Intente de nuevo." };
+  }
 }
 
-export async function enviarA(prospectoId: number, tipo: "inicial" | "seguimiento", usuarioId: number | null, opciones: { reenviar?: boolean } = {}): Promise<Resultado<{ token: string }>> {
+export async function enviarA(prospectoId: number, tipo: "inicial" | "seguimiento", usuarioId: number | null, opciones: { reenviar?: boolean; tope?: number } = {}): Promise<Resultado<{ token: string }>> {
   const hoy = hoyCaracas();
   const p = await prisma.prospecto.findFirst({ where: { AND: [{ id: prospectoId }, DEL_DIRECTORIO] }, select: { id: true, email: true, ciudad: true, etapa: true } });
   if (!p) return fallo("Ese prospecto no existe.");
   if (paisDeCiudad(p.ciudad) !== "VE") return fallo("Solo se envía a negocios de Venezuela.");
   const email = normalizarCorreo(p.email);
   if (!email) return fallo("Este negocio no tiene correo.");
+  if (motivoDeCorreo(email, p.ciudad, paisDeCiudad)) return fallo("Ese correo no sirve para escribirle (inválido, genérico o del Estado).");
   if (await prisma.correoBloqueado.findUnique({ where: { email } })) return fallo("Ese correo está bloqueado.");
   const [fila] = (await colaCorreo(hoy)).filter((f) => f.prospectoId === prospectoId);
   if (!fila) return fallo("Este negocio todavía no tiene ficha.");
@@ -213,20 +243,23 @@ export async function enviarA(prospectoId: number, tipo: "inicial" | "seguimient
     real = "seguimiento";
   } else if (!hayInicial && tipo === "seguimiento") {
     return fallo("Todavía no se le ha enviado la propuesta inicial.");
+  } else if (!hayInicial) {
+    // Primer envio: solo a quien sigue por contactar y no recibio nunca un envio (de cualquier canal).
+    if (p.etapa !== "por_contactar") return fallo("Este negocio ya no está por contactar.");
+    if (await prisma.evento.count({ where: { prospectoId, tipo: "enviado" } })) return fallo("A este negocio ya se le envió la propuesta por otro canal.");
   }
-  const prep = await prepararEnvio(prospectoId, real);
+  const prep = await prepararEnvio(prospectoId, real, { reenviar: opciones.reenviar, tope: opciones.tope });
   if ("error" in prep) return fallo(prep.error);
   const r = await enviarCorreo({ para: email, asunto: prep.correo.asunto, html: prep.correo.html, texto: prep.correo.texto, ...(prep.pdf ? { adjunto: { nombre: prep.pdf.nombre, ruta: prep.pdf.ruta } } : {}) });
   if (!r.ok) {
-    await prisma.envioCorreo.update({ where: { token: prep.token }, data: { fallo: (r.error || "error").slice(0, 300) } });
+    await marcarFallo(prep.token, r.error);
     return fallo("No se pudo enviar el correo. Quedó anotado el motivo; puede reintentar.");
   }
   const dias = (await prisma.nicho.findFirst({ where: { prospectos: { some: { id: prospectoId } } }, select: { diasSeguimiento: true } }))?.diasSeguimiento ?? 3;
   await prisma.$transaction([
     prisma.evento.create({ data: { prospectoId, usuarioId, tipo: real === "inicial" ? "enviado" : "seguimiento", de: p.etapa, a: "enviado", canal: "email", texto: prep.correo.asunto.slice(0, 200) } }),
-    // No baja de etapa a quien ya respondio: solo mueve a por_contactar y enviado.
-    prisma.prospecto.updateMany({ where: { id: prospectoId, etapa: { in: ["por_contactar", "enviado"] } }, data: { etapa: "enviado", esLead: true, proximoSeguimiento: sumarDias(hoy, dias) } }),
-    prisma.prospecto.updateMany({ where: { id: prospectoId, fuenteLead: "" }, data: { fuenteLead: "directorio" } }),
+    // No baja de etapa a quien ya respondio. Un correo enviado no asciende a lead (eso pasa al marcar «Respondio»).
+    prisma.prospecto.updateMany({ where: { id: prospectoId, etapa: { in: ["por_contactar", "enviado"] } }, data: { etapa: "enviado", proximoSeguimiento: sumarDias(hoy, dias) } }),
   ]);
   return exito({ token: prep.token });
 }

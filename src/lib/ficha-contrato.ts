@@ -384,11 +384,18 @@ function completitud(f: FilaUniverso): number {
   return [f.web, f.whatsapp, f.instagram, f.facebook, f.telefono, f.nota].filter((v) => (v ?? "").trim() !== "").length;
 }
 
-function motivoDeExclusion(f: FilaUniverso, correo: string, pais: (c: string) => "VE" | "CO"): string {
+// Reglas de correo compartidas por la depuracion del universo y el envio a mano: invalido, generico, del Estado, Colombia.
+export function motivoDeCorreo(correo: string, ciudad: string, pais: (c: string) => "VE" | "CO"): string {
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(correo)) return "correo_invalido";
   if (/(^|[^a-z])(no-?reply|noreply)|@(.*\.)?example\./.test(correo)) return "correo_generico";
   if (/\.gob\.ve$|\.gov\.ve$/.test(correo.split("@")[1])) return "correo_estado";
-  if (pais(f.ciudad) === "CO") return "colombia";
+  if (pais(ciudad) === "CO") return "colombia";
+  return "";
+}
+
+function motivoDeExclusion(f: FilaUniverso, correo: string, pais: (c: string) => "VE" | "CO"): string {
+  const m = motivoDeCorreo(correo, f.ciudad, pais);
+  if (m) return m;
   if (f.esLead && f.fuenteLead !== "directorio") return "lead_propio";
   if (f.etapa !== "por_contactar") return "etapa";
   return "";

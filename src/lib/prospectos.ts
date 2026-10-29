@@ -64,8 +64,12 @@ export async function seguimientosQueTocan(hoy: string, ambito: "directorio" | "
   const filas = await prisma.prospecto.findMany({
     where: { etapa: "enviado", proximoSeguimiento: { lte: hoy }, ...(ambito === "directorio" ? DEL_DIRECTORIO : {}) }, select: SELECT, orderBy: { proximoSeguimiento: "asc" }, take: 50,
   });
-  const ab = await abrieron(filas.map((f) => f.id));
-  return filas.map((f) => aTarjeta(f, ab.has(f.id), "seguimiento"));
+  // Los enviados por correo se siguen desde /correos (tocaSeguimiento), no por la cola de WhatsApp.
+  const eventos = await prisma.evento.findMany({ where: { prospectoId: { in: filas.map((f) => f.id) }, tipo: "enviado" }, orderBy: { id: "asc" }, select: { prospectoId: true, canal: true } });
+  const ultimoCanal = new Map(eventos.map((e) => [e.prospectoId, e.canal]));
+  const aWhatsapp = filas.filter((f) => ultimoCanal.get(f.id) !== "email");
+  const ab = await abrieron(aWhatsapp.map((f) => f.id));
+  return aWhatsapp.map((f) => aTarjeta(f, ab.has(f.id), "seguimiento"));
 }
 
 export async function resumenHoy(hoy: string): Promise<{ embudo: Record<Etapa, number>; porUsuario: { id: number; nombre: string; enviados: number; meta: number }[] }> {
