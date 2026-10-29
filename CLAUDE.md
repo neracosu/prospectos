@@ -14,6 +14,69 @@ solicitud) y en el correo de aviso. Contrato en `src/lib/web-contrato.ts`; migra
 set +a`): el 2026-10-28 se corrio sin ella, no fallo la cadena y el panel quedo dos minutos con el codigo nuevo sin las
 columnas. Plan: `docs/superpowers/plans/2026-10-28-embudo-empezar-panel.md`.
 
+## Propuesta por correo (desde el 2026-10-29)
+
+Diseño: `docs/superpowers/specs/2026-10-29-correo-propuestas-design.md` (con las decisiones de la revisión de constructor,
+las de Neri y las de la revisión final); plan: `docs/superpowers/plans/2026-10-29-correo-propuestas.md`. Migraciones a
+mano `20261031090000_fichas_correo` (`FichaNegocio`, `CorreoBloqueado`, `EnvioCorreo`) y `20261031100000_correos_semillas`
+(`correos_automatico=off` y la fila `candado_correos`). Se construyó con subagentes; el ledger con los rulings quedó en el
+mensaje de cierre de la sesión.
+
+- **Ficha de negocio** (`src/lib/ficha-contrato.ts` puro + `src/lib/fichas.ts` + `src/lib/overture-cruce.ts`): lee la web
+  del prospecto por `red-segura` (portada + hasta 3 internas, 1 s entre páginas; un reintento tras 3 s), cruza con
+  Overture y la base, y arma `hallazgos`, `resumen` y el **gancho** «Vi que…» por reglas (tabla regla × arquetipo en
+  `armarGancho`; nada que no salga de una fuente; `GANCHO_MAX = 280`, una línea). Estados de la web: `viva`, `caida`
+  (solo DNS/conexión/5xx), `vendida`, `en_mantenimiento` (solo por título/h1/cuerpo casi vacío), `red_social`, `sin_web`
+  y **`desconocida`** (timeout, corte, certificado: sin gancho y la web sigue contando como existente). Un nombre que no
+  coincide con la web deja la ficha en `borrador` y sin gancho. `investigarProspecto` **no pisa** una ficha `revisada`.
+  Script en bloque: `scripts/investigar-prospectos.mts [--depurar] [--ids 1,2] [--limite N] [--aplicar]` (3 s entre
+  prospectos). `--depurar --aplicar` descarta las duplicadas por correo (nota «mismo correo que #id») y marca
+  `alAutomatico` en la cola; es idempotente. Bloque «Lo que sabemos del negocio» en `/prospectos/[id]` (gancho y resumen
+  editables por el dueño → `revisada`; reinvestigar; «No quiere correo»/«Rebotó» → `CorreoBloqueado` por dirección
+  normalizada; «Al automático»).
+- **El gancho en la propuesta**: `renderPropuesta` acepta `gancho`; en la carta **reemplaza** al párrafo genérico
+  `si:web`/`si:sinweb` (la hoja no tenía holgura para sumarlo). En el PDF va en 8 de 9 plantillas: `hoteles-estadia` no
+  cede ni 40 caracteres (`GANCHOS_SIN_PDF`); el correo y la propuesta en línea lo llevan en las nueve. Con web `caida` o
+  `vendida` la propuesta va como sin web (`webUsable`). `PROMESA/CREDENCIAL/ANTETITULO_POR_ARQUETIPO` en
+  `mensajes-nicho-contrato.ts`.
+- **Correo** (`src/lib/correo-propuesta-contrato.ts` puro; maqueta probada en Gmail el 29-oct): HTML de 600 px con CSS en
+  línea, texto plano, PDF adjunto solo en el inicial (el seguimiento va sin adjunto). Sale por **nodemailer con
+  transporte `sendmail`** (`src/lib/correo-envio.ts`; `From: Neri Colón · NERACOSU <info@neracosu.com>`, `Reply-To` y
+  envelope `info@`; exim firma DKIM). **Fuera de `NODE_ENV=production` no manda** salvo `PROSPECTOS_CORREO_SIMULADO=1`
+  (éxito sin enviar; el clon lo usa). `limpiarCabecera` vive en `src/lib/correo-contrato.ts`.
+- **Rastreo** por `EnvioCorreo.token` (22 base64url): píxel `GET /api/correo/a/<token>.png` (PNG 1×1 alfa 0, siempre 200,
+  `no-store`), clic `GET /r/<token>` → `/p/<codigo>?e=<token>`, descarga `/p/<codigo>/pdf?e=<token>`. «Primera vez» con
+  `updateMany … where null` (a prueba de carreras); con sesión del panel no cuenta (`src/lib/sesion-ligera.ts`). La
+  apertura es aproximada (proxies de imágenes). Sin rate-limit en píxel y `/r/` (pendiente menor).
+- **Cola y envío** (`src/lib/correos.ts`, `src/acciones/correos.ts`, `/correos` solo dueño): «listas» = directorio, VE,
+  `por_contactar`, sin ningún evento `enviado` (de cualquier canal: **un negocio, un canal**), con plantilla, con ficha,
+  correo no excluido (`motivoDeCorreo`: gob.ve, genéricos, Colombia), no bloqueado y sin otro prospecto con la misma
+  dirección ya enviada. `enviarA` **reserva** la fila `EnvioCorreo` con `fallo: "en curso"` dentro de una transacción con
+  `SELECT … FOR UPDATE` sobre `Configuracion.candado_correos` (tope del día, duplicados y doble clic se deciden ahí),
+  genera el PDF, manda, y con éxito pone `fallo: ""`, evento `enviado` canal `email` (congela `fechaDePropuesta`), etapa
+  `enviado` y `proximoSeguimiento`; **no asciende a lead** (eso lo hace «Respondió»). Una reserva «en curso» de más de
+  10 minutos pasa a «interrumpido (puede haber salido)» y se reintenta a mano. `puedeEnviar(fila, modo)`
+  (`correos-contrato.ts`): a mano se permite un nombre que no coincide si la ficha está `revisada`; el automático nunca.
+  Los enviados por correo **salen de `seguimientosQueTocan`** (la cola de WhatsApp): su seguimiento vive en `/correos`
+  («toca seguimiento»: segundo correo corto, una sola vez). Cifras: enviados · abrieron · vieron · descargaron ·
+  respondieron, total y por arquetipo.
+- **Envío automático** (`enviarAutomatico`): ruta `POST /api/correos/automatico` con cabecera `x-cron-secret` =
+  `PROSPECTOS_CRON_SECRET` del env (404 sin cuerpo si falta o no coincide; comparación en tiempo constante). Interruptor
+  `correos_automatico` (**`off` por defecto**; Neri lo enciende en Ajustes tras los primeros 10 a mano), tope
+  `correos_por_dia` (25; 1..200), lote `ceil(tope/8)` por pasada, solo lunes a viernes de 09:00 a 16:59 de Caracas
+  (`ventanaDeEnvio`), corta tras 2 fallos seguidos; «ya recibió de otro negocio» no cuenta. Log `[correos] <fecha hh:mm>:
+  N enviados, M del dia, tope T (motivo)`. **El servidor está en hora de Los Ángeles**: el crontab corre cada hora y el
+  código decide la ventana:
+  `0 * * * * bash -c 'set -a; . ~/.config/prospectos/env; set +a; curl -s -o /dev/null --max-time 540 -X POST -H "x-cron-secret: $PROSPECTOS_CRON_SECRET" https://prospectos.neracosu.com/api/correos/automatico'`.
+  Pausar el automático antes de un `pm2 restart prospectos` (una reserva cortada queda «interrumpida»). Para que PM2
+  vea el secreto: `pm2 restart prospectos --update-env` con el env cargado.
+- **PDFs por adelantado**: `scripts/pregenerar-pdf-correos.mts [--limite N] [--ids] [--aplicar]` (el hash incluye la
+  fecha de la propuesta: vale para el mismo día). Recorrido: `scripts/verificar-correos.mts` (50 comprobaciones a 390 y
+  1280; solo clon + base de tests + `PROSPECTOS_CORREO_SIMULADO=1`).
+- Fuera de esta versión (spec): reseñas (Google Places), Colombia por correo, tercer toque, leer el buzón para rebotes.
+  Trampa de pruebas: con el env de producción cargado en el shell, `tests/avisos.test.ts` falla 3/9 porque
+  `PROSPECTOS_URL_PUBLICA` le gana al `??=` de `preparar-entorno.ts`; sin el env pasan.
+
 ## Panel CRM, fase 4: pulido (desde el 2026-10-30)
 
 Plan: `docs/superpowers/plans/2026-10-30-panel-crm-fase-4-pulido.md`. Sin migración.
