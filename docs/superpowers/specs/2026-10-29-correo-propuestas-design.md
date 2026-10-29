@@ -155,10 +155,16 @@ cambia de hash cuando cambia el gancho, así que el caché se regenera solo.
   motivo. Es un freno de reputación, no un límite técnico.
 - **Ficha del prospecto** (`/prospectos/[id]`): bloque «Lo que sabemos del negocio» con la ficha (editable) y
   el botón «Enviar propuesta por correo» que abre la misma vista previa. También «Volver a investigar».
-- **Rebotes:** llegan a `info@` (los ve Neri en Gmail). Si un correo rebota, Neri marca «Correo inválido» en la
-  ficha: vacía `email` y deja evento. Leer el buzón para marcarlo solo queda fuera de esta versión.
-- La búsqueda global y el Inicio no cambian; «Hoy» del dueño incluye los seguimientos por correo como los
-  demás (ya entran por `proximoSeguimiento`).
+- **Rebotes y «no»:** llegan a `info@` (los ve Neri en Gmail). Desde `/correos` o la ficha, Neri marca «Rebotó» o «No
+  quiere correo»: la dirección entra en `CorreoBloqueado` (correo único, motivo, fecha) y ninguna fila con esa
+  dirección vuelve a salir en la cola ni admite reenvío, aunque sea otra sucursal. El `email` del prospecto no se
+  borra (es un dato con fuente). Leer el buzón para marcarlo solo queda fuera de esta versión.
+- **Seguimiento:** a los `diasSeguimiento` sin respuesta ni apertura, la fila aparece en `/correos` como «toca
+  seguimiento» con dos salidas: WhatsApp con el `mensajeSeguimiento` del nicho si el prospecto tiene WhatsApp, o un
+  **segundo correo corto** (asunto «Le reenvío la propuesta para {nombre}», tres líneas, sin adjunto, con el enlace).
+  Los enviados por correo **no** entran en `seguimientosQueTocan` del prospectador (filtro por evento con canal
+  `email`): viven en `/correos`. No hay tercer toque en esta versión.
+- La búsqueda global y el Inicio no cambian.
 
 ### 5. Entregabilidad (lo que protege el dominio)
 
@@ -191,13 +197,54 @@ cambia de hash cuando cambia el gancho, así que el caché se regenera solo.
   tests): abrir `/correos`, abrir una vista previa, editar el gancho, enviar, ver la fila en «enviado» y el
   evento en la ficha; a 390 px y a 1280 px.
 
+## Respuestas a la revisión de constructor (29-oct, decisiones mías; Neri puede cambiarlas)
+
+1. **Universo hacia adelante y convivencia con la cola de WhatsApp.** `/correos` toma solo filas del directorio
+   (`DEL_DIRECTORIO`) en `por_contactar`, sin ningún evento `enviado` previo y con correo no bloqueado. Al enviar, la
+   etapa pasa a `enviado`, así que la fila sale de la cola de WhatsApp: **un negocio, un canal, un primer toque**.
+   Quien ya recibió WhatsApp no recibe el correo como refuerzo. Las filas duplicadas por correo pasan a `descartado`
+   con motivo «mismo correo que #id» en la depuración (evento `nota`; reversible desde la ficha).
+2. **El evento es `enviado` con canal `email`**, no un tipo nuevo: así `fechaDePropuesta` congela la fecha y la
+   vigencia del PDF y de `/p/<codigo>` el día del envío, y el envío cuenta para la meta diaria del Inicio.
+3. **Un correo enviado no asciende el prospecto a lead.** Asciende cuando Neri marca «Respondió» (una conversación
+   real, como define la fase 2). `marcarEnviado` no se reutiliza para el correo: acción propia `enviarPropuestaCorreo`.
+4. **Colombia fuera de esta versión:** hoy no hay ningún prospecto colombiano con correo (verificado); la depuración
+   excluye `paisDeCiudad === "CO"` y lo dice en el contador.
+5. **Mapa regla de gancho × arquetipo** (fuera de la tabla no se genera gancho):
+
+   | Regla | Arquetipos | Nota |
+   |---|---|---|
+   | Reserva, pedido o cita por WhatsApp en la web | estadía, reservas, restaurantes; citas con la versión honesta («Vi que hoy la cita se pide por WhatsApp y se confirma a mano»; sin prometer la agenda) | nunca hoteles de paso |
+   | Tienda en línea que cobra a mano | comercio | plataforma detectada y sin pasarela local |
+   | Carta o catálogo en PDF o imagen | restaurantes (carta), comercio (catálogo) | |
+   | Motor de reservas externo (Cloudbeds, Booking) | estadía | el argumento es Bs a tasa, caja local y sin comisión; no «reemplace su motor» |
+   | Varias sedes | todos menos hoteles de paso | |
+   | Solo Instagram, sin web | comercio, restaurantes, citas, reservas, estadía | |
+   | **Web caída, dominio vencido o en venta** (nuevo, de la muestra del 29-oct: 4 de 16) | todos | «Vi que su dirección web hoy no abre»; el PDF va como *sin web* |
+
+   La muestra también mostró webs «en mantención», dominios de Wix sin conectar, enlaces de Linktree o Instagram
+   puestos como web y nombres que no coinciden con la web (fila «Chino» → web «Da Guido»): la investigación marca
+   `webViva`, `webEsRedSocial` y `nombreNoCoincide`, y con nombre que no coincide **no** se genera gancho ni se
+   manda sin que Neri revise la ficha.
+6. **Credencial y promesa por arquetipo** viven como lista fija en `mensajes-nicho-contrato.ts` (`CREDENCIAL_POR_ARQUETIPO`,
+   `PROMESA_POR_ARQUETIPO`), copiadas de las frases ya verificadas de la semilla; no se recortan de la base editable.
+7. **Gancho en la hoja 2 de comercio y reservas:** si el verificador dice que no cabe ni a 280 caracteres, esos dos
+   arquetipos llevan el gancho en el correo y en la propuesta en línea, y el PDF sale sin él. No se toca la carta.
+8. **El PDF se pregenera** al construir la cola (como `generar-propuestas.mts`) y al guardar un gancho editado, para
+   que «Enviar» no espere a Chromium ni choque con `PDF_OCUPADO`. `/p/<codigo>` (route) y `pdf/route.ts` leen
+   `FichaNegocio` para el gancho en línea.
+9. El script del cruce con Overture ya está rescatado en `scripts/_cruzar.mts` (sin commitear).
+10. **Prueba del 29-oct:** se mandó a Neri un correo real (hotel de estadía con gancho verdadero, PDF de 1 MB con el
+    gancho en la carta) por el sendmail del servidor; la maqueta de esa prueba es la base de la fase 3.
+
 ## Decisiones de Neri (cambian lo que se construye)
 
 1. **Reseñas.** No hay fuente gratuita y lícita de reseñas de Google. Opciones: (a) sin reseñas en esta
    versión (la ficha se arma con web, Overture y la base); (b) Google Places API con una clave de Neri con
    facturación: unas 300 consultas de «detalles del lugar» salen en el orden de USD 5 a 10 y traen puntuación,
    cantidad de reseñas y las 5 más relevantes. El diseño deja el hueco (`hallazgos.resenas`) para la (b).
-2. **Remitente.** Propongo `info@neracosu.com` por el servidor (ya firma DKIM, nada que configurar). La otra
+2. **Remitente.** Propongo `info@neracosu.com` por el servidor (ya firma DKIM, nada que configurar; la prueba del
+   29-oct a su Gmail salió así). La otra
    opción es su Gmail por SMTP con contraseña de aplicación: la respuesta le llegaría al mismo hilo de Gmail,
    pero hay que guardar esa contraseña en el servidor y Gmail limita a ~500 al día.
 3. **Tope diario** de arranque: propongo 15.
