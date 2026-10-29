@@ -12,7 +12,7 @@ export async function marcarSolicitud(id: number, atendida: boolean): Promise<Re
   try {
     const r = await prisma.solicitudWeb.updateMany({ where: { id }, data: { atendidaEn: atendida ? new Date() : null } });
     if (r.count === 0) return fallo("Esa solicitud no existe.");
-    revalidatePath("/web"); revalidatePath("/hoy");
+    revalidatePath("/web"); revalidatePath("/hoy"); revalidatePath("/solicitudes"); revalidatePath("/inicio");
     return exito();
   } catch (err) { console.error("marcarSolicitud", err); return fallo("No se pudo guardar. Intenta de nuevo."); }
 }

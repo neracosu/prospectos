@@ -1,15 +1,12 @@
-import React from "react";
 import Link from "next/link";
 import { exigirRol } from "@/lib/sesion";
-import { PERIODOS, resumenWeb, listarSolicitudes, podarEventosViejos } from "@/lib/web";
-import { BotonAtender } from "@/componentes/BotonAtender";
+import { PERIODOS, resumenWeb, podarEventosViejos } from "@/lib/web";
+import { CabeceraPagina } from "@/componentes/CabeceraPagina";
 import { fechaVisible, hoyCaracas } from "@/lib/fecha-caracas";
-import { clasificarOrigen, respuestasLegibles } from "@/lib/web-contrato";
 
 export const dynamic = "force-dynamic";
 
 const pct = (n: number, de: number) => (de > 0 ? Math.round((100 * n) / de) : 0);
-const fechaHora = (d: Date) => `${fechaVisible(hoyCaracas(d))} ${new Date(d.getTime() - 4 * 3_600_000).toISOString().slice(11, 16)}`;
 
 function Barras({ filas }: { filas: { nombre: string; n: number; de: number }[] }) {
   return (
@@ -29,42 +26,12 @@ export default async function Web({ searchParams }: { searchParams: Promise<{ d?
   const pedido = Number((await searchParams).d);
   const dias = (PERIODOS as readonly number[]).includes(pedido) ? pedido : 7;
   await podarEventosViejos().catch(() => 0);
-  const [r, solicitudes] = await Promise.all([resumenWeb(dias), listarSolicitudes()]);
-  const nuevas = solicitudes.filter((s) => !s.atendidaEn).length;
+  const r = await resumenWeb(dias);
 
   return (
     <>
-      <h1 className="titulo">Web</h1>
+      <CabeceraPagina titulo="Web" accion={<Link href="/solicitudes" className="boton">Solicitudes</Link>} />
       <p className="suave">Lo que hace la gente en neracosu.com. Sin cookies ni IP: una «persona» es una visita del navegador, y quien vuelve otro día cuenta otra vez. Los robots no se cuentan.</p>
-
-      <h2 className="titulo" id="solicitudes">Solicitudes {nuevas > 0 && <span className="etiqueta etiqueta--nuevo">{nuevas} sin atender</span>}</h2>
-      {solicitudes.length === 0 && <p className="suave">Todavía no llega ninguna por el formulario.</p>}
-      {solicitudes.map((s) => {
-        const wa = s.whatsapp.replace(/\D/g, "");
-        const embudo = s.tipo === "embudo";
-        const respuestas = embudo ? respuestasLegibles(s.respuestas) : [];
-        return (
-          <article key={s.id} className={`tarjeta tarjeta--franja ${s.atendidaEn ? "tarjeta--decidida" : "tarjeta--verde"}`}>
-            <div className="cabecera">
-              <b>{s.nombre}{embudo && s.calificacion && <> <span className="etiqueta etiqueta--nuevo">{s.calificacion === "demo" ? "Califica para demostración" : "Diagnóstico por escrito"}</span></>}</b>
-              <span className="suave">{fechaHora(s.creadaEn)}</span>
-            </div>
-            <dl className="datos">
-              <dt>Proyecto</dt><dd>{embudo ? "Embudo /empezar" : s.tipo}</dd>
-              {embudo && s.origen && <><dt>Llegó desde</dt><dd>{clasificarOrigen(s.origen)}</dd></>}
-              {respuestas.map((r) => <React.Fragment key={r.clave}><dt>{r.clave}</dt><dd>{r.valor}</dd></React.Fragment>)}
-              {s.presupuesto && <><dt>Presupuesto</dt><dd>{s.presupuesto}</dd></>}
-              {s.pagina && <><dt>Desde</dt><dd>{s.pagina}</dd></>}
-            </dl>
-            <p className="web-mensaje">{s.mensaje}</p>
-            <div className="fila-botones">
-              {wa && <a className="boton boton--primario mini" href={`https://wa.me/${wa}`} target="_blank" rel="noopener noreferrer">WhatsApp</a>}
-              {s.correo && <a className="boton mini" href={`mailto:${s.correo}`}>Correo</a>}
-              <BotonAtender id={s.id} atendida={!!s.atendidaEn} />
-            </div>
-          </article>
-        );
-      })}
 
       <h2 className="titulo">Visitas</h2>
       <nav className="pestanas" aria-label="Periodo">
