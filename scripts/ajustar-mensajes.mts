@@ -1,10 +1,11 @@
-// scripts/ajustar-mensajes.mts — corrige frases de los mensajes de WhatsApp de cada nicho (5-oct-2026) SIN pisar lo
+// scripts/ajustar-mensajes.mts — corrige frases de los mensajes de WhatsApp de cada nicho (5-oct y 29-oct-2026) SIN pisar lo
 // que Neri haya editado en Ajustes: no reescribe el mensaje, solo reemplaza las frases que prometian de mas. Las
 // mismas frases se corrigieron en scripts/sembrar-nichos.mjs, que solo vale para nichos nuevos.
 // Uso (con el env cargado; DATABASE_URL decide la base):
 //   npx tsx scripts/ajustar-mensajes.mts            # muestra que cambiaria
 //   npx tsx scripts/ajustar-mensajes.mts --aplicar
 import { prisma } from "../src/lib/db";
+import { pasarAlEnganche } from "../src/lib/mensajes-nicho-contrato";
 
 // «Se paga una sola vez» es cierto solo donde no hay mensualidad (cobros y pagos). En citas el sistema se construye:
 // no es una adaptacion.
@@ -39,8 +40,10 @@ const aplicar = process.argv.includes("--aplicar");
 const nichos = await prisma.nicho.findMany({ select: { id: true, slug: true, plantillaPropuesta: true, mensajeInicial: true, mensajeSeguimiento: true }, orderBy: { slug: "asc" } });
 let cambian = 0;
 for (const n of nichos) {
-  const inicial = ajustar(n.mensajeInicial, n.slug, n.plantillaPropuesta);
-  const seguimiento = ajustar(n.mensajeSeguimiento, n.slug, n.plantillaPropuesta);
+  // 29-oct-2026: la pregunta final («¿Le parece si en 30 minutos…?» / «llamada de 30 minutos») pasa al enganche:
+  // dos lineas sobre como opera + diagnostico gratis por escrito + demostracion con su marca segun el caso.
+  const inicial = pasarAlEnganche(ajustar(n.mensajeInicial, n.slug, n.plantillaPropuesta), n.plantillaPropuesta, "inicial");
+  const seguimiento = pasarAlEnganche(ajustar(n.mensajeSeguimiento, n.slug, n.plantillaPropuesta), n.plantillaPropuesta, "seguimiento");
   const cambios = [inicial !== n.mensajeInicial ? "inicial" : "", seguimiento !== n.mensajeSeguimiento ? "seguimiento" : ""].filter(Boolean);
   console.log(`${n.slug.padEnd(26)} ${cambios.length ? cambios.join(" y ") : "sin cambios"}`);
   if (!cambios.length) continue;

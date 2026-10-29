@@ -224,6 +224,18 @@ nichos (`hoteles`, `hoteles-estadia`).
   «desarrollo») salvo donde de verdad se construye (citas, calendario de estadía), y **la demostración es con datos de
   ejemplo**: no se promete cargar el menú, los productos o los espacios del prospecto. `scripts/ajustar-mensajes.mts`
   corrige frases de los mensajes en la base sin pisar lo editado en Ajustes.
+  **Enganche (29-oct-2026, pedido de Neri tras los últimos prospectos): ni los mensajes ni las propuestas piden una
+  reunión ni «30 minutos».** El primer mensaje pide dos líneas sobre cómo opera el negocio (la pregunta que califica, por
+  arquetipo en `src/lib/mensajes-nicho-contrato.ts`) y ofrece el diagnóstico gratis por escrito y, «cuando el caso lo
+  permite», una demostración con su marca para verla en el teléfono antes de pagar nada; en citas no se promete
+  demostración (la agenda no está construida): se dice qué está hecho y qué falta. `pasarAlEnganche` cambia solo la
+  pregunta final del mensaje viejo (idempotente; un mensaje editado sin esa frase queda igual); lo corre
+  `ajustar-mensajes.mts` y la semilla ya lo trae (`tests/mensajes-nicho-contrato.test.ts` lo vigila, también para los
+  mensajes de Colombia). En las nueve propuestas: carta, «Siguiente paso» del resumen, el destacado de la hoja 8, la hoja 9
+  («Véalo con su marca antes de decidir»; en citas «Cuénteme cómo trabaja hoy. El diagnóstico es gratis») y la casilla
+  «Diagnóstico · gratis» primera en la aceptación de todas. Las cartas de comercio y reservas quedaron con la petición
+  corta («Solo le pido que me cuente por WhatsApp cómo opera hoy») porque la hoja 2 no daba para más. El portafolio del
+  pie va sin `.html` (URLs limpias). Nunca volver a «llamada», «videollamada» ni «reunión» de cara al prospecto.
   **Temporada promocional (decisión de Neri, 5-oct): 40 % de descuento en el pago único de cualquier plan para quien
   contrate hasta el 31-dic-2026**; la mensualidad no cambia. En las plantillas va dentro de `<!--si:promo-->…<!--fin:promo-->`,
   que `renderPropuesta` deja mientras el día de Caracas no pase de `PROMO_HASTA` (`propuesta-contrato.ts`): fila de
