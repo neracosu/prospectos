@@ -80,6 +80,18 @@ describe.runIf(DB_HABILITADA)("consultas de prospectos", () => {
     expect(f?.historial[0].usuarioNombre).toBe("Neri");
     expect(await fichaProspecto(999999)).toBeNull();
   });
+  it("la ficha trae la ficha de negocio y el motivo del bloqueo del correo", async () => {
+    const p = await crearProspectoDePrueba(ids.nichoId, { nombre: "Con Ficha", etapa: "ganado", email: "Hola@Ficha.test" });
+    const antes = await fichaProspecto(p.id);
+    expect(antes?.ficha).toBeNull();
+    expect(antes?.correoBloqueado).toBe("");
+    await prisma.fichaNegocio.create({ data: { prospectoId: p.id, gancho: "Gancho", resumen: "Resumen", estado: "lista" } });
+    await prisma.correoBloqueado.create({ data: { email: "hola@ficha.test", motivo: "rebote" } });
+    const f = await fichaProspecto(p.id);
+    expect(f?.ficha).toMatchObject({ gancho: "Gancho", estado: "lista", alAutomatico: false });
+    expect(f?.correoBloqueado).toBe("rebote");
+    await prisma.correoBloqueado.delete({ where: { email: "hola@ficha.test" } });
+  });
   it("la ficha trae la web del prospecto", async () => {
     const p = await prisma.prospecto.findFirstOrThrow({ where: { nombre: "Con Web" } });
     const f = await fichaProspecto(p.id);

@@ -10,6 +10,8 @@ import { mensajeColombia } from "@/lib/colombia-contrato";
 import { hoyCaracas } from "@/lib/fecha-caracas";
 import { enlacePropuesta, type ProspectoTarjeta } from "@/lib/prospectos-contrato";
 import { listaDeTextos, mapaDeTextos } from "@/lib/revision";
+import { leerFicha, type FichaFila } from "@/lib/fichas";
+import { normalizarCorreo } from "@/lib/ficha-contrato";
 
 const SELECT = {
   id: true, nombre: true, ciudad: true, nota: true, web: true, tipo: true, tamano: true, etapa: true, proximoSeguimiento: true, codigo: true,
@@ -108,13 +110,17 @@ export type EventoFila = { id: number; tipo: string; de: string; a: string; cana
 
 export async function fichaProspecto(
   id: number,
-): Promise<(ProspectoTarjeta & { fuentes: string[]; fuentesPorCampo: Record<string, string>; historial: EventoFila[]; nichoId: number; esLead: boolean; fuenteLead: string; valorEstimado: number | null; proximoPaso: string; propuestaUrl: string }) | null> {
+): Promise<(ProspectoTarjeta & { fuentes: string[]; fuentesPorCampo: Record<string, string>; historial: EventoFila[]; nichoId: number; esLead: boolean; fuenteLead: string; valorEstimado: number | null; proximoPaso: string; propuestaUrl: string; ficha: FichaFila | null; correoBloqueado: string }) | null> {
   const f = await prisma.prospecto.findUnique({ where: { id }, select: { ...SELECT, fuentes: true, fuentesPorCampo: true } });
   if (!f) return null;
   const eventos = await prisma.evento.findMany({ where: { prospectoId: id }, orderBy: { creadoEn: "desc" }, take: 200, include: { usuario: { select: { nombre: true } } } });
   const ab = await abrieron([id]);
   const t = aTarjeta(f, ab.has(id), f.etapa === "por_contactar" ? "inicial" : "seguimiento");
+  const ficha = await leerFicha(id);
+  const correo = normalizarCorreo(f.email);
+  const bloqueo = correo ? await prisma.correoBloqueado.findUnique({ where: { email: correo.slice(0, 120) } }) : null;
   return {
+    ficha, correoBloqueado: bloqueo?.motivo ?? "",
     ...t, fuentes: listaDeTextos(f.fuentes),
     // Campos de lead (fase 2)
     nichoId: f.nichoId, esLead: f.esLead, fuenteLead: f.fuenteLead, valorEstimado: f.valorEstimado === null ? null : Number(f.valorEstimado), proximoPaso: f.proximoPaso, propuestaUrl: f.propuestaUrl,

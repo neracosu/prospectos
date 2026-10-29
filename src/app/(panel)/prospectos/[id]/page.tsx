@@ -6,10 +6,11 @@ import { Etapa } from "@/componentes/Etapa";
 import { FichaAcciones } from "@/componentes/FichaAcciones";
 import { BotonCopiar } from "@/componentes/BotonCopiar";
 import { SugerenciasWeb } from "@/componentes/SugerenciasWeb";
+import { FichaNegocioBloque } from "@/componentes/FichaNegocioBloque";
 
 export const dynamic = "force-dynamic";
 
-const TEXTO_EVENTO: Record<string, string> = { enviado: "Enviado", seguimiento: "Escribió de nuevo", abierto: "Abrió la propuesta", etapa: "Cambio de etapa", nota: "Nota", saltado: "Saltado", salto_deshecho: "Salto deshecho", importado: "Ingresó", lectura_web: "Leyó la web" };
+const TEXTO_EVENTO: Record<string, string> = { enviado: "Enviado", seguimiento: "Escribió de nuevo", abierto: "Abrió la propuesta", etapa: "Cambio de etapa", nota: "Nota", saltado: "Saltado", salto_deshecho: "Salto deshecho", importado: "Ingresó", lectura_web: "Leyó la web", ficha_generada: "Ficha investigada", ficha_revisada: "Gancho revisado", correo_bloqueado: "Correo bloqueado" };
 
 export default async function Ficha({ params }: { params: Promise<{ id: string }> }) {
   const u = await exigirSesion();
@@ -50,6 +51,7 @@ export default async function Ficha({ params }: { params: Promise<{ id: string }
         {p.fuentes.length > 0 && <p className="suave">Fuentes: {p.fuentes.map((f, i) => <a key={i} href={f} target="_blank" rel="noopener">[{i + 1}] </a>)}</p>}
       </section>
       <SugerenciasWeb prospectoId={p.id} tieneWeb={!!p.web} />
+      <FichaNegocioBloque prospectoId={p.id} ficha={p.ficha} correoBloqueado={p.correoBloqueado} tieneCorreo={!!p.email} esDueno={u.rol === "dueno"} />
       {p.tienePropuesta && (
         <section className="tarjeta">
           <b>Propuesta</b>
