@@ -4,6 +4,16 @@ Plataforma de Neri para prospectar por nicho y llevar los proyectos vendidos. Pi
 prospección: cola del día, embudo, propuesta por enlace, seguimientos) en producción en
 `prospectos.neracosu.com`. Entra con PIN.
 
+## Embudo /empezar en el panel (desde el 2026-10-29)
+
+`/api/web/solicitud` acepta `type: "embudo"` con `respuestas` (JSON de rubro, actual, objetivo, tamano, sistema; texto, no
+Json), `calificacion` (`demo` | `diagnostico`) y `origen` (el `?de=` del enlace); `/api/web/evento` acepta `t: "paso"` con
+`p1`..`p4`, `resultado`, `datos`, `enviado`. Se ven en `/web` (bloque «Embudo de /empezar» y las respuestas en cada
+solicitud) y en el correo de aviso. Contrato en `src/lib/web-contrato.ts`; migracion a mano `20261029090000_embudo_empezar`.
+**Al desplegar, `npx prisma migrate deploy` necesita `DATABASE_URL` en el entorno** (`set -a; . ~/.config/prospectos/env;
+set +a`): el 2026-10-28 se corrio sin ella, no fallo la cadena y el panel quedo dos minutos con el codigo nuevo sin las
+columnas. Plan: `docs/superpowers/plans/2026-10-28-embudo-empezar-panel.md`.
+
 ## Cómo retomar
 
 **El diseño vive en `docs/superpowers/specs/`. Leer primero `2026-09-16-plataforma-vision-general.md`
