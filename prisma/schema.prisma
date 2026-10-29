@@ -10,22 +10,22 @@ datasource db {
 }
 
 model Usuario {
-  id         Int        @id @default(autoincrement())
-  nombre     String
-  rol        String // dueno | prospectador | cliente (pieza 5)
-  activo     Boolean    @default(true)
-  pinHash    String
-  metaDiaria Int        @default(10)
+  id            Int         @id @default(autoincrement())
+  nombre        String
+  rol           String // dueno | prospectador | cliente (pieza 5)
+  activo        Boolean     @default(true)
+  pinHash       String
+  metaDiaria    Int         @default(10)
   // Pieza 5: la cuenta del portal de un cliente (rol "cliente"). Una sola por cliente.
-  clienteId     Int?       @unique
-  cliente       Cliente?   @relation(fields: [clienteId], references: [id])
+  clienteId     Int?        @unique
+  cliente       Cliente?    @relation(fields: [clienteId], references: [id])
   // Sube al regenerar el PIN o desactivar el acceso: invalida las sesiones abiertas del portal.
-  sesionVersion Int        @default(0)
-  creadoEn   DateTime   @default(now())
-  eventos    Evento[]
-  horas      Horas[]
-  revisiones Revision[]
-  documentos Documento[]
+  sesionVersion Int         @default(0)
+  creadoEn      DateTime    @default(now())
+  eventos       Evento[]
+  horas         Horas[]
+  revisiones    Revision[]
+  documentos    Documento[]
 }
 
 model Nicho {
@@ -46,44 +46,46 @@ model Nicho {
 }
 
 model Prospecto {
-  id                 Int        @id @default(autoincrement())
+  id                 Int           @id @default(autoincrement())
   nichoId            Int
-  nicho              Nicho      @relation(fields: [nichoId], references: [id])
+  nicho              Nicho         @relation(fields: [nichoId], references: [id])
   nombre             String
   ciudad             String
-  estado             String     @default("")
-  region             String     @default("")
-  tipo               String     @default("")
-  tamano             String     @default("")
-  telefono           String     @default("")
-  whatsapp           String     @default("") // 58XXXXXXXXXX o vacio
-  email              String     @default("")
-  web                String     @default("")
-  instagram          String     @default("")
-  facebook           String     @default("")
-  tiktok             String     @default("")
-  nota               String     @default("") @db.Text
+  estado             String        @default("")
+  region             String        @default("")
+  tipo               String        @default("")
+  tamano             String        @default("")
+  telefono           String        @default("")
+  whatsapp           String        @default("") // 58XXXXXXXXXX o vacio
+  email              String        @default("")
+  web                String        @default("")
+  instagram          String        @default("")
+  facebook           String        @default("")
+  tiktok             String        @default("")
+  nota               String        @default("") @db.Text
   fuentes            Json // lista de URLs (pieza 2 suma {campo: url})
   // {campo: url} de donde salio cada dato (pieza 2). `fuentes` sigue siendo la lista plana de URLs.
-  fuentesPorCampo    Json       @default("{}")
-  origen             String     @default("importado") // importado | manual | overpass | web | maps | overture | solicitud
+  fuentesPorCampo    Json          @default("{}")
+  origen             String        @default("importado") // importado | manual | overpass | web | maps | overture | solicitud
   // Panel CRM, fase 2: un lead es una conversacion real; lo demas es directorio (prospeccion masiva).
-  esLead             Boolean    @default(false)
-  fuenteLead         String     @default("") @db.VarChar(20) // web | embudo | whatsapp | instagram | referido | directorio | otro
-  valorEstimado      Decimal?   @db.Decimal(10, 2)
-  proximoPaso        String     @default("") @db.VarChar(160)
-  propuestaUrl       String     @default("") @db.VarChar(300)
-  etapa              String     @default("por_contactar")
+  esLead             Boolean       @default(false)
+  fuenteLead         String        @default("") @db.VarChar(20) // web | embudo | whatsapp | instagram | referido | directorio | otro
+  valorEstimado      Decimal?      @db.Decimal(10, 2)
+  proximoPaso        String        @default("") @db.VarChar(160)
+  propuestaUrl       String        @default("") @db.VarChar(300)
+  etapa              String        @default("por_contactar")
   // Texto ISO YYYY-MM-DD en dia de Caracas. Nulo = sin seguimiento pendiente.
   proximoSeguimiento String?
-  codigo             String     @unique // 16 bytes base64url, para /p/<codigo>
-  ordenCola          Int        @default(0)
+  codigo             String        @unique // 16 bytes base64url, para /p/<codigo>
+  ordenCola          Int           @default(0)
   // nombre+ciudad normalizados: reimportar no duplica
   clave              String
-  creadoEn           DateTime   @default(now())
+  creadoEn           DateTime      @default(now())
   eventos            Evento[]
   cliente            Cliente?
   revisiones         Revision[]
+  ficha              FichaNegocio?
+  envios             EnvioCorreo[]
 
   @@unique([nichoId, clave])
   @@index([etapa, ordenCola])
@@ -369,23 +371,64 @@ model EventoWeb {
 
 // Lo que la gente escribe en el formulario de contacto de neracosu.com. Lo escribe /api/web/solicitud.
 model SolicitudWeb {
-  id          Int       @id @default(autoincrement())
-  nombre      String    @db.VarChar(120)
-  correo      String    @default("") @db.VarChar(191)
-  whatsapp    String    @default("") @db.VarChar(40)
-  tipo        String    @db.VarChar(80)
-  presupuesto String    @default("") @db.VarChar(40)
-  mensaje     String    @db.Text
-  pagina      String    @default("") @db.VarChar(191)
-  sesion      String    @default("") @db.VarChar(32)
+  id           Int       @id @default(autoincrement())
+  nombre       String    @db.VarChar(120)
+  correo       String    @default("") @db.VarChar(191)
+  whatsapp     String    @default("") @db.VarChar(40)
+  tipo         String    @db.VarChar(80)
+  presupuesto  String    @default("") @db.VarChar(40)
+  mensaje      String    @db.Text
+  pagina       String    @default("") @db.VarChar(191)
+  sesion       String    @default("") @db.VarChar(32)
   // Embudo /empezar (29-oct): JSON {rubro, actual, objetivo, tamano, sistema}, demo|diagnostico|"", y el ?de= del enlace
   respuestas   String    @default("") @db.VarChar(400)
   calificacion String    @default("") @db.VarChar(20)
   origen       String    @default("") @db.VarChar(120)
   // Fase 2: el lead que salio de esta solicitud (convertirSolicitud); sin FK a proposito, como el resto del modelo web
   prospectoId  Int?
-  creadaEn    DateTime  @default(now())
-  atendidaEn  DateTime?
+  creadaEn     DateTime  @default(now())
+  atendidaEn   DateTime?
 
   @@index([creadaEn])
+}
+
+// Correo por propuesta (31-oct-2026): lo investigado de cada negocio, los bloqueos y los envios rastreados.
+model FichaNegocio {
+  id           Int       @id @default(autoincrement())
+  prospectoId  Int       @unique
+  prospecto    Prospecto @relation(fields: [prospectoId], references: [id])
+  hallazgos    Json      @default("{}")
+  fuentes      Json      @default("[]")
+  resumen      String    @default("") @db.Text
+  gancho       String    @default("") @db.VarChar(400)
+  estado       String    @default("sin_hallazgos") @db.VarChar(20)
+  alAutomatico Boolean   @default(false)
+  generadaEn   DateTime  @default(now())
+  revisadaEn   DateTime?
+}
+
+model CorreoBloqueado {
+  email    String   @id @db.VarChar(120)
+  motivo   String   @db.VarChar(20) // no_quiere | rebote
+  creadoEn DateTime @default(now())
+}
+
+model EnvioCorreo {
+  id          Int       @id @default(autoincrement())
+  prospectoId Int
+  prospecto   Prospecto @relation(fields: [prospectoId], references: [id])
+  token       String    @unique @db.VarChar(22)
+  tipo        String    @db.VarChar(12) // inicial | seguimiento
+  asunto      String    @db.VarChar(200)
+  para        String    @db.VarChar(120)
+  enviadoEn   DateTime  @default(now())
+  abiertoEn   DateTime?
+  aperturas   Int       @default(0)
+  clicEn      DateTime?
+  clics       Int       @default(0)
+  pdfEn       DateTime?
+  pdfs        Int       @default(0)
+  fallo       String    @default("") @db.VarChar(300)
+
+  @@index([prospectoId, enviadoEn])
 }
