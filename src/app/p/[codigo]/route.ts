@@ -1,9 +1,6 @@
 import { paisDeCiudad } from "@/lib/overpass-contrato";
-import { cookies } from "next/headers";
 import { prisma } from "@/lib/db";
-import { verificarToken, verificarTokenCliente } from "@/lib/auth";
-import { COOKIE_SESION } from "@/lib/sesion";
-import { COOKIE_CLIENTE } from "@/lib/sesion-cliente";
+import { tieneSesion } from "@/lib/sesion-ligera";
 import { permitirIntento } from "@/lib/rate-limit";
 import { ipCliente } from "@/lib/ip";
 import { leerPlantillaPara, fechaDePropuesta } from "@/lib/propuesta";
@@ -20,17 +17,6 @@ const BOT_UA = /whatsapp|facebookexternalhit|telegrambot|twitterbot|slackbot|dis
 
 function encabezados() {
   return { "content-type": "text/html; charset=utf-8", "x-robots-tag": "noindex, nofollow", "cache-control": "no-store" };
-}
-
-// No se usa sesionActual() ni sesionCliente() aqui: pueden hacer redirect() o ir a la base, y esta ruta
-// no lo necesita. Alcanza con un token valido (del panel, o del portal del cliente: un cliente ya ganado
-// que revisa su propuesta aceptada no es un prospecto abriendo el enlace) para no contar la visita.
-async function tieneSesion(): Promise<boolean> {
-  const jar = await cookies();
-  const delPanel = jar.get(COOKIE_SESION)?.value;
-  if (delPanel && (await verificarToken(delPanel)) !== null) return true;
-  const delPortal = jar.get(COOKIE_CLIENTE)?.value;
-  return !!delPortal && (await verificarTokenCliente(delPortal)) !== null;
 }
 
 async function encontrarProspecto(codigo: string) {

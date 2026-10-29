@@ -7,6 +7,8 @@ import { leerPlantillaPara, generarPdf, hashDe, fechaDePropuesta } from "@/lib/p
 import { renderPropuesta, webUsable } from "@/lib/propuesta-contrato";
 import { CODIGO_VALIDO } from "@/lib/codigo";
 import { leerFicha } from "@/lib/fichas";
+import { registrarPdf, TOKEN_VALIDO } from "@/lib/correos";
+import { tieneSesion } from "@/lib/sesion-ligera";
 
 // Nombre de archivo seguro para el header (ASCII, sin comillas ni barras);
 // la version completa con acentos y demas va aparte en filename* (UTF-8).
@@ -28,7 +30,7 @@ function respuestaFalloGenerico(): Response {
   });
 }
 
-export async function GET(_req: Request, ctx: { params: Promise<{ codigo: string }> }) {
+export async function GET(req: Request, ctx: { params: Promise<{ codigo: string }> }) {
   const { codigo } = await ctx.params;
   if (!CODIGO_VALIDO.test(codigo)) return new Response("No encontrado", { status: 404 });
   if (!permitirIntento(`pdf:${await ipCliente()}`, 10, 60_000)) return new Response("Demasiadas descargas. Intenta en un minuto.", { status: 429 });
@@ -43,6 +45,11 @@ export async function GET(_req: Request, ctx: { params: Promise<{ codigo: string
     const bytes = await readFile(ruta);
     const nombreArchivo = `Propuesta-NERACOSU-${saneado(p.nombre) || "Propuesta"}.pdf`;
     const nombreCompleto = `Propuesta-NERACOSU-${p.nombre}.pdf`;
+    // Descarga desde el correo (?e=<token> del mismo prospecto): se cuenta despues de tener el PDF listo.
+    const e = new URL(req.url).searchParams.get("e") ?? "";
+    if (TOKEN_VALIDO.test(e)) {
+      try { await registrarPdf(e, codigo, { conSesion: await tieneSesion() }); } catch (err) { console.error("registrarPdf", err); }
+    }
     return new Response(bytes, { headers: {
       "content-type": "application/pdf",
       "content-disposition": `attachment; filename="${nombreArchivo}"; filename*=UTF-8''${encodeURIComponent(nombreCompleto)}`,
