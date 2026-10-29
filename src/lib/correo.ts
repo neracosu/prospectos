@@ -2,7 +2,7 @@
 // local del servidor (exim de cPanel); info@neracosu.com reenvia al Gmail de Neri. Usa node: : fuera de la cadena de
 // src/instrumentation.ts.
 import { spawn } from "node:child_process";
-import type { SolicitudNormal } from "@/lib/web-contrato";
+import { clasificarOrigen, respuestasLegibles, type SolicitudNormal } from "@/lib/web-contrato";
 
 const DE = "info@neracosu.com";
 const PARA = () => process.env.PROSPECTOS_AVISO_CORREO || "info@neracosu.com";
@@ -18,16 +18,25 @@ function codificar(s: string): string {
 }
 
 export function armarCorreo(d: SolicitudNormal): string {
-  const asunto = `Solicitud web: ${limpiarCabecera(d.nombre)} (${limpiarCabecera(d.tipo)})`;
+  const embudo = d.tipo === "embudo";
+  const asunto = embudo
+    ? `Embudo /empezar: ${limpiarCabecera(d.nombre)}${d.calificacion === "demo" ? " (demo)" : ""}`
+    : `Solicitud web: ${limpiarCabecera(d.nombre)} (${limpiarCabecera(d.tipo)})`;
+  const califica = d.calificacion === "demo" ? "demostracion con su marca" : d.calificacion === "diagnostico" ? "diagnostico por escrito" : "";
+  const respuestas = respuestasLegibles(d.respuestas);
   const responderA = d.correo && !/[\r\n]/.test(d.correo) ? `Reply-To: ${limpiarCabecera(d.correo)}\n` : "";
   const wa = d.whatsapp.replace(/\D/g, "");
   const cuerpo = [
     `${d.nombre} escribio desde neracosu.com${d.pagina ? ` (${d.pagina})` : ""}.`,
     "",
-    `Tipo de proyecto: ${d.tipo}`,
+    `Tipo de proyecto: ${embudo ? "Embudo /empezar" : d.tipo}`,
+    d.origen ? `Llego desde: ${clasificarOrigen(d.origen)}` : "",
+    califica ? `Califica para: ${califica}` : "",
     d.presupuesto ? `Presupuesto: ${d.presupuesto}` : "",
     d.correo ? `Correo: ${d.correo}` : "",
     d.whatsapp ? `WhatsApp: ${d.whatsapp}${wa ? `  ->  https://wa.me/${wa}` : ""}` : "",
+    "",
+    ...(respuestas.length ? ["", "Respuestas:", ...respuestas.map((r) => `${r.clave}: ${r.valor}`)] : []),
     "",
     "Mensaje:",
     d.mensaje,
