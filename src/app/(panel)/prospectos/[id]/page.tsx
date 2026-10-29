@@ -10,7 +10,7 @@ import { FichaNegocioBloque } from "@/componentes/FichaNegocioBloque";
 
 export const dynamic = "force-dynamic";
 
-const TEXTO_EVENTO: Record<string, string> = { enviado: "Enviado", seguimiento: "Escribió de nuevo", abierto: "Abrió la propuesta", etapa: "Cambio de etapa", nota: "Nota", saltado: "Saltado", salto_deshecho: "Salto deshecho", importado: "Ingresó", lectura_web: "Leyó la web", ficha_generada: "Ficha investigada", ficha_revisada: "Gancho revisado", correo_bloqueado: "Correo bloqueado" };
+const TEXTO_EVENTO: Record<string, string> = { enviado: "Enviado", seguimiento: "Escribió de nuevo", abierto: "Abrió la propuesta", etapa: "Cambio de etapa", nota: "Nota", saltado: "Saltado", salto_deshecho: "Salto deshecho", importado: "Ingresó", lectura_web: "Leyó la web", correo_abierto: "Abrió el correo", correo_clic: "Tocó “Ver la propuesta” en el correo", pdf_descargado: "Descargó el PDF", correo_bloqueado: "Correo bloqueado", ficha_generada: "Ficha investigada", ficha_revisada: "Ficha revisada" };
 
 export default async function Ficha({ params }: { params: Promise<{ id: string }> }) {
   const u = await exigirSesion();

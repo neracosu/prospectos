@@ -6,15 +6,20 @@ import { useFlotante } from "@/componentes/LineaFlotante";
 
 // Ajustes › Correos: tope diario y el interruptor del envio automatico (la misma accion que «Pausar/Reanudar» de
 // /correos). guardarCorreos revalida /ajustes y /correos: la respuesta trae la pantalla nueva.
+// El exito va a la linea flotante: Ajustes monta este formulario con key={tope-automatico}, asi que al guardar se
+// remonta con los valores nuevos y un mensaje en su propio estado no se llegaria a ver.
 export function FormularioAjustesCorreos({ tope, automatico }: { tope: number; automatico: boolean }) {
-  const [msj, setMsj] = useState<{ ok: boolean; texto: string } | null>(null);
+  const [error, setError] = useState("");
   const [pendiente, empezar] = useTransition();
+  const avisar = useFlotante();
   const guardar = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
     empezar(async () => {
+      setError("");
       const r = await guardarCorreos(fd);
-      setMsj(r.ok ? { ok: true, texto: "Guardado." } : { ok: false, texto: r.mensaje });
+      if (r.ok) avisar({ texto: "Ajustes de correo guardados" });
+      else setError(r.mensaje);
     });
   };
   return (
@@ -29,7 +34,7 @@ export function FormularioAjustesCorreos({ tope, automatico }: { tope: number; a
         </select>
       </label>
       <button className="boton boton--primario" disabled={pendiente}>Guardar</button>
-      {msj && <p className={msj.ok ? "suave" : "error"} role="status">{msj.texto}</p>}
+      {error && <p className="error" role="alert">{error}</p>}
     </form>
   );
 }

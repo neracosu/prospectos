@@ -12,7 +12,7 @@ import { BotonCopiar } from "@/componentes/BotonCopiar";
 
 export const dynamic = "force-dynamic";
 
-const TEXTO_EVENTO: Record<string, string> = { enviado: "Propuesta enviada", seguimiento: "Escribió de nuevo", abierto: "Abrió la propuesta", etapa: "Cambio de etapa", nota: "Nota", saltado: "Saltado", salto_deshecho: "Salto deshecho", importado: "Ingresó", lectura_web: "Leyó la web" };
+const TEXTO_EVENTO: Record<string, string> = { enviado: "Propuesta enviada", seguimiento: "Escribió de nuevo", abierto: "Abrió la propuesta", etapa: "Cambio de etapa", nota: "Nota", saltado: "Saltado", salto_deshecho: "Salto deshecho", importado: "Ingresó", lectura_web: "Leyó la web", correo_abierto: "Abrió el correo", correo_clic: "Tocó “Ver la propuesta” en el correo", pdf_descargado: "Descargó el PDF", correo_bloqueado: "Correo bloqueado", ficha_generada: "Ficha investigada", ficha_revisada: "Ficha revisada" };
 
 // Ficha de un lead (panel CRM, fase 2): siguiente paso al frente, datos, contacto, propuesta, nota; historial a la
 // derecha en escritorio y plegado en el telefono. Una fila del directorio sigue en /prospectos/<id>.
