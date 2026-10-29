@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { CabeceraPagina } from "@/componentes/CabeceraPagina";
 import { exigirSesion } from "@/lib/sesion";
 import { buscarProspectos, listarNichos, resumenProspectos, POR_PAGINA_PROSPECTOS } from "@/lib/prospectos";
 import { ETAPAS, ETIQUETA_ETAPA, esEtapa } from "@/lib/embudo-contrato";
@@ -39,7 +40,7 @@ export default async function Prospectos({ searchParams }: { searchParams: Promi
 
   return (
     <>
-      <div className="fila" style={{ border: 0 }}><h1 className="titulo">Prospectos</h1><Link className="boton boton--primario" href="/prospectos/nuevo">Nuevo</Link></div>
+      <CabeceraPagina titulo="Prospectos" accion={<Link className="boton boton--primario" href="/prospectos/nuevo">Nuevo</Link>} />
       <form className="tarjeta" method="get">
         <label className="campo"><span>Buscar</span><input name="q" defaultValue={sp.q ?? ""} placeholder="Nombre, ciudad o teléfono" /></label>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>

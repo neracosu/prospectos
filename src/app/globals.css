@@ -8,6 +8,7 @@
   --borde-control: #5f6e67;
   --verde: #5ed29c; --rojo: #ef6b6b; --ambar: #f0c35a; --radio: 12px;
   --barra-alto: 64px;
+  --lateral-ancho: 240px;
 }
 * { box-sizing: border-box; }
 html, body { margin: 0; background: var(--fondo); color: var(--tinta); font: 16px/1.45 var(--fuente-panel), system-ui, -apple-system, "Segoe UI", sans-serif; }
@@ -207,3 +208,68 @@ button, input, select, textarea { font: inherit; }
 .web-dias { list-style: none; margin: 0; padding: 0; font-size: 14px; }
 .web-dias li { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid var(--borde); }
 .cifras > div > .suave { font-size: 12px; }
+
+/* ============================================================
+   Panel CRM, fase 1 (29-oct-2026): esqueleto. Niveles de titulo, cabecera de pagina, tabla, barra lateral
+   (escritorio, desde 1024 px) y hoja «Mas» de la barra inferior (telefono).
+   ============================================================ */
+.contenedor h1 { font-size: 24px; margin: 0; line-height: 1.2; }
+.contenedor h2 { font-size: 18px; margin: 20px 0 10px; line-height: 1.25; }
+.contenedor h3 { font-size: 15px; margin: 14px 0 8px; }
+.contenedor h2.titulo { font-size: 18px; }
+.icono { flex: none; }
+
+/* cabecera de pagina */
+.cabecera-pagina { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 16px; }
+.cabecera-pagina__texto { display: flex; align-items: baseline; gap: 10px; min-width: 0; flex-wrap: wrap; }
+.cabecera-pagina__cifra { color: var(--tinta-suave); font-size: 14px; }
+.cabecera-pagina__accion { flex: none; }
+
+/* tabla base: en el telefono, filas apiladas con su etiqueta; desde 1024 px, tabla de verdad */
+.tabla { width: 100%; border-collapse: collapse; }
+.tabla thead { display: none; }
+.tabla tr { display: block; padding: 10px 0; border-bottom: 1px solid var(--borde); }
+.tabla td { display: flex; justify-content: space-between; gap: 12px; padding: 2px 0; font-size: 15px; }
+.tabla td[data-label]::before { content: attr(data-label); color: var(--tinta-suave); font-size: 13px; }
+.tabla td.num { font-variant-numeric: tabular-nums; }
+
+/* barra inferior: icono + texto, y el boton «Mas» con el mismo trato que un enlace */
+.barra__item { flex-direction: column; gap: 2px; font-size: 11px; background: none; border: 0; color: var(--tinta-suave); cursor: pointer; padding: 0; min-width: 0; }
+.barra__item .icono { width: 22px; height: 22px; }
+.barra__mas[aria-expanded="true"] { color: var(--tinta); }
+
+/* hoja «Mas» */
+.velo { position: fixed; inset: 0; background: rgba(0, 0, 0, .55); z-index: 40; }
+.hoja { position: fixed; left: 0; right: 0; bottom: 0; z-index: 41; background: var(--panel); border-top: 1px solid var(--borde); border-radius: 16px 16px 0 0; padding: 12px 16px calc(16px + env(safe-area-inset-bottom)); }
+.hoja__lista { list-style: none; margin: 0 0 8px; padding: 0; }
+.hoja__item { display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 0 4px; text-decoration: none; color: var(--tinta); font-size: 16px; border-bottom: 1px solid var(--borde); }
+.hoja__item:last-child { border-bottom: 0; }
+.hoja__cerrar { width: 100%; }
+
+/* barra lateral: no existe en el telefono */
+.lateral { display: none; }
+
+@media (min-width: 1024px) {
+  .barra { display: none; }
+  .lateral { display: flex; flex-direction: column; position: fixed; left: 0; top: 0; bottom: 0; width: var(--lateral-ancho); background: var(--panel); border-right: 1px solid var(--borde); padding: 20px 12px 16px; z-index: 30; }
+  .lateral__marca { display: block; padding: 4px 12px 20px; font-weight: 700; letter-spacing: .06em; font-size: 15px; text-decoration: none; color: var(--tinta); }
+  .lateral__marca b { color: var(--verde); }
+  .lateral__lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+  .lateral__item { display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 0 12px; border-radius: 10px; text-decoration: none; color: var(--tinta-suave); font-size: 15px; }
+  .lateral__item:hover { background: var(--superficie-2); color: var(--tinta); }
+  .lateral__item.activo { background: var(--superficie-2); color: var(--tinta); font-weight: 600; box-shadow: inset 3px 0 0 var(--verde); }
+  .lateral__pie { margin-top: auto; padding: 12px; border-top: 1px solid var(--borde); display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 14px; color: var(--tinta-suave); }
+  .lateral__usuario { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .lateral__salir { color: var(--tinta-suave); }
+  .contenedor { margin-left: var(--lateral-ancho); max-width: none; padding: 24px 32px 48px; }
+  .contenedor > * { max-width: 1280px; }
+  .cabecera-pagina { position: sticky; top: 0; z-index: 20; background: var(--fondo); padding: 4px 0 12px; margin: -4px 0 16px; }
+  .contenedor h1 { font-size: 26px; }
+  .tabla thead { display: table-header-group; }
+  .tabla tr { display: table-row; padding: 0; }
+  .tabla th { position: sticky; top: 56px; background: var(--fondo); text-align: left; font-size: 13px; font-weight: 600; color: var(--tinta-suave); padding: 8px 10px; border-bottom: 1px solid var(--borde); }
+  .tabla td { display: table-cell; height: 48px; padding: 6px 10px; font-size: 14px; border-bottom: 1px solid var(--borde); vertical-align: middle; }
+  .tabla td[data-label]::before { content: none; }
+  .tabla th.num, .tabla td.num { text-align: right; }
+  .flotante-zona { left: calc(var(--lateral-ancho) + 24px); right: auto; width: 480px; bottom: 24px; }
+}
