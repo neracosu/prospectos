@@ -123,13 +123,16 @@ export async function depurarYMarcar(aplicar: boolean): Promise<{ cola: number; 
   const excluidas: Record<string, number> = {};
   for (const e of r.excluidas) excluidas[e.motivo] = (excluidas[e.motivo] ?? 0) + 1;
   if (aplicar) {
+    const yaMarcadas = new Set((await prisma.fichaNegocio.findMany({ where: { alAutomatico: true }, select: { prospectoId: true } })).map((x) => x.prospectoId));
+    const descartadas = new Set(prospectos.filter((x) => x.etapa === "descartado").map((x) => x.id));
     for (const d of r.duplicadas) {
+      if (descartadas.has(d.id)) continue;
       await prisma.$transaction([
         prisma.prospecto.update({ where: { id: d.id }, data: { etapa: "descartado" } }),
         prisma.evento.create({ data: { prospectoId: d.id, tipo: "nota", texto: `mismo correo que #${d.principalId}` } }),
       ]);
     }
-    for (const f of r.cola) await marcarAlAutomatico(f.id, true);
+    for (const f of r.cola) if (!yaMarcadas.has(f.id)) await marcarAlAutomatico(f.id, true);
   }
   return { cola: r.cola.length, duplicadas: r.duplicadas.length, excluidas };
 }

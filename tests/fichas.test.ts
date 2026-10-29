@@ -62,6 +62,20 @@ describe.runIf(DB_HABILITADA)("fichas de negocio", () => {
     const nota = await prisma.evento.findFirstOrThrow({ where: { prospectoId: b.id, tipo: "nota" } });
     expect(nota.texto).toBe(`mismo correo que #${a.id}`);
   });
+
+  it("depurarYMarcar(true) dos veces es idempotente: una sola nota por duplicada y el mismo estado", async () => {
+    await prisma.fichaNegocio.deleteMany(); await prisma.evento.deleteMany(); await prisma.prospecto.deleteMany();
+    const a = await crearProspectoDePrueba(nichoRestaurantes, { nombre: "Idem A", email: "idem@x.test", web: "https://a.test/" });
+    const b = await crearProspectoDePrueba(nichoRestaurantes, { nombre: "Idem B", email: "IDEM@x.test" });
+    await depurarYMarcar(true);
+    const antes = await prisma.fichaNegocio.findUniqueOrThrow({ where: { prospectoId: a.id } });
+    await depurarYMarcar(true);
+    expect(await prisma.evento.count({ where: { prospectoId: b.id, tipo: "nota" } })).toBe(1);
+    expect((await prisma.prospecto.findUniqueOrThrow({ where: { id: b.id } })).etapa).toBe("descartado");
+    const despues = await prisma.fichaNegocio.findUniqueOrThrow({ where: { prospectoId: a.id } });
+    expect(despues).toEqual(antes);
+    expect(await prisma.fichaNegocio.count()).toBe(1);
+  });
 });
 
 
