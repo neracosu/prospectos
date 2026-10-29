@@ -49,7 +49,8 @@ const b = await chromium.launch();
 try {
   // ---------- siembra (dentro del try: si algo falla, el finally limpia) ----------
   configAntes = await prisma.configuracion.findMany({ where: { clave: { in: CLAVES_CONFIG } }, select: { clave: true, valor: true } });
-  await prisma.configuracion.deleteMany({ where: { clave: { in: CLAVES_CONFIG } } }); // defectos: 25 por dia, encendido
+  await prisma.configuracion.deleteMany({ where: { clave: { in: CLAVES_CONFIG } } }); // defectos: 25 por dia, automatico apagado
+  await prisma.configuracion.upsert({ where: { clave: "correos_automatico" }, update: { valor: "on" }, create: { clave: "correos_automatico", valor: "on" } }); // el recorrido parte con el automatico encendido
   const nichoDe = async (arquetipo: string, nombre: string) => {
     const n = await prisma.nicho.findFirst({ where: { plantillaPropuesta: arquetipo } });
     if (n) return n;
@@ -176,6 +177,7 @@ try {
     await form.locator("select[name=automatico]").selectOption("off");
     await form.locator("button", { hasText: "Guardar" }).click();
     revisar(await esperar(async () => (await prisma.configuracion.findUnique({ where: { clave: "correos_automatico" } }))?.valor === "off"), "ajustes: pausar desde Ajustes queda en la base");
+    await pg.waitForLoadState("networkidle"); await pg.waitForTimeout(1500); // el formulario se remonta con los valores nuevos (key): esperar antes de tocarlo
     await pg.locator("#correos form select[name=automatico]").selectOption("on");
     await pg.locator("#correos form input[name=tope]").fill("30");
     await pg.locator("#correos form button", { hasText: "Guardar" }).click();
