@@ -96,7 +96,8 @@ function limpiarRespuestas(x: unknown): string {
     const r: Record<string, string> = {};
     for (const k of CLAVES_RESPUESTAS) {
       const v = o[k];
-      if (v === undefined || v === null) continue;
+      // Solo primitivos: String({toString: 1}) lanza y un arreglo u objeto no es una respuesta.
+      if (typeof v !== "string" && typeof v !== "number" && typeof v !== "boolean") continue;
       const t = String(v).trim().slice(0, largo);
       if (t) r[k] = t;
     }

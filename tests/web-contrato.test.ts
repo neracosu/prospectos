@@ -183,6 +183,11 @@ describe("embudo /empezar", () => {
     expect(r.ok).toBe(true);
     if (r.ok) { expect(r.datos.respuestas.length).toBeLessThanOrEqual(400); expect(r.datos.calificacion).toBe(""); }
   });
+  it("un valor que no es primitivo (objeto con toString, arreglo) no revienta: se ignora", () => {
+    const r = normalizarSolicitud({ nombre: "Ana", phone: "04121234567", type: "embudo", respuestas: { rubro: { toString: 1 }, actual: ["a"], objetivo: "cobros", tamano: 1, sistema: true } });
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(JSON.parse(r.datos.respuestas)).toEqual({ objetivo: "cobros", tamano: "1", sistema: "true" });
+  });
   it("respuestasLegibles traduce y tolera JSON roto", () => {
     expect(respuestasLegibles('{"rubro":"hoteles","tamano":"1"}')).toEqual([{ clave: "Rubro", valor: "hoteles" }, { clave: "Tamaño", valor: "1" }]);
     expect(respuestasLegibles("{no es json")).toEqual([]);
