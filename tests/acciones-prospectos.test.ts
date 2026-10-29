@@ -43,6 +43,15 @@ describe.runIf(DB_HABILITADA)("acciones de prospectos", () => {
     expect(ev[0]).toMatchObject({ canal: "whatsapp", usuarioId: ids.usuarioId, de: "por_contactar", a: "enviado" });
   });
 
+  it("marcarEnviado asciende un directorio a lead con fuente directorio y no pisa la fuente de un lead", async () => {
+    const dir = await crearProspectoDePrueba(ids.nichoId, { whatsapp: "584120000011" });
+    expect((await marcarEnviado(dir.id, "whatsapp")).ok).toBe(true);
+    expect(await prisma.prospecto.findUniqueOrThrow({ where: { id: dir.id }, select: { esLead: true, fuenteLead: true } })).toEqual({ esLead: true, fuenteLead: "directorio" });
+    const lead = await prisma.prospecto.create({ data: { nichoId: ids.nichoId, nombre: "Boutique Alma", ciudad: "", whatsapp: "584120000012", fuentes: [], codigo: "l".repeat(22), clave: "boutiquealma||584120000012", origen: "manual", esLead: true, fuenteLead: "web" } });
+    expect((await marcarEnviado(lead.id, "whatsapp")).ok).toBe(true);
+    expect(await prisma.prospecto.findUniqueOrThrow({ where: { id: lead.id }, select: { esLead: true, fuenteLead: true } })).toEqual({ esLead: true, fuenteLead: "web" });
+  });
+
   it("marcarEnviado rechaza un canal desconocido", async () => {
     const p = await crearProspectoDePrueba(ids.nichoId, { whatsapp: "584120000002" });
     expect(await marcarEnviado(p.id, "paloma" as any)).toEqual({ ok: false, mensaje: expect.stringContaining("canal") });

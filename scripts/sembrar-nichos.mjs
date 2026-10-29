@@ -147,6 +147,13 @@ const NICHOS = [
     // Etiquetas OSM para el buscador (pieza 2): amenity=pharmacy
     etiquetaOsm: [["amenity", "pharmacy"]],
   },
+  {
+    // Comodin para los leads que no encajan en ningun nicho (panel CRM, fase 2). Sin propuesta, sin buscador.
+    slug: "otro", nombre: "Otro", plantillaPropuesta: "", diasSeguimiento: 3,
+    mensajeInicial: "Hola, {nombre}. Soy Neri Colón, de NERACOSU. Le escribo por lo que conversamos: cuando quiera le cuento cómo quedaría su sistema, sin compromiso.",
+    mensajeSeguimiento: "Hola de nuevo, {nombre}. Le escribí hace unos días; si le sirve, le muestro cómo quedaría su sistema con su marca.",
+    etiquetaOsm: [],
+  },
 ];
 for (const n of NICHOS) {
   await prisma.nicho.upsert({ where: { slug: n.slug }, update: { etiquetaOsm: n.etiquetaOsm, plantillaPropuesta: n.plantillaPropuesta }, create: n });

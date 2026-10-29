@@ -35,7 +35,7 @@ export const REGLAS_NICHO: Record<string, ReglaNicho> = {
   educacion: { bases: ["specialty_school"] },
 };
 // Nichos que el directorio no cubre: 4 moteles y 2 tiendas de cosmeticos en todo el pais (medido el 5-oct-2026).
-export const SIN_EQUIVALENCIA = ["hoteles", "cosmeticos"];
+export const SIN_EQUIVALENCIA = ["hoteles", "cosmeticos", "otro"];
 
 export function reglaDeNicho(slug: string): ReglaNicho | undefined {
   return Object.hasOwn(REGLAS_NICHO, slug) ? REGLAS_NICHO[slug] : undefined;

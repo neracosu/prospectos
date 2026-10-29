@@ -46,7 +46,7 @@ export async function marcarEnviado(prospectoId: number, canal: Canal): Promise<
     // Condicionado a la etapa leida: dos toques no cuentan dos envios.
     const r = await prisma.prospecto.updateMany({
       where: { id: eId.data, etapa: "por_contactar" },
-      data: { etapa: "enviado", proximoSeguimiento: sumarDias(hoy, p.nicho.diasSeguimiento) },
+      data: { etapa: "enviado", esLead: true, proximoSeguimiento: sumarDias(hoy, p.nicho.diasSeguimiento) },
     });
     if (r.count === 0) {
       // Se releen la etapa actual: pudo cambiar entre la lectura de arriba y el updateMany.
@@ -55,6 +55,8 @@ export async function marcarEnviado(prospectoId: number, canal: Canal): Promise<
       if (etapaActual === "enviado") return fallo("Ya estaba marcado como enviado.");
       return fallo(`Este prospecto está en «${ETIQUETA_ETAPA[etapaActual]}».`);
     }
+    // Un directorio que recibe su primer envio asciende a lead (fase 2); si ya era lead, su fuente se respeta.
+    await prisma.prospecto.updateMany({ where: { id: eId.data, fuenteLead: "" }, data: { fuenteLead: "directorio" } });
     await prisma.evento.create({ data: { prospectoId: eId.data, usuarioId: u.id, tipo: "enviado", de: "por_contactar", a: "enviado", canal: eCanal.data } });
     refrescar(eId.data);
     return exito();

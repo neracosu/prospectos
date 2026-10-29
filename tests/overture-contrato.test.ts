@@ -20,7 +20,7 @@ describe("overture: de nicho a categorias", () => {
   it("cada nicho sembrado tiene regla o esta en la lista de sin equivalencia, nunca las dos", () => {
     const fuente = readFileSync(path.join(import.meta.dirname, "..", "scripts", "sembrar-nichos.mjs"), "utf8");
     const slugs = [...fuente.matchAll(/slug: "([a-z-]+)"/g)].map((m) => m[1]);
-    expect(slugs.length).toBe(19);
+    expect(slugs.length).toBe(20);
     for (const s of slugs) expect([s, Boolean(REGLAS_NICHO[s]) !== SIN_EQUIVALENCIA.includes(s)]).toEqual([s, true]);
     expect(Object.keys(REGLAS_NICHO).filter((s) => !slugs.includes(s))).toEqual([]);
   });

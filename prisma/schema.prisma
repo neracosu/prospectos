@@ -66,7 +66,13 @@ model Prospecto {
   fuentes            Json // lista de URLs (pieza 2 suma {campo: url})
   // {campo: url} de donde salio cada dato (pieza 2). `fuentes` sigue siendo la lista plana de URLs.
   fuentesPorCampo    Json       @default("{}")
-  origen             String     @default("importado") // importado | manual | overpass | web | maps | overture
+  origen             String     @default("importado") // importado | manual | overpass | web | maps | overture | solicitud
+  // Panel CRM, fase 2: un lead es una conversacion real; lo demas es directorio (prospeccion masiva).
+  esLead             Boolean    @default(false)
+  fuenteLead         String     @default("") @db.VarChar(20) // web | embudo | whatsapp | instagram | referido | directorio | otro
+  valorEstimado      Decimal?   @db.Decimal(10, 2)
+  proximoPaso        String     @default("") @db.VarChar(160)
+  propuestaUrl       String     @default("") @db.VarChar(300)
   etapa              String     @default("por_contactar")
   // Texto ISO YYYY-MM-DD en dia de Caracas. Nulo = sin seguimiento pendiente.
   proximoSeguimiento String?
@@ -82,6 +88,7 @@ model Prospecto {
   @@unique([nichoId, clave])
   @@index([etapa, ordenCola])
   @@index([etapa, proximoSeguimiento])
+  @@index([esLead, etapa])
 }
 
 model Evento {
@@ -375,6 +382,8 @@ model SolicitudWeb {
   respuestas   String    @default("") @db.VarChar(400)
   calificacion String    @default("") @db.VarChar(20)
   origen       String    @default("") @db.VarChar(120)
+  // Fase 2: el lead que salio de esta solicitud (convertirSolicitud); sin FK a proposito, como el resto del modelo web
+  prospectoId  Int?
   creadaEn    DateTime  @default(now())
   atendidaEn  DateTime?
 
