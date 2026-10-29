@@ -100,6 +100,15 @@ describe.runIf(DB_HABILITADA)("consultas de prospectos", () => {
     expect(f?.mensaje).not.toContain("/p/");
   });
 
+  it("la cola del dia no sirve prospectos sin ningun contacto (solo nombre y ciudad)", async () => {
+    const mudo = await prisma.prospecto.create({ data: { nichoId: ids.nichoId, nombre: "Sin Contacto", ciudad: "Caracas", fuentes: [], codigo: "m".repeat(22), clave: "sincontacto|caracas", origen: "overpass", etapa: "por_contactar", ordenCola: 0 } });
+    const soloWeb = await prisma.prospecto.create({ data: { nichoId: ids.nichoId, nombre: "Solo Web", ciudad: "Caracas", fuentes: [], codigo: "w".repeat(22), clave: "soloweb|caracas", origen: "overpass", etapa: "por_contactar", ordenCola: 0, web: "https://soloweb.test/" } });
+    const ids2 = (await colaDelDia(50)).map((p) => p.id);
+    expect(ids2).not.toContain(mudo.id);
+    expect(ids2).not.toContain(soloWeb.id); // una web sola no es un canal para escribir
+    await prisma.prospecto.deleteMany({ where: { id: { in: [mudo.id, soloWeb.id] } } });
+  });
+
   it("la cola del dia y los seguimientos del directorio no traen leads (fase 2)", async () => {
     const hoy = hoyCaracas();
     const leadNuevo = await prisma.prospecto.create({ data: { nichoId: ids.nichoId, nombre: "Lead Nuevo", ciudad: "", whatsapp: "584129990001", fuentes: [], codigo: "n".repeat(22), clave: "leadnuevo||584129990001", origen: "manual", esLead: true, fuenteLead: "web", etapa: "por_contactar", ordenCola: 0 } });

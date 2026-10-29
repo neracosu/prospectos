@@ -91,6 +91,10 @@ directorio, otro), `valorEstimado`, `proximoPaso`, `propuestaUrl` (migración a 
   mismo nombre choquen; el directorio sigue con `nombre|ciudad`); `naceLead` (solo `manual` y `solicitud`);
   `nichoDesdeRubro` (rubro del embudo → slug). Nicho comodín **`otro`** (sembrado; en `SIN_EQUIVALENCIA`; el test de
   slugs va en 20).
+- **La cola del día solo sirve prospectos con algún canal** (`CON_CONTACTO` en `src/lib/prospectos.ts`: WhatsApp,
+  teléfono, Instagram, Facebook, correo o TikTok; una web sola no cuenta). Desde el 2026-10-31: 2.655 filas del mapa de
+  OpenStreetMap solo traían nombre y ciudad y el prospectador perdía el turno en ellas. Siguen en la lista del
+  Directorio; se completan con el cruce de Overture (script fuera del repo, 249 completadas ese día) y con «Leer web».
 - **Un directorio asciende a lead al marcar enviado** (`marcarEnviado`: `esLead = true`, `fuenteLead = "directorio"` si
   estaba vacía).
 - Acciones en `src/acciones/leads.ts`: `crearLead` (alta corta, exige un contacto), `moverLead` (rechaza lo que no es

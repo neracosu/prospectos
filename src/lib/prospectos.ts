@@ -49,8 +49,12 @@ function aTarjeta(f: FilaProspecto, abrio: boolean, plantilla: "inicial" | "segu
 // cola masiva ni en sus seguimientos (fase 2).
 export const DEL_DIRECTORIO: Prisma.ProspectoWhereInput = { OR: [{ esLead: false }, { fuenteLead: "directorio" }] };
 
+// Un prospecto sin ningun canal (solo nombre y ciudad, como los del mapa de OpenStreetMap) no entra en la cola: nadie
+// puede escribirle y el prospectador perdia el turno. Una web sola tampoco es un canal; «Leer web» lo completa.
+export const CON_CONTACTO: Prisma.ProspectoWhereInput = { OR: [{ whatsapp: { not: "" } }, { telefono: { not: "" } }, { instagram: { not: "" } }, { facebook: { not: "" } }, { email: { not: "" } }, { tiktok: { not: "" } }] };
+
 export async function colaDelDia(limite = 10): Promise<ProspectoTarjeta[]> {
-  const filas = await prisma.prospecto.findMany({ where: { etapa: "por_contactar", esLead: false }, select: SELECT, orderBy: { ordenCola: "asc" }, take: 500 });
+  const filas = await prisma.prospecto.findMany({ where: { etapa: "por_contactar", esLead: false, ...CON_CONTACTO }, select: SELECT, orderBy: { ordenCola: "asc" }, take: 500 });
   return ordenarCola(filas.map((f) => aTarjeta(f, false, "inicial"))).slice(0, limite);
 }
 
