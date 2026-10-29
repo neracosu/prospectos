@@ -20,14 +20,18 @@ con una carta que demuestre que miramos su negocio, y queda registrado en el pan
 2. Un **gancho personalizado** («Vi que…») sacado de esa ficha, que entra en la carta del PDF y en el correo.
 3. Un **correo con diseño** (marca NERACOSU, se lee bien en Gmail del teléfono), con el PDF adjunto y el
    enlace a la propuesta en línea, en texto de usted y con el enganche actual.
-4. **Envío desde el panel**, uno a uno, con vista previa y un solo botón; registrado como evento, con etapa y
+4. **Envío desde el panel**: automático y goteado para todo lo que ya está en la base (decisión de Neri, 29-oct) y
+   un botón «Enviar» con vista previa para los prospectos que entren después; registrado como evento, con etapa y
    seguimiento como el WhatsApp.
-5. Todo listo antes de que Neri entre: fichas generadas, correos armados, cola ordenada por calidad.
+5. **Rastreo por correo enviado** (pedido de Neri, 29-oct): cuántos abrieron el correo, cuántos vieron la propuesta en
+   línea, cuántos descargaron el PDF y cuántos respondieron, por correo y en total.
+6. Todo listo antes de que Neri entre: fichas generadas, correos armados, cola ordenada por calidad.
 
 ## No metas y anti-metas
 
-- **No** envío masivo de un golpe ni programado: cada correo sale cuando Neri pulsa «Enviar». Es su decisión
-  y protege la reputación del dominio (ver Entregabilidad).
+- **No** envío masivo de un golpe: el envío automático (pedido de Neri el 29-oct, ver §4b) sale **goteado**, dentro
+  del tope diario y en horario laboral de Caracas, y se apaga con un interruptor. Protege la reputación del dominio
+  (ver Entregabilidad).
 - **No** se inventa nada en la ficha ni en el gancho: cada dato tiene su fuente. Si de un negocio solo
   sabemos nombre, ciudad y rubro, el correo va sin «Vi que…» y lo dice el estado de la ficha («sin hallazgos»).
 - **No** se mandan correos a direcciones del Estado (`gob.ve`, 10 filas) ni genéricas.
@@ -166,23 +170,61 @@ cambia de hash cuando cambia el gancho, así que el caché se regenera solo.
   `email`): viven en `/correos`. No hay tercer toque en esta versión.
 - La búsqueda global y el Inicio no cambian.
 
+### 4b. Envío automático (decisión de Neri, 29-oct)
+
+- **Interruptor** en Ajustes (`correos_automatico`: `on`/`off`, por defecto `on` al desplegar, tras revisar con Neri
+  la muestra de 20 fichas) y **tope diario** `correos_por_dia` (por defecto **25**; Neri pidió «un poquito más» que
+  15; recomendación: una semana en 25 y, sin rebotes ni quejas, subir a 40).
+- **Goteo:** una ruta interna `POST /api/correos/automatico` (cabecera `x-cron-secret` = `PROSPECTOS_CRON_SECRET` del
+  env; sin ella 404) manda **un lote pequeño** por llamada: `ceil(tope / 8)` correos, solo de lunes a viernes entre las
+  09:00 y las 17:00 de Caracas, hasta completar el tope del día. La llama el crontab de cPanel cada hora con `curl`.
+  No va en `src/instrumentation.ts`: su cadena de imports no admite `node:` y el envío lo usa (nodemailer).
+- **Qué entra al automático:** la cola de §4 con ficha en estado `lista` o `revisada` (con o sin gancho), **nunca** una
+  ficha `nombreNoCoincide` ni una dirección en `CorreoBloqueado`; orden: primero las fichas con gancho. Los prospectos
+  que entren al directorio **después** del despliegue no entran al automático: se les investiga y se les manda a mano
+  desde `/correos` (botón «Enviar»), salvo que Neri los marque «al automático» en la ficha.
+- Cada llamada deja una línea `[correos] <fecha hora>: N enviados, M del día, tope T` en el log de PM2; si una
+  dirección falla en sendmail se registra el evento `correo_fallido` y la fila queda para reintento manual.
+- En `/correos`, arriba: estado del automático (encendido, enviados hoy / tope, próximo lote) y el botón de pausa.
+
+### 4c. Rastreo
+
+- Modelo `EnvioCorreo`: `id`, `prospectoId`, `token` (22 caracteres base64url, único), `tipo` (`inicial` |
+  `seguimiento`), `asunto`, `para`, `enviadoEn`, `abiertoEn` (primera vez), `aperturas`, `clicEn` (primera vez),
+  `clics`, `pdfEn` (primera vez), `pdfs`, `fallo` (texto, vacío si salió).
+- **Apertura:** imagen de 1×1 `GET /api/correo/a/<token>.png` al final del HTML (la única imagen remota del correo).
+  Suma `aperturas` y fija `abiertoEn`; deja evento `correo_abierto` solo la primera vez.
+- **Vio la propuesta:** el botón «Ver la propuesta» apunta a `GET /r/<token>` que suma `clics`, fija `clicEn`, deja
+  evento `correo_clic` (primera vez) y redirige a `/p/<codigo>?e=<token>`; `/p/<codigo>` sigue dejando `abierto`.
+- **Descargó el PDF:** el enlace al PDF del correo y el botón del documento en línea llevan `?e=<token>`;
+  `/p/<codigo>/pdf` con `e` válido suma `pdfs`, fija `pdfEn` y deja evento `pdf_descargado` (primera vez). Sin `e`
+  (descarga desde el panel) no cuenta.
+- **Respondió:** lo marca Neri («Respondió», ya existe) o llega una solicitud web del mismo correo; cuenta por etapa.
+- Ninguno de los tres endpoints exige sesión ni expone datos: con token inválido responden la imagen vacía / 404.
+  Los pedidos con sesión del panel (Neri probando) no cuentan, como en `/p/<codigo>`.
+- **Cifras en `/correos`:** enviados · abrieron el correo · vieron la propuesta · descargaron el PDF · respondieron,
+  con porcentaje sobre enviados, para el total y por arquetipo; y en cada fila los cuatro hitos con su fecha. La
+  ficha del prospecto muestra los eventos en el historial.
+
 ### 5. Entregabilidad (lo que protege el dominio)
 
-- Uno a uno, con tope diario de 15 los primeros días; si no hay rebotes ni quejas, Neri lo sube desde Ajustes.
+- Goteado, con tope diario de 25 la primera semana; si no hay rebotes ni quejas, Neri lo sube desde Ajustes.
 - DKIM, SPF y DMARC ya están. El PTR genérico de Contabo es un punto en contra menor; cambiarlo es un ajuste
   en el panel de Contabo (PTR → `mail.neracosu.com`), lo anotamos para Neri.
 - Contenido: texto real, un solo enlace al panel y uno a WhatsApp, sin acortadores, sin imágenes remotas, pie
   con el porqué y la salida.
-- Sin seguimiento por píxel: la apertura se mide por la visita a `/p/<codigo>` (evento `abierto`, ya existe).
+- Rastreo con píxel y enlaces con token (§4c), porque Neri lo pidió; se dice con honestidad en el panel que la
+  apertura por píxel es aproximada (Gmail la carga por su proxy y algunos clientes la bloquean).
 
 ### 6. Fases publicables
 
 1. **Fichas:** modelo + migración, script de investigación, bloque en la ficha del prospecto. Correr la
    investigación sobre los 286 y revisar una muestra de 20 fichas por arquetipo a mano antes de seguir.
 2. **Gancho en el PDF:** token, bloque en las nueve plantillas, verificador con gancho largo.
-3. **Correo y cola:** contrato del correo, envío, `/correos`, vista previa, tope, eventos, Ajustes.
-4. **Despliegue y arranque:** build, `pm2 restart prospectos`, los primeros 10 envíos con Neri mirando la
-   vista previa, memoria y CLAUDE.md al día.
+3. **Correo, rastreo y cola:** contrato del correo, envío, rastreo (`EnvioCorreo`, píxel, `/r/<token>`, PDF con `e`),
+   `/correos` con cifras, vista previa, tope, eventos, Ajustes, envío automático por cron.
+4. **Despliegue y arranque:** build, `pm2 restart prospectos`, crontab, los primeros 10 envíos a mano con Neri
+   mirando la vista previa, y entonces el automático encendido; memoria y CLAUDE.md al día.
 
 ### 7. Pruebas
 
@@ -239,6 +281,8 @@ cambia de hash cuando cambia el gancho, así que el caché se regenera solo.
 
 ## Decisiones de Neri (cambian lo que se construye)
 
+Neri aprobó el diseño el 29-oct («está perfecto, aprobado») y sumó el envío automático y el rastreo (§4b y §4c).
+
 1. **Reseñas.** No hay fuente gratuita y lícita de reseñas de Google. Opciones: (a) sin reseñas en esta
    versión (la ficha se arma con web, Overture y la base); (b) Google Places API con una clave de Neri con
    facturación: unas 300 consultas de «detalles del lugar» salen en el orden de USD 5 a 10 y traen puntuación,
@@ -247,7 +291,7 @@ cambia de hash cuando cambia el gancho, así que el caché se regenera solo.
    29-oct a su Gmail salió así). La otra
    opción es su Gmail por SMTP con contraseña de aplicación: la respuesta le llegaría al mismo hilo de Gmail,
    pero hay que guardar esa contraseña en el servidor y Gmail limita a ~500 al día.
-3. **Tope diario** de arranque: propongo 15.
+3. **Tope diario** de arranque: 25 (Neri, 29-oct: «un poquito más» que 15).
 
 ## Lo que decide el constructor
 
