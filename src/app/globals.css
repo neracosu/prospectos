@@ -401,3 +401,11 @@ button, input, select, textarea { font: inherit; }
 .aviso__fila { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 6px 0 0; color: var(--tinta); }
 .tabla__principal { display: inline-flex; align-items: center; gap: 6px; text-decoration: none; color: var(--tinta); }
 .pestanas__item--aparte { margin-left: auto; }
+
+/* Ficha de proyecto (fase 3): resumen y cliente a la derecha en escritorio, plegados arriba en el telefono */
+.ficha__resumen { margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid var(--borde); }
+.ficha__resumen .tarjeta { background: transparent; border: 0; padding: 0; margin-bottom: 10px; }
+.ficha__cliente { padding-top: 4px; }
+.ficha__cliente .fila-botones { margin-top: 6px; }
+.cabecera-pagina__cifra .semaforo { vertical-align: middle; }
+.cabecera-pagina__cifra a { color: var(--tinta); }

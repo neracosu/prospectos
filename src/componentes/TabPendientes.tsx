@@ -11,6 +11,7 @@ import { agregarPendiente, marcarPendiente, alternarVisible, moverPendiente, eli
 export function TabPendientes({ proyectoId, pendientes }: { proyectoId: number; pendientes: PendienteFila[] }) {
   const [error, setError] = useState("");
   const [abierta, setAbierta] = useState<number | null>(null); // la fila con sus acciones secundarias a la vista
+  const [nuevo, setNuevo] = useState(false); // el formulario de alta vive detras de «Nuevo pendiente» (fase 3)
   const [pendiente, empezar] = useTransition();
   const avisarResultado = useFlotante();
   // Pasada de UX, fase B: la casilla, «Mostrar al cliente» y subir/bajar se ven al tocar; si el servidor dice que
@@ -67,7 +68,8 @@ export function TabPendientes({ proyectoId, pendientes }: { proyectoId: number; 
           {enlaceManual?.id === p.id && <p className="suave">El navegador bloqueó la ventana: <a href={enlaceManual.href} target="_blank" rel="noopener">Abrir WhatsApp</a></p>}
         </Fragment>
       ))}
-      <form className="pregunta" action={(fd) => correr(async () => { const r = await agregarPendiente(fd); return r; })}>
+      <div className="fila-botones"><button type="button" className="boton" aria-expanded={nuevo} onClick={() => setNuevo((v) => !v)}>{nuevo ? "Cancelar" : "Nuevo pendiente"}</button></div>
+      {nuevo && <form className="pregunta" action={(fd) => correr(() => agregarPendiente(fd), undefined, () => setNuevo(false))}>
         <input type="hidden" name="proyectoId" value={proyectoId} />
         {/* Reglas copiadas de NuevoZ (src/acciones/pendientes.ts). */}
         <Campo nombre="texto" etiqueta="Nuevo pendiente" regla={{ tipo: "texto", min: 2, max: 200 }} requerido autoComplete="off" />
@@ -76,7 +78,7 @@ export function TabPendientes({ proyectoId, pendientes }: { proyectoId: number; 
           <Campo nombre="fechaEstimada" etiqueta="Fecha estimada" regla={{ tipo: "fecha" }} type="date" />
         </div>
         <button className="boton boton--primario" disabled={pendiente}>Agregar</button>
-      </form>
+      </form>}
       {error && <p className="error" role="alert">{error}</p>}
     </section>
   );
