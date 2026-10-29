@@ -72,7 +72,7 @@ try {
     await entrar(pg, PIN_DUENO);
     await pg.goto(`${BASE}/prospectos`); await pg.waitForLoadState("networkidle");
     revisar(await visible(pg, "nav.lateral"), `${ancho}: barra lateral visible`);
-    revisar((await pg.locator("nav.lateral a").count()) === 7, `${ancho}: lateral con 7 enlaces (${await pg.locator("nav.lateral a").count()})`);
+    revisar((await pg.locator("nav.lateral .lateral__item").count()) === 7, `${ancho}: lateral con 7 secciones (${await pg.locator("nav.lateral .lateral__item").count()})`);
     revisar(!(await visible(pg, "nav.barra")), `${ancho}: barra inferior oculta`);
     revisar(await visible(pg, ".cabecera-pagina h1"), `${ancho}: cabecera de pagina`);
     revisar(await visible(pg, "nav.lateral a[aria-current=page]"), `${ancho}: seccion activa marcada`);
@@ -171,7 +171,7 @@ try {
     const { ctx: ctx2, pg: pg2 } = await pagina(b, 1280, 800, false);
     await entrar(pg2, PIN_PROSPECTADOR);
     await pg2.goto(`${BASE}/prospectos`); await pg2.waitForLoadState("networkidle");
-    revisar((await pg2.locator("nav.lateral a").count()) === 4, `prospectador 1280: lateral de 4 (${await pg2.locator("nav.lateral a").count()})`);
+    revisar((await pg2.locator("nav.lateral .lateral__item").count()) === 4, `prospectador 1280: lateral de 4 (${await pg2.locator("nav.lateral .lateral__item").count()})`);
     await ctx2.close();
   }
 } catch (e) {
