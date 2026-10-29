@@ -105,7 +105,7 @@ export async function enviarPropuestaCorreo(prospectoId: number, reenviar = fals
   if (!eId.success || typeof reenviar !== "boolean") return fallo("Ese prospecto no existe.");
   try {
     const tope = await leerCorreosPorDia();
-    const r = await enviarA(eId.data, "inicial", u.id, { reenviar, tope });
+    const r = await enviarA(eId.data, "inicial", u.id, { reenviar, tope, modo: "manual" });
     if (r.ok) refrescar(eId.data);
     return r;
   } catch (err) {

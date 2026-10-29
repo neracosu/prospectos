@@ -3,7 +3,7 @@ import { useCallback, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import type { FilaCola } from "@/lib/correos";
 import { ANTETITULO_POR_ARQUETIPO } from "@/lib/mensajes-nicho-contrato";
-import { hitosDe, recortar, yaEnviado } from "@/lib/correos-contrato";
+import { hitosDe, recortar, yaEnviado, puedeEnviar } from "@/lib/correos-contrato";
 import { enviarPropuestaCorreo } from "@/acciones/correos";
 import { useFlotante } from "@/componentes/LineaFlotante";
 import { VistaPreviaCorreo } from "@/componentes/VistaPreviaCorreo";
@@ -48,7 +48,7 @@ export function ColaCorreos({ filas }: { filas: FilaCola[] }) {
         <tbody>
           {filas.map((f) => {
             const hitos = hitosDe(f.envio);
-            const puedeEnviar = !f.bloqueado && !f.nombreNoCoincide && f.arquetipo !== "" && (!yaEnviado(f.envio) || f.tocaSeguimiento);
+            const conBoton = puedeEnviar(f, "manual") && (!yaEnviado(f.envio) || f.tocaSeguimiento);
             return (
               <tr key={f.prospectoId} className="cola-correos__fila" data-id={f.prospectoId}>
                 <td data-label="Negocio"><Link href={`/prospectos/${f.prospectoId}`} className="cola-correos__nombre">{f.nombre}</Link></td>
@@ -65,7 +65,7 @@ export function ColaCorreos({ filas }: { filas: FilaCola[] }) {
                 <td data-label="Hitos" className="cola-correos__hitos">{hitos.length ? hitos.join(" · ") : <span className="suave">Sin enviar</span>}</td>
                 <td className="tabla__acciones">
                   <button type="button" className="boton mini" onClick={(e) => abrir(f, e)} aria-label={`Ver el correo de ${f.nombre}`}>Ver</button>
-                  {puedeEnviar && (
+                  {conBoton && (
                     <button type="button" className="boton mini boton--primario" disabled={enCurso !== null} onClick={() => enviar(f)} aria-label={`${f.tocaSeguimiento ? "Enviar seguimiento" : "Enviar"} a ${f.nombre}`}>
                       {enCurso === f.prospectoId ? "Enviando…" : f.tocaSeguimiento ? "Enviar seguimiento" : "Enviar"}
                     </button>

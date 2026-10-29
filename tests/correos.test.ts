@@ -132,6 +132,17 @@ describe.runIf(DB_HABILITADA)("correos: preparar, enviar a mano, cola y cifras",
     expect((await enviarA(p.id, "inicial", null)).ok).toBe(false); // una sola vez
   });
 
+  it("nombre que no coincide: a mano sale con la ficha revisada, no con borrador; el automatico nunca", async () => {
+    const n = await nuevo();
+    await prisma.fichaNegocio.update({ where: { prospectoId: n.id }, data: { hallazgos: { web: { nombreCoincide: false } }, estado: "borrador" } });
+    expect((await enviarA(n.id, "inicial", null, { modo: "manual" })).ok).toBe(false);
+    await prisma.fichaNegocio.update({ where: { prospectoId: n.id }, data: { estado: "revisada" } });
+    expect((await enviarA(n.id, "inicial", null, { modo: "automatico" })).ok).toBe(false);
+    expect(salidos).toHaveLength(0);
+    expect((await enviarA(n.id, "inicial", ids.usuarioId, { modo: "manual" })).ok).toBe(true);
+    expect(salidos).toHaveLength(1);
+  });
+
   it("colaCorreo ordena: con gancho primero, luego comercio antes que citas", async () => {
     const citas = await nuevo({}, citasId);
     const comercio = await nuevo({}, comercioId);

@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import type { FilaCola } from "@/lib/correos";
 import { GANCHO_MAX } from "@/lib/ficha-contrato";
-import { fechaCorta, hitosDe, yaEnviado } from "@/lib/correos-contrato";
+import { fechaCorta, hitosDe, yaEnviado, puedeEnviar } from "@/lib/correos-contrato";
 import { guardarGancho, vistaPrevia, enviarPropuestaCorreo, bloquearCorreo, ponerAlAutomatico } from "@/acciones/correos";
 import { Campo } from "@/componentes/Campo";
 import { useFlotante } from "@/componentes/LineaFlotante";
@@ -79,7 +79,7 @@ export function VistaPreviaCorreo({ fila, onCerrar }: { fila: FilaCola; onCerrar
           <button ref={cerrarRef} type="button" className="boton" onClick={onCerrar}>Cerrar</button>
         </div>
         <p className="suave">{fila.email} · {fila.ciudad}{hitos.length ? ` · ${hitos.join(" · ")}` : ""}</p>
-        {fila.nombreNoCoincide && <p className="aviso">El nombre no coincide con su página web: revise la ficha antes de enviar.</p>}
+        {fila.nombreNoCoincide && <p className="aviso">El nombre de la web no coincide: revise la ficha antes de enviar.{fila.estadoFicha === "revisada" ? " La ficha ya está revisada." : " Al guardar el gancho queda revisada."}</p>}
         {error && <p className="error" role="alert">{error}</p>}
         <p className="estado-fila" role="status">{estado}</p>
 
@@ -96,7 +96,7 @@ export function VistaPreviaCorreo({ fila, onCerrar }: { fila: FilaCola; onCerrar
           <button className="boton" type="submit" disabled={pendiente}>Guardar gancho</button>
         </form>
 
-        {!fila.bloqueado && (
+        {puedeEnviar(fila, "manual") && (
           <div className="fila-botones">
             {!enviado && <button type="button" className="boton boton--primario" disabled={pendiente || !previa} onClick={() => enviar(false)}>{pendiente ? "Enviando…" : "Enviar"}</button>}
             {enviado && fila.tocaSeguimiento && <button type="button" className="boton boton--primario" disabled={pendiente || !previa} onClick={() => enviar(false)}>Enviar seguimiento</button>}

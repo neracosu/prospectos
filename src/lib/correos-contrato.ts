@@ -29,12 +29,23 @@ export const yaEnviado = (e: EnvioVisible | null): boolean => !!e && e.fallo ===
 export function hitosDe(e: EnvioVisible | null): string[] {
   if (!e) return [];
   if (e.fallo === "en curso") return ["Enviando…"];
+  // «interrumpido»: el proceso murio a medias; el correo pudo haber salido antes de que se anotara.
+  if (e.fallo === "interrumpido") return [`Falló ${fechaCorta(e.enviadoEn)}: interrumpido (puede haber salido)`];
   if (e.fallo) return [`Falló ${fechaCorta(e.enviadoEn)}: ${e.fallo}`];
   const h = [`${e.tipo === "seguimiento" ? "Seguimiento" : "Enviado"} ${fechaCorta(e.enviadoEn)}`];
   if (e.abiertoEn) h.push(`Abrió ${fechaCorta(e.abiertoEn)}`);
   if (e.clicEn) h.push(`Vio ${fechaCorta(e.clicEn)}`);
   if (e.pdfEn) h.push(`PDF ${fechaCorta(e.pdfEn)}`);
   return h;
+}
+
+// Una sola regla para la tabla, la hoja y el servidor. A mano, una ficha cuyo nombre no coincide con la web sale solo si
+// Neri ya la reviso (al guardar el gancho queda «revisada»); el automatico nunca la toma. Un correo bloqueado no sale nunca.
+export type ModoEnvio = "manual" | "automatico";
+export function puedeEnviar(f: { bloqueado: string; nombreNoCoincide: boolean; estadoFicha: string; arquetipo: string }, modo: ModoEnvio): boolean {
+  if (f.bloqueado || f.arquetipo === "") return false;
+  if (f.nombreNoCoincide) return modo === "manual" && f.estadoFicha === "revisada";
+  return true;
 }
 
 // El cron corre al minuto 0 de cada hora; el automatico solo manda de lunes a viernes de 9:00 a 16:59 de Caracas

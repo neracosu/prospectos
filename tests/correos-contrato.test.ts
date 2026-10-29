@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { ESTADOS_COLA, esEstadoCola, porcentaje, recortar, hitosDe, fechaCorta, proximoLote, yaEnviado } from "@/lib/correos-contrato";
+import { ESTADOS_COLA, esEstadoCola, porcentaje, recortar, hitosDe, fechaCorta, proximoLote, yaEnviado, puedeEnviar } from "@/lib/correos-contrato";
 
 // 2026-10-29 es jueves. Caracas = UTC-4.
 const caracas = (iso: string) => new Date(`${iso}-04:00`);
@@ -31,6 +31,7 @@ describe("correos-contrato (pantalla /correos)", () => {
     expect(hitosDe({ ...e, tipo: "seguimiento", abiertoEn: null, pdfEn: null })).toEqual(["Seguimiento 29/10"]);
     expect(hitosDe({ ...e, fallo: "smtp caido" })).toEqual(["Falló 29/10: smtp caido"]);
     expect(hitosDe({ ...e, fallo: "en curso" })).toEqual(["Enviando…"]);
+    expect(hitosDe({ ...e, fallo: "interrumpido" })).toEqual(["Falló 29/10: interrumpido (puede haber salido)"]);
     expect(hitosDe(null)).toEqual([]);
     expect(yaEnviado(e)).toBe(true);
     expect(yaEnviado({ ...e, fallo: "interrumpido" })).toBe(false);
@@ -45,5 +46,16 @@ describe("correos-contrato (pantalla /correos)", () => {
     expect(proximoLote(caracas("2026-10-30T16:30:00"), base)).toBe("Próximo lote el lunes a las 9:00, hasta 4 correos.");
     expect(proximoLote(caracas("2026-10-31T12:00:00"), base)).toBe("Próximo lote el lunes a las 9:00, hasta 4 correos.");
     expect(proximoLote(caracas("2026-10-29T10:20:00"), { ...base, delDia: 25 })).toBe("El tope de hoy ya se cumplió. Próximo lote mañana a las 9:00, hasta 4 correos.");
+  });
+  it("puedeEnviar: manual admite el nombre que no coincide solo con la ficha revisada; automatico nunca; bloqueado nunca", () => {
+    const f = { bloqueado: "", nombreNoCoincide: false, estadoFicha: "lista" as const, arquetipo: "hoteles" };
+    expect(puedeEnviar(f, "manual")).toBe(true);
+    expect(puedeEnviar(f, "automatico")).toBe(true);
+    const nc = { ...f, nombreNoCoincide: true };
+    expect(puedeEnviar(nc, "manual")).toBe(false);
+    expect(puedeEnviar({ ...nc, estadoFicha: "revisada" }, "manual")).toBe(true);
+    expect(puedeEnviar({ ...nc, estadoFicha: "revisada" }, "automatico")).toBe(false);
+    expect(puedeEnviar({ ...f, estadoFicha: "revisada", bloqueado: "rebote" }, "manual")).toBe(false);
+    expect(puedeEnviar({ ...f, arquetipo: "" }, "manual")).toBe(false);
   });
 });

@@ -13,6 +13,7 @@ import { renderPropuesta, webUsable } from "@/lib/propuesta-contrato";
 import { armarCorreoPropuesta, ventanaDeEnvio, tamanoLote, type DatosCorreo } from "@/lib/correo-propuesta-contrato";
 import { leerCorreosAutomatico, leerCorreosPorDia } from "@/lib/configuracion";
 import { enviarCorreo } from "@/lib/correo-envio";
+import { puedeEnviar, type ModoEnvio } from "@/lib/correos-contrato";
 import { fallo, exito, type Resultado } from "@/acciones/resultado";
 
 export const TOKEN_VALIDO = CODIGO_VALIDO;
@@ -249,7 +250,8 @@ export async function prepararEnvio(prospectoId: number, tipo: "inicial" | "segu
   }
 }
 
-export async function enviarA(prospectoId: number, tipo: "inicial" | "seguimiento", usuarioId: number | null, opciones: { reenviar?: boolean; tope?: number } = {}): Promise<Resultado<{ token: string }>> {
+// modo: "manual" desde el boton de Neri, "automatico" desde el cron (por defecto, lo mas estricto).
+export async function enviarA(prospectoId: number, tipo: "inicial" | "seguimiento", usuarioId: number | null, opciones: { reenviar?: boolean; tope?: number; modo?: ModoEnvio } = {}): Promise<Resultado<{ token: string }>> {
   const hoy = hoyCaracas();
   const p = await prisma.prospecto.findFirst({ where: { AND: [{ id: prospectoId }, DEL_DIRECTORIO] }, select: { id: true, email: true, ciudad: true, etapa: true } });
   if (!p) return fallo("Ese prospecto no existe.");
@@ -260,7 +262,9 @@ export async function enviarA(prospectoId: number, tipo: "inicial" | "seguimient
   if (await prisma.correoBloqueado.findUnique({ where: { email } })) return fallo("Ese correo está bloqueado.");
   const [fila] = (await colaCorreo(hoy)).filter((f) => f.prospectoId === prospectoId);
   if (!fila) return fallo("Este negocio todavía no tiene ficha.");
-  if (fila.nombreNoCoincide) return fallo("El nombre no coincide con su página web: revise la ficha antes de enviar.");
+  if (!puedeEnviar(fila, opciones.modo ?? "automatico")) {
+    return fallo(fila.nombreNoCoincide ? "El nombre de la web no coincide: revise la ficha antes de enviar." : "Este negocio no tiene propuesta armada.");
+  }
   const envios = await prisma.envioCorreo.findMany({ where: { prospectoId, ...buenoPrisma() }, select: { tipo: true } });
   const hayInicial = envios.some((e) => e.tipo === "inicial");
   let real: "inicial" | "seguimiento" = "inicial";
@@ -306,7 +310,7 @@ export async function enviarAutomatico(ahora: Date = new Date()): Promise<Result
   else if (!ventanaDeEnvio(ahora)) motivo = "fuera_de_horario";
   else if (delDia >= tope) motivo = "tope";
   else {
-    const cola = (await colaCorreo(hoy, { estado: "listas" })).filter((f) => f.alAutomatico && !f.nombreNoCoincide && !f.bloqueado && (f.estadoFicha === "lista" || f.estadoFicha === "revisada"));
+    const cola = (await colaCorreo(hoy, { estado: "listas" })).filter((f) => f.alAutomatico && puedeEnviar(f, "automatico") && (f.estadoFicha === "lista" || f.estadoFicha === "revisada"));
     if (cola.length === 0) motivo = "sin_cola";
     const lote = tamanoLote(tope);
     let intentos = 0, seguidos = 0;
@@ -315,7 +319,7 @@ export async function enviarAutomatico(ahora: Date = new Date()): Promise<Result
       if (await enviadosHoy(hoy) >= tope) { motivo = "tope"; break; }
       intentos++;
       let r: Awaited<ReturnType<typeof enviarA>>;
-      try { r = await enviarA(f.prospectoId, "inicial", null, { tope }); }
+      try { r = await enviarA(f.prospectoId, "inicial", null, { tope, modo: "automatico" }); }
       catch (e) { console.error("[correos]", f.prospectoId, e); r = { ok: false, mensaje: "excepcion" }; }
       if (r.ok) { enviados++; seguidos = 0; continue; }
       if (r.mensaje.startsWith("Hoy ya salieron")) { motivo = "tope"; break; }
