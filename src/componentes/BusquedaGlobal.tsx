@@ -17,36 +17,56 @@ export function BusquedaGlobal() {
   const [buscando, setBuscando] = useState(false);
   const [sel, setSel] = useState(0);
   const anterior = useRef<HTMLElement | null>(null);
+  const abiertaRef = useRef(false);
   const peticion = useRef(0);
   const input = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
   const cerrar = useCallback(() => {
-    setAbierta(false); setQ(""); setResultados([]); setSel(0);
+    peticion.current++; // lo que este en vuelo ya no vale
+    abiertaRef.current = false;
+    setAbierta(false); setQ(""); setResultados([]); setSel(0); setBuscando(false);
     const a = anterior.current; anterior.current = null;
-    requestAnimationFrame(() => a?.focus());
+    // Si el elemento de antes ya no esta en la pagina (navego), no hay a donde volver
+    requestAnimationFrame(() => { if (a && a.isConnected) a.focus(); });
   }, []);
   const abrir = useCallback(() => {
+    // Ya abierto (Ctrl+K repetido o tecla mantenida): solo volver al campo, sin pisar «anterior»
+    if (abiertaRef.current) { input.current?.focus(); return; }
     anterior.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    abiertaRef.current = true;
     setAbierta(true);
   }, []);
 
   useEffect(() => {
-    const tecla = (e: KeyboardEvent) => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") { e.preventDefault(); abrir(); } };
+    const tecla = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === "k") { e.preventDefault(); if (!e.repeat) abrir(); }
+      // Escape cierra aunque el foco haya quedado fuera del dialogo (p. ej. abierto desde la hoja «Mas»)
+      else if (e.key === "Escape" && abiertaRef.current) { e.preventDefault(); cerrar(); }
+    };
     const evento = () => abrir();
     document.addEventListener("keydown", tecla);
     window.addEventListener(EVENTO_BUSCAR, evento);
     return () => { document.removeEventListener("keydown", tecla); window.removeEventListener(EVENTO_BUSCAR, evento); };
-  }, [abrir]);
+  }, [abrir, cerrar]);
+
+  // El foco va al campo en el cuadro siguiente: gana al requestAnimationFrame con que la barra inferior devuelve el
+  // foco a «Mas» al cerrar su hoja (sin esto, en el telefono no salia el teclado y Escape no cerraba)
+  useEffect(() => {
+    if (!abierta) return;
+    const id = requestAnimationFrame(() => input.current?.focus());
+    return () => cancelAnimationFrame(id);
+  }, [abierta]);
 
   useEffect(() => {
     if (!abierta) return;
+    const n = ++peticion.current; // tambien al acortar a nada: una respuesta en vuelo ya no vale
     const t = normalizarConsulta(q);
     if (!t) { setResultados([]); setBuscando(false); return; }
-    const n = ++peticion.current;
     setBuscando(true);
     const id = setTimeout(async () => {
-      const r = await buscarGlobal(t);
+      let r: Awaited<ReturnType<typeof buscarGlobal>>;
+      try { r = await buscarGlobal(t); } catch { r = { ok: false, mensaje: "No se pudo buscar. Intenta de nuevo." }; }
       if (n !== peticion.current) return; // llego una respuesta vieja
       setResultados(r.ok ? r.datos : []); setSel(0); setBuscando(false);
     }, 200);
@@ -56,8 +76,9 @@ export function BusquedaGlobal() {
   if (!abierta) return null;
   const ir = (r: ResultadoBusqueda) => { cerrar(); router.push(r.href); };
   const teclas = (e: React.KeyboardEvent) => {
-    if (e.key === "Escape") { e.preventDefault(); cerrar(); }
-    else if (e.key === "ArrowDown") { e.preventDefault(); setSel((s) => Math.min(s + 1, resultados.length - 1)); }
+    if (e.key === "Escape") return; // lo atiende el oyente de document
+    if (!resultados.length) return;
+    if (e.key === "ArrowDown") { e.preventDefault(); setSel((s) => Math.min(s + 1, resultados.length - 1)); }
     else if (e.key === "ArrowUp") { e.preventDefault(); setSel((s) => Math.max(s - 1, 0)); }
     else if (e.key === "Enter" && resultados[sel]) { e.preventDefault(); ir(resultados[sel]); }
   };
@@ -66,7 +87,10 @@ export function BusquedaGlobal() {
     <div className="busqueda" onKeyDown={teclas}>
       <div className="velo" onClick={cerrar} aria-hidden="true" />
       <div role="dialog" aria-modal="true" aria-label="Buscar en el panel" className="busqueda__caja">
-        <input ref={input} type="search" className="busqueda__input" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Leads, directorio, clientes, proyectos…" autoFocus autoComplete="off" aria-label="Buscar" aria-controls="busqueda-lista" aria-activedescendant={resultados[sel] ? `busqueda-${resultados[sel].tipo}-${resultados[sel].id}` : undefined} />
+        <div className="busqueda__fila">
+          <input ref={input} type="search" className="busqueda__input" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Leads, directorio, clientes, proyectos…" autoComplete="off" aria-label="Buscar" aria-controls="busqueda-lista" aria-activedescendant={resultados[sel] ? `busqueda-${resultados[sel].tipo}-${resultados[sel].id}` : undefined} />
+          <button type="button" className="boton busqueda__cerrar" onClick={cerrar}>Cerrar</button>
+        </div>
         <ul id="busqueda-lista" role="listbox" className="busqueda__lista" aria-label="Resultados">
           {resultados.map((r, i) => (
             <li key={`${r.tipo}-${r.id}`} id={`busqueda-${r.tipo}-${r.id}`} role="option" aria-selected={i === sel} className="busqueda__item" onMouseEnter={() => setSel(i)} onClick={() => ir(r)}>
@@ -76,7 +100,7 @@ export function BusquedaGlobal() {
           ))}
         </ul>
         {t && !buscando && resultados.length === 0 && <p className="suave busqueda__nada">Nada con «{t}».</p>}
-        {!t && <p className="suave busqueda__nada">Escribe al menos dos letras. Enter abre, Escape cierra.</p>}
+        {!t && <p className="suave busqueda__nada">Escribe al menos dos letras.</p>}
       </div>
     </div>
   );

@@ -20,8 +20,11 @@ Plan: `docs/superpowers/plans/2026-10-30-panel-crm-fase-4-pulido.md`. Sin migrac
 
 - **Búsqueda global** (`BusquedaGlobal`, montada en el layout del panel): se abre con **Ctrl+K / Cmd+K**, con el botón
   «Buscar» de la barra lateral y con «Buscar» en la hoja «Más» del teléfono; los tres disparan el evento
-  `nc:buscar` (`abrirBusqueda()`), así que no comparten estado. Diálogo `role="dialog"` con flechas, Enter y Escape;
-  al cerrar devuelve el foco a donde estaba. Espera 200 ms y descarta respuestas viejas. Lo puro en
+  `nc:buscar` (`abrirBusqueda()`), así que no comparten estado. Diálogo `role="dialog"` con flechas, Enter y Escape
+  (Escape se escucha en `document`: al abrir desde la hoja «Más» el foco podía quedar fuera), botón «Cerrar» en el
+  teléfono, y **el foco va al campo en un `requestAnimationFrame` al abrir** (gana al que la barra inferior usa para
+  devolver el foco a «Más»); al cerrar vuelve a donde estaba si ese elemento sigue en la página. Ctrl+K repetido no pisa
+  ese «anterior». Espera 200 ms y descarta respuestas viejas (también al acortar la consulta a nada). Lo puro en
   `src/lib/busqueda-contrato.ts` (`normalizarConsulta`: mínimo 2 caracteres, máximo 80; `ordenarResultados`: primero
   lo que empieza por la consulta sin acentos ni mayúsculas, luego por tipo lead · proyecto · cliente · directorio, tope
   20). La acción `buscarGlobal` (`src/acciones/busqueda.ts`) **respeta el rol**: el prospectador solo alcanza el
@@ -30,8 +33,12 @@ Plan: `docs/superpowers/plans/2026-10-30-panel-crm-fase-4-pulido.md`. Sin migrac
   viaja como `id:etapa` en `text/plain` y la etapa también como tipo `application/x-lead-etapa-<etapa>` (durante
   `dragover` el navegador no deja leer el dato). Al soltar llama a `moverLead`, la misma acción de «Mover a…»;
   `puedeSoltar` (puro) no deja soltar en la misma columna, en una no permitida ni en **Descartado** (pide motivo).
-  Con el dedo el arrastre nativo no se dispara: ahí sigue «Mover a…». CSS solo bajo `(pointer: fine)`.
-- Recorrido real: `scripts/verificar-pulido.mts` (17 comprobaciones a 1280 y 390, dueño y prospectador). Solo contra el
+  Mientras el servidor responde, la tarjeta de origen lleva el atributo `data-pendiente` (atenuada, sin eventos y sin
+  volver a arrastrarse); **es un atributo puesto a mano y no una clase**, porque el re-render de `dragend` reescribe
+  `className`. En Android el arrastre nativo no se dispara con el dedo; en Safari de iOS sí arranca con pulsación larga
+  (a 390 solo hay una columna y `puedeSoltar` niega la misma, así que no mueve nada). CSS solo bajo `(pointer: fine)`.
+- Recorrido real: `scripts/verificar-pulido.mts` (23 comprobaciones a 1280 y 390, dueño y prospectador; retiene las
+  Server Actions con `page.route` para probar la respuesta vieja y la tarjeta pendiente). Solo contra el
   clon y la base de tests. ⚠️ Un script de depuración que falle **antes** de su `try` deja sembrado en la base de
   tests (pasó con un dueño de PIN repetido): sembrar siempre dentro del `try`.
 - **La prueba en el teléfono real la hace Neri.**

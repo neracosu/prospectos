@@ -36,7 +36,7 @@ export function TarjetaLead({ lead, compacta = false, conValor = true, arrastrab
       data-id={lead.id}
       draggable={arrastrable || undefined}
       // El dato real va en text/plain; el tipo con la etapa es una marca legible durante dragover (ColumnaTablero)
-      onDragStart={arrastrable ? (e) => { e.dataTransfer.setData("text/plain", `${lead.id}:${lead.etapa}`); e.dataTransfer.setData(`application/x-lead-etapa-${lead.etapa}`, "1"); e.dataTransfer.effectAllowed = "move"; setArrastrando(true); } : undefined}
+      onDragStart={arrastrable ? (e) => { if ((e.target as HTMLElement).closest?.("input, textarea") || e.currentTarget.hasAttribute("data-pendiente")) { e.preventDefault(); return; } e.dataTransfer.setData("text/plain", `${lead.id}:${lead.etapa}`); e.dataTransfer.setData(`application/x-lead-etapa-${lead.etapa}`, "1"); e.dataTransfer.effectAllowed = "move"; setArrastrando(true); } : undefined}
       onDragEnd={arrastrable ? () => setArrastrando(false) : undefined}
     >
       <Link href={`/leads/${lead.id}`} className="lead__nombre">{lead.nombre}</Link>

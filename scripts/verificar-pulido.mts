@@ -59,6 +59,9 @@ try {
   // ---------- escritorio, dueno ----------
   {
     const { ctx, pg } = await pagina(b, 1280, 800, false);
+    // Para retener las Server Actions (respuesta vieja, tarjeta pendiente): una sola ruta y una bandera
+    let retener = false;
+    await pg.route("**/*", async (ruta) => { if (retener && ruta.request().method() === "POST" && ruta.request().headers()["next-action"]) await new Promise((r) => setTimeout(r, 1500)); await ruta.continue().catch(() => {}); });
     await entrar(pg, PIN_DUENO);
     await pg.goto(`${BASE}/leads/nuevo`); await pg.waitForLoadState("networkidle");
     await pg.fill('input[name="nombre"]', "x");
@@ -89,11 +92,28 @@ try {
     await pg.waitForTimeout(200);
     const foco = await pg.evaluate(() => ({ name: (document.activeElement as HTMLInputElement)?.name, value: (document.activeElement as HTMLInputElement)?.value }));
     revisar(foco.name === "nombre" && foco.value === "x", `1280: abierto con Ctrl+K desde un campo, el foco vuelve a ese campo y conserva lo escrito (${foco.name}=${foco.value})`);
+    await pg.focus('input[name="nombre"]');
+    await pg.keyboard.press("Control+k"); await pg.keyboard.press("Control+k");
+    await pg.keyboard.press("Escape"); await pg.waitForTimeout(200);
+    revisar((await pg.evaluate(() => (document.activeElement as HTMLInputElement)?.name)) === "nombre", "1280: Ctrl+K dos veces y Escape: el foco vuelve igual al campo");
+    // respuesta vieja: se retiene la accion 1,5 s, se escribe la consulta y se acorta a una letra antes de que llegue
+    retener = true;
+    await pg.keyboard.press("Control+k");
+    await pg.keyboard.type(`${sello} hotel`);
+    await pg.waitForTimeout(400);
+    await pg.locator(`${DIALOGO} input`).fill("h");
+    await pg.waitForTimeout(2500);
+    revisar((await pg.locator(`${DIALOGO} .busqueda__item`).count()) === 0, "1280: acortar la consulta a una letra deja la lista vacia aunque llegue la respuesta vieja");
+    await pg.keyboard.press("Escape"); await pg.waitForTimeout(200);
     // arrastre
     await pg.goto(`${BASE}/leads?q=${encodeURIComponent(String(sello))}`); await pg.waitForLoadState("networkidle");
     const tarjeta = pg.locator(`.lead[data-id="${alma.id}"]`);
     revisar((await tarjeta.getAttribute("draggable")) === "true", "1280: la tarjeta es arrastrable");
     await tarjeta.dragTo(pg.locator('.tablero__columna[data-etapa="enviado"] .tablero__lista'));
+    await pg.waitForTimeout(300);
+    const atenuada = await pg.evaluate((id) => { const el = document.querySelector(`.lead[data-id="${id}"]`); if (!el) return { opacidad: "ida", eventos: "ida" }; const cs = getComputedStyle(el); return { opacidad: cs.opacity, eventos: cs.pointerEvents }; }, alma.id);
+    revisar(atenuada.opacidad === "ida" || (Number(atenuada.opacidad) < 1 && atenuada.eventos === "none"), `1280: mientras el servidor responde, la tarjeta soltada va atenuada y sin eventos (${atenuada.opacidad}/${atenuada.eventos})`);
+    retener = false;
     await pg.waitForFunction((id) => !!document.querySelector(`.tablero__columna[data-etapa="enviado"] .lead[data-id="${id}"]`), alma.id, { timeout: 10000 }).catch(() => {});
     const enBase = await prisma.prospecto.findUniqueOrThrow({ where: { id: alma.id } });
     revisar(enBase.etapa === "enviado", `1280: arrastrar Nuevo → Propuesta enviada mueve el lead en la base (${enBase.etapa})`);
@@ -113,6 +133,16 @@ try {
     await pg.locator("nav.barra button", { hasText: "Más" }).click();
     await pg.locator(".hoja button", { hasText: "Buscar" }).click();
     revisar(await pg.locator(DIALOGO).isVisible(), "390: «Más» → «Buscar» abre el dialogo");
+    await pg.waitForTimeout(300);
+    revisar(await pg.evaluate(() => document.activeElement?.classList.contains("busqueda__input") ?? false), "390: al abrir desde «Más», el foco queda en el campo de busqueda (sale el teclado)");
+    await pg.keyboard.press("Escape"); await pg.waitForTimeout(200);
+    revisar(!(await pg.locator(DIALOGO).count()), "390: Escape cierra el dialogo aunque el foco no estuviera dentro");
+    await pg.locator("nav.barra button", { hasText: "Más" }).click();
+    await pg.locator(".hoja button", { hasText: "Buscar" }).click();
+    await pg.locator(`${DIALOGO} button`, { hasText: "Cerrar" }).click(); await pg.waitForTimeout(200);
+    revisar(!(await pg.locator(DIALOGO).count()), "390: el boton «Cerrar» del dialogo lo cierra");
+    await pg.locator("nav.barra button", { hasText: "Más" }).click();
+    await pg.locator(".hoja button", { hasText: "Buscar" }).click();
     await pg.locator(`${DIALOGO} input`).fill(`${sello} tienda`);
     await pg.waitForFunction((sel) => document.querySelectorAll(`${sel} .busqueda__item`).length >= 1, DIALOGO, { timeout: 10000 });
     const t = await titulos(pg);

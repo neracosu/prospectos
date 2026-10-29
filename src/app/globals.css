@@ -418,7 +418,7 @@ button, input, select, textarea { font: inherit; }
 
 /* Busqueda global (fase 4): dialogo con Ctrl+K, boton en la lateral y en la hoja Mas */
 .busqueda { position: fixed; inset: 0; z-index: 50; }
-.busqueda__caja { position: absolute; left: 0; right: 0; top: 0; z-index: 51; background: var(--panel); border-bottom: 1px solid var(--borde); padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); max-height: 80vh; overflow-y: auto; }
+.busqueda__caja { position: absolute; left: 0; right: 0; top: 0; z-index: 51; background: var(--panel); border-bottom: 1px solid var(--borde); padding: 12px 16px; max-height: 80vh; overflow-y: auto; }
 .busqueda__input { width: 100%; min-height: 48px; padding: 0 14px; font-size: 16px; border-radius: 10px; border: 1px solid var(--borde-control); background: var(--fondo); color: var(--tinta); }
 .busqueda__lista { list-style: none; margin: 8px 0 0; padding: 0; }
 .busqueda__item { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 6px 8px; border-radius: 8px; cursor: pointer; }
@@ -426,9 +426,13 @@ button, input, select, textarea { font: inherit; }
 .busqueda__tipo { flex: none; font-size: 11px; padding: 2px 6px; border-radius: 999px; background: var(--borde); color: var(--tinta-suave); min-width: 64px; text-align: center; }
 .busqueda__texto { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .busqueda__nada { margin: 10px 0 0; }
+.busqueda__fila { display: flex; gap: 8px; }
+.busqueda__fila .busqueda__input { flex: 1; min-width: 0; }
+.busqueda__cerrar { flex: none; }
 .hoja__item--boton { width: 100%; background: none; border: 0; border-bottom: 1px solid var(--borde); cursor: pointer; font: inherit; text-align: left; }
 .lateral__buscar { display: none; }
 @media (min-width: 1024px) {
+  .busqueda__cerrar { display: none; }
   .busqueda__caja { left: 50%; right: auto; top: 12vh; transform: translateX(-50%); width: min(560px, 92vw); border: 1px solid var(--borde); border-radius: var(--radio); padding: 12px; max-height: 70vh; }
   .lateral__buscar { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 40px; margin: 0 0 8px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--borde-control); background: var(--fondo); color: var(--tinta-suave); font: inherit; font-size: 14px; cursor: pointer; }
   .lateral__buscar kbd { margin-left: auto; font: inherit; font-size: 11px; padding: 1px 6px; border: 1px solid var(--borde-control); border-radius: 6px; color: var(--tinta-suave); }
@@ -438,6 +442,6 @@ button, input, select, textarea { font: inherit; }
 @media (pointer: fine) and (min-width: 1024px) {
   .lead[draggable="true"] { cursor: grab; }
   .lead--arrastrando { opacity: .5; }
-  .lead--pendiente { opacity: .4; pointer-events: none; }
+  .lead[data-pendiente] { opacity: .4; pointer-events: none; }
   .tablero__lista--recibe { outline: 2px dashed var(--verde); outline-offset: -4px; }
 }

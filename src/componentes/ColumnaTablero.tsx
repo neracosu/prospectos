@@ -8,7 +8,7 @@ import { useFlotante } from "@/componentes/LineaFlotante";
 
 // Columna del tablero de leads que acepta una tarjeta arrastrada (fase 4). El dato viaja como "id:etapa" en
 // text/plain (lo pone TarjetaLead). Al soltar se llama a moverLead, la misma accion de «Mover a…»; mientras el
-// servidor responde la tarjeta de origen se atenua (clase lead--pendiente por id) y la revalidacion la trae aqui.
+// servidor responde la tarjeta de origen se atenua (atributo data-pendiente) y la revalidacion la trae aqui.
 // Con el dedo (telefono, tablet) el arrastre nativo no se dispara: ahi sigue «Mover a…».
 function leerDato(e: React.DragEvent): { id: number; de: Etapa } | null {
   const [id, de] = (e.dataTransfer.getData("text/plain") || "").split(":");
@@ -24,7 +24,6 @@ function etapaDeTipos(e: React.DragEvent): Etapa | null {
 
 export function ColumnaTablero({ etapa, children }: { etapa: Etapa; children: ReactNode }) {
   const [recibe, setRecibe] = useState(false);
-  const [pendientes, setPendientes] = useState<number[]>([]);
   const [, empezar] = useTransition();
   const avisar = useFlotante();
   // En el telefono no hace falta apagar nada: el arrastre nativo de HTML5 no se dispara con el dedo, y el CSS del
@@ -32,19 +31,19 @@ export function ColumnaTablero({ etapa, children }: { etapa: Etapa; children: Re
   return (
     <div
       className={"tablero__lista" + (recibe ? " tablero__lista--recibe" : "")}
-      data-pendientes={pendientes.join(",") || undefined}
       onDragOver={(e) => { const de = etapaDeTipos(e); if (de && puedeSoltar(de, etapa)) { e.preventDefault(); e.dataTransfer.dropEffect = "move"; if (!recibe) setRecibe(true); } }}
       onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setRecibe(false); }}
       onDrop={(e) => {
         e.preventDefault(); setRecibe(false);
         const d = leerDato(e);
         if (!d || !puedeSoltar(d.de, etapa)) return;
-        setPendientes((p) => [...p, d.id]);
-        document.querySelector(`.lead[data-id="${d.id}"]`)?.classList.add("lead--pendiente");
+        // Atributo que React no gestiona: una clase en className la pisaria el re-render de dragend. La tarjeta
+        // de origen se atenua y no se vuelve a arrastrar hasta que la revalidacion la lleve a su columna.
+        const tarjeta = document.querySelector(`.lead[data-id="${d.id}"]`);
+        tarjeta?.setAttribute("data-pendiente", "");
         empezar(async () => {
           const r = await moverLead(d.id, etapa);
-          setPendientes((p) => p.filter((x) => x !== d.id));
-          document.querySelector(`.lead[data-id="${d.id}"]`)?.classList.remove("lead--pendiente");
+          document.querySelector(`.lead[data-id="${d.id}"]`)?.removeAttribute("data-pendiente");
           if (!r.ok) avisar({ texto: r.mensaje });
         });
       }}
