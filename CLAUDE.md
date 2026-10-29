@@ -14,6 +14,35 @@ solicitud) y en el correo de aviso. Contrato en `src/lib/web-contrato.ts`; migra
 set +a`): el 2026-10-28 se corrio sin ella, no fallo la cadena y el panel quedo dos minutos con el codigo nuevo sin las
 columnas. Plan: `docs/superpowers/plans/2026-10-28-embudo-empezar-panel.md`.
 
+## Panel CRM, fase 1: esqueleto (desde el 2026-10-29)
+
+Diseño: `docs/superpowers/specs/2026-10-29-panel-crm-design.md` (leads vs directorio, Inicio con cifras, tablero, cobros,
+escritorio); plan de la fase 1: `docs/superpowers/plans/2026-10-29-panel-crm-fase-1-esqueleto.md`. **Las fases 2 a 4
+(leads, dinero y proyectos, pulido) siguen en el diseño, sin plan.** Lo que trae la fase 1:
+
+- **Navegación por rol en `src/lib/navegacion-contrato.ts`** (puro): `seccionesPara`, `barraPara` (cuatro fijas más
+  «Más»), `estaActiva`. La barra lateral (`BarraLateral`) existe desde **1024 px, el primer breakpoint del proyecto**;
+  debajo manda la barra inferior (`BarraInferior` + `HojaMas`, un `role="dialog"` que cierra con Escape, el velo y al
+  navegar, y devuelve el foco a «Más»). Iconos de línea en `Icono.tsx`. Al sumar una sección, va en el contrato y en
+  su test, no en los componentes.
+- **`/inicio` reemplaza a `/hoy`** (`/hoy`, `/` y el `start_url` del manifiesto llevan a `/inicio`; `/hoy` es
+  `permanentRedirect`). El dueño ve cuatro cifras (`CifrasInicio`) y una sola lista «Hoy» (`armarHoy` en
+  `src/lib/inicio-contrato.ts`: seguimientos, cobros que vencen en 7 días e hitos con fecha, por fecha; lo sin fecha ISO
+  se omite); el prospectador ve su cola de siempre (`InicioProspectador`). Las acciones que revalidaban `/hoy` ahora
+  revalidan `/inicio`. «Ganó y no tiene proyecto» ya no está en Inicio: vive en Proyectos.
+- **`/solicitudes`** (solo dueño): las de la web y del embudo, «Sin atender · Todas», con `TarjetaSolicitud`. `/web`
+  queda solo con la medición y enlaza a Solicitudes desde la cabecera.
+- **Ajustes en acordeón** (`<details>` nativos con índice de anclas): un nicho a la vez; `?abrir=nicho-<id>` deja ese
+  abierto tras el refresco.
+- `CabeceraPagina` (título, cifra, acción principal; pegajosa en escritorio) y `.tabla` base (filas apiladas con
+  `data-label` en el teléfono, tabla de verdad desde 1024 px) quedan para las fases siguientes; hoy solo Prospectos,
+  Inicio, Solicitudes, Web y Ajustes usan la cabecera.
+- **Recorrido real: `scripts/verificar-esqueleto.mts`** (45 comprobaciones a 390, 1023, 1024 y 1280 px, con dueño y
+  prospectador temporales; captura todas las pantallas) contra el clon `~/dev-clon-prospectos` con
+  `next dev -p 3021 -H 127.0.0.1` y la base de tests. ⚠️ **Tras cada migración, el clon necesita `npx prisma generate`**
+  (su cliente no conocía las columnas del embudo y `/inicio` reventaba solo allá). El viejo `capturas-panel.mts` espera
+  `/hoy` tras entrar: ya no sirve tal cual.
+
 ## Cómo retomar
 
 **El diseño vive en `docs/superpowers/specs/`. Leer primero `2026-09-16-plataforma-vision-general.md`
