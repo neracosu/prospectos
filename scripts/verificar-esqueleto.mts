@@ -79,6 +79,12 @@ try {
     if (ancho === 1280 && !process.env.SIN_INICIO) {
       await pg.goto(`${BASE}/inicio`); await pg.waitForLoadState("networkidle");
       await pg.screenshot({ path: `${SALIDA}/inicio-1280.png`, fullPage: true });
+      for (const ruta of ["prospectos", "solicitudes", "proyectos"]) {
+        await pg.goto(`${BASE}/${ruta}`); await pg.waitForLoadState("networkidle");
+        await pg.screenshot({ path: `${SALIDA}/${ruta}-1280.png`, fullPage: false });
+      }
+      await pg.goto(`${BASE}/ajustes?abrir=nicho-${nicho.id}`); await pg.waitForLoadState("networkidle");
+      await pg.screenshot({ path: `${SALIDA}/ajustes-1280.png`, fullPage: false });
     }
     await ctx.close();
   }
@@ -143,6 +149,10 @@ try {
       revisar((await pg.locator(`details#nicho-${nicho.id}[open]`).count()) === 1 && (await pg.locator("details.acordeon#nichos[open]").count()) === 1, "390: ?abrir= deja ese nicho (y su seccion) abiertos");
       revisar((await pg.locator("textarea:visible").count()) === 2, "390: solo ese nicho visible");
       await pg.screenshot({ path: `${SALIDA}/ajustes-390.png`, fullPage: true });
+      for (const ruta of ["prospectos", "solicitudes", "proyectos"]) {
+        await pg.goto(`${BASE}/${ruta}`); await pg.waitForLoadState("networkidle");
+        await pg.screenshot({ path: `${SALIDA}/${ruta}-390.png`, fullPage: false });
+      }
     }
     if (!process.env.SIN_RUTAS) {
       const r1 = await pg.goto(`${BASE}/hoy`); await pg.waitForLoadState("networkidle");
@@ -166,6 +176,7 @@ try {
     if (!process.env.SIN_INICIO) {
       await pg.goto(`${BASE}/inicio`); await pg.waitForLoadState("networkidle");
       revisar((await pg.locator("text=Por contactar").count()) >= 1, "prospectador: /inicio muestra su cola");
+      await pg.screenshot({ path: `${SALIDA}/inicio-prospectador-390.png`, fullPage: true });
     }
     await ctx.close();
     const { ctx: ctx2, pg: pg2 } = await pagina(b, 1280, 800, false);
