@@ -1,5 +1,14 @@
 import { vi } from "vitest";
 vi.mock("@/lib/sesion-ligera", () => ({ tieneSesion: async () => false }));
+vi.mock("@/lib/ip", () => ({ ipCliente: async () => "203.0.113.9" }));
+// generarPdf falso: escribe un PDF de juguete en un temporal (sin Chromium).
+vi.mock("@/lib/propuesta", async (orig) => {
+  const real = await orig<typeof import("@/lib/propuesta")>();
+  const { mkdtempSync, writeFileSync } = await import("node:fs");
+  const { tmpdir } = await import("node:os");
+  const path = await import("node:path");
+  return { ...real, generarPdf: async (c: string) => { const r = path.join(mkdtempSync(path.join(tmpdir(), "pdf-")), `${c}.pdf`); writeFileSync(r, "%PDF-1.4 falso"); return r; } };
+});
 
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
 import { prisma } from "@/lib/db";
@@ -7,6 +16,7 @@ import { DB_HABILITADA, limpiarBase, sembrarBasico, crearProspectoDePrueba } fro
 import { crearEnvio, registrarApertura, registrarClic, registrarPdf } from "@/lib/correos";
 import { GET as pixel } from "@/app/api/correo/a/[token]/route";
 import { GET as redirigir } from "@/app/r/[token]/route";
+import { GET as descargarPdf } from "@/app/p/[codigo]/pdf/route";
 
 const ctx = (token: string) => ({ params: Promise.resolve({ token }) });
 const BASURA = "x".repeat(22) + "!";
@@ -130,5 +140,23 @@ describe.runIf(DB_HABILITADA)("rastreo de correos", () => {
     expect(malo.status).toBe(404);
     const noExiste = "A".repeat(22);
     expect((await redirigir(new Request("http://x/"), ctx(noExiste))).status).toBe(404);
+  });
+
+  it("/p/<codigo>/pdf?e=<token>: suma pdfs con el token del mismo prospecto; con el de otro, no", async () => {
+    const { token } = await nuevo();
+    const pedir = (c: string, e: string) => descargarPdf(new Request(`http://x/p/${c}/pdf?e=${e}`), { params: Promise.resolve({ codigo: c }) });
+    const r = await pedir(codigo, token);
+    expect(r.status).toBe(200);
+    expect(r.headers.get("content-type")).toBe("application/pdf");
+    const e = await prisma.envioCorreo.findUniqueOrThrow({ where: { token } });
+    expect(e.pdfs).toBe(1); expect(e.pdfEn).not.toBeNull();
+    expect(await eventos("pdf_descargado")).toBe(1);
+    // el token es de otro prospecto: el PDF sale igual, pero no cuenta
+    const ajeno = await pedir(otroCodigo, token);
+    expect(ajeno.status).toBe(200);
+    expect((await prisma.envioCorreo.findUniqueOrThrow({ where: { token } })).pdfs).toBe(1);
+    // sin e (descarga desde el panel) tampoco cuenta
+    expect((await descargarPdf(new Request(`http://x/p/${codigo}/pdf`), { params: Promise.resolve({ codigo }) })).status).toBe(200);
+    expect((await prisma.envioCorreo.findUniqueOrThrow({ where: { token } })).pdfs).toBe(1);
   });
 });
