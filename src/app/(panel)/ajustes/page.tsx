@@ -1,11 +1,12 @@
 import { exigirRol } from "@/lib/sesion";
 import { prisma } from "@/lib/db";
 import { listarUsuarios } from "@/lib/usuarios";
-import { leerConfig, leerEmisor, leerTarifaHora, CLAVES } from "@/lib/configuracion";
+import { leerConfig, leerEmisor, leerTarifaHora, leerCorreosPorDia, leerCorreosAutomatico, CLAVES } from "@/lib/configuracion";
 import { CabeceraPagina } from "@/componentes/CabeceraPagina";
 import { FormularioNicho, FormularioUsuario } from "@/componentes/FormularioAjustes";
 import { FormularioMensajesCobro, FormularioEmisor, FormularioTarifa, FormularioMensajesAviso } from "@/componentes/FormularioAjustesCobros";
 import { FormularioPin } from "@/componentes/FormularioPin";
+import { FormularioAjustesCorreos } from "@/componentes/FormularioAjustesCorreos";
 
 export const dynamic = "force-dynamic";
 
@@ -13,6 +14,7 @@ const SECCIONES = [
   { id: "usuarios", texto: "Usuarios" },
   { id: "nichos", texto: "Mensajes por nicho" },
   { id: "cobros", texto: "Cobros" },
+  { id: "correos", texto: "Correos" },
   { id: "pin", texto: "Mi PIN" },
 ] as const;
 
@@ -21,7 +23,7 @@ const SECCIONES = [
 export default async function Ajustes({ searchParams }: { searchParams: Promise<{ abrir?: string }> }) {
   await exigirRol("dueno");
   const abrir = (await searchParams).abrir ?? "";
-  const [nichos, usuarios, mensajeRecordatorio, mensajeVencido, emisor, tarifaHora, avisoHito, avisoVersion, avisoCobro] = await Promise.all([
+  const [nichos, usuarios, mensajeRecordatorio, mensajeVencido, emisor, tarifaHora, avisoHito, avisoVersion, avisoCobro, correosPorDia, correosAutomatico] = await Promise.all([
     prisma.nicho.findMany({ orderBy: { nombre: "asc" } }),
     listarUsuarios(),
     leerConfig(CLAVES.mensajeRecordatorio),
@@ -31,6 +33,8 @@ export default async function Ajustes({ searchParams }: { searchParams: Promise<
     leerConfig(CLAVES.avisoHito),
     leerConfig(CLAVES.avisoVersion),
     leerConfig(CLAVES.avisoCobro),
+    leerCorreosPorDia(),
+    leerCorreosAutomatico(),
   ]);
   const abierta = (id: string) => abrir === id || (id === "nichos" && abrir.startsWith("nicho-"));
   return (
@@ -72,6 +76,11 @@ export default async function Ajustes({ searchParams }: { searchParams: Promise<
             <FormularioEmisor emisor={emisor} />
             <FormularioTarifa tarifa={tarifaHora} />
           </div>
+        </details>
+
+        <details className="acordeon" id="correos" open={abierta("correos")}>
+          <summary><span>Correos</span><span className="suave">{correosPorDia} por día · {correosAutomatico ? "automático encendido" : "automático en pausa"}</span></summary>
+          <div className="acordeon__cuerpo"><FormularioAjustesCorreos key={`${correosPorDia}-${correosAutomatico}`} tope={correosPorDia} automatico={correosAutomatico} /></div>
         </details>
 
         <details className="acordeon" id="pin" open={abierta("pin")}>

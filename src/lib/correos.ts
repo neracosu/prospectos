@@ -78,7 +78,7 @@ const ETAPAS_RESPUESTA = ["respondio", "reunion", "ganado"];
 
 export type FilaCola = {
   prospectoId: number; codigo: string; nombre: string; ciudad: string; arquetipo: string; nichoNombre: string; email: string;
-  estadoFicha: EstadoFicha; gancho: string; alAutomatico: boolean; nombreNoCoincide: boolean; bloqueado: string; etapa: string;
+  estadoFicha: EstadoFicha; gancho: string; resumen: string; alAutomatico: boolean; nombreNoCoincide: boolean; bloqueado: string; etapa: string;
   envio: { id: number; tipo: string; enviadoEn: Date; abiertoEn: Date | null; clicEn: Date | null; pdfEn: Date | null; fallo: string } | null;
   tocaSeguimiento: boolean;
 };
@@ -107,7 +107,7 @@ export async function colaCorreo(hoy: string, filtro: FiltroCola = {}): Promise<
     const sinTocar = !p.envios.some((e) => e.abiertoEn || e.clicEn || e.pdfEn);
     return {
       prospectoId: p.id, codigo: p.codigo, nombre: p.nombre, ciudad: p.ciudad, arquetipo: p.nicho.plantillaPropuesta, nichoNombre: p.nicho.nombre,
-      email: p.email, estadoFicha: ficha.estado as EstadoFicha, gancho: ficha.gancho, alAutomatico: ficha.alAutomatico,
+      email: p.email, estadoFicha: ficha.estado as EstadoFicha, gancho: ficha.gancho, resumen: ficha.resumen, alAutomatico: ficha.alAutomatico,
       nombreNoCoincide: hallazgos.web?.nombreCoincide === false, bloqueado: motivos.get(normalizarCorreo(p.email)) ?? "", etapa: p.etapa,
       envio: ultimo && { id: ultimo.id, tipo: ultimo.tipo, enviadoEn: ultimo.enviadoEn, abiertoEn: ultimo.abiertoEn, clicEn: ultimo.clicEn, pdfEn: ultimo.pdfEn, fallo: ultimo.fallo },
       yaSeEnvio: conEnviado.has(p.id),
@@ -118,7 +118,8 @@ export async function colaCorreo(hoy: string, filtro: FiltroCola = {}): Promise<
   const sirve = (f: FilaCola & { yaSeEnvio?: boolean }): boolean => {
     const enviada = conExito.has(f.prospectoId);
     switch (filtro.estado) {
-      case "listas": return !enviada && !f.bloqueado && !(f.envio && !esBueno(f.envio)) && f.etapa === "por_contactar" && !f.yaSeEnvio && !motivoDeCorreo(normalizarCorreo(f.email), f.ciudad, paisDeCiudad);
+      // Sin plantilla no hay propuesta que mandar: fuera de «listas» (y por tanto del automatico).
+      case "listas": return f.arquetipo !== "" && !enviada && !f.bloqueado && !(f.envio && !esBueno(f.envio)) && f.etapa === "por_contactar" && !f.yaSeEnvio && !motivoDeCorreo(normalizarCorreo(f.email), f.ciudad, paisDeCiudad);
       case "enviadas": return enviada;
       case "seguimiento": return f.tocaSeguimiento;
       case "bloqueadas": return !!f.bloqueado;
@@ -190,19 +191,21 @@ async function reservar(d: { prospectoId: number; tipo: "inicial" | "seguimiento
 
 const marcarFallo = (token: string, motivo: string) => prisma.envioCorreo.update({ where: { token }, data: { fallo: (motivo || "error").slice(0, 300) } });
 
-export async function prepararEnvio(prospectoId: number, tipo: "inicial" | "seguimiento", opc: Reserva = {}): Promise<Preparado | { error: string }> {
+// Lo que comparten el envio y la vista previa: el prospecto, su plantilla, su ficha y los DatosCorreo sin token.
+const sinCorreo = (error: string): { error: string } => ({ error });
+async function cargarCorreo(prospectoId: number, tipo: "inicial" | "seguimiento") {
   const p = await prisma.prospecto.findUnique({
     where: { id: prospectoId },
     select: { id: true, nombre: true, ciudad: true, web: true, email: true, codigo: true, fuentesPorCampo: true, nicho: { select: { plantillaPropuesta: true, nombre: true } },
       envios: { where: { ...buenoPrisma(), tipo: "inicial" }, orderBy: { id: "asc" }, take: 1, select: { enviadoEn: true } } },
   });
-  if (!p) return { error: "Ese prospecto no existe." };
+  if (!p) return sinCorreo("Ese prospecto no existe.");
   const arquetipo = p.nicho.plantillaPropuesta;
   const pais = paisDeCiudad(p.ciudad);
   const plantilla = arquetipo ? await leerPlantillaPara(arquetipo, pais) : null;
-  if (!plantilla) return { error: "Este negocio no tiene propuesta armada." };
+  if (!plantilla) return sinCorreo("Este negocio no tiene propuesta armada.");
   const para = normalizarCorreo(p.email);
-  if (!para) return { error: "Este negocio no tiene correo." };
+  if (!para) return sinCorreo("Este negocio no tiene correo.");
   const ficha = await leerFicha(p.id);
   const gancho = ficha?.gancho ?? "";
   const hoy = hoyCaracas();
@@ -215,6 +218,19 @@ export async function prepararEnvio(prospectoId: number, tipo: "inicial" | "segu
     hojas: (plantilla.match(/<section class="hoja/g) ?? []).length, hoy, dondeCorreo: deSuWeb ? `su página ${hostWeb}` : "un directorio público", tipo,
     ...(tipo === "seguimiento" && p.envios[0] ? { enviadoAnteriorEn: hoyCaracas(p.envios[0].enviadoEn) } : {}),
   };
+  return { p, arquetipo, pais, plantilla, para, ficha, gancho, hoy, datos };
+}
+
+// Los datos del correo con el token dado, sin reservar nada (la vista previa usa un token que no existe).
+export async function datosCorreoDe(prospectoId: number, tipo: "inicial" | "seguimiento", token: string): Promise<DatosCorreo | { error: string }> {
+  const c = await cargarCorreo(prospectoId, tipo);
+  return "error" in c ? c : { ...c.datos, token };
+}
+
+export async function prepararEnvio(prospectoId: number, tipo: "inicial" | "seguimiento", opc: Reserva = {}): Promise<Preparado | { error: string }> {
+  const c = await cargarCorreo(prospectoId, tipo);
+  if ("error" in c) return c;
+  const { p, arquetipo, pais, plantilla, para, ficha, gancho, hoy, datos } = c;
   // El asunto no depende del token: se arma con uno provisional para reservar la fila ANTES de generar el PDF.
   const reserva = await reservar({ prospectoId: p.id, tipo, asunto: armarCorreoPropuesta({ ...datos, token: "x".repeat(22) }).asunto, para }, opc, hoy);
   if ("error" in reserva) return reserva;

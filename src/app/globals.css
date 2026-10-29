@@ -445,3 +445,35 @@ button, input, select, textarea { font: inherit; }
   .lead[data-pendiente] { opacity: .4; pointer-events: none; }
   .tablero__lista--recibe { outline: 2px dashed var(--verde); outline-offset: -4px; }
 }
+
+/* Correos (propuesta por correo, 29-oct): cifras, automatico, cola y la hoja de vista previa */
+.correos-cifras { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 6px; }
+.correos-cifras > .cifra:first-child { grid-column: 1 / -1; }
+.correos-por-plantilla { margin: 10px 0 12px; }
+.correos-automatico { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; margin-top: 12px; }
+.correos-automatico > div { min-width: 0; flex: 1 1 220px; }
+.correos-automatico p { margin: 4px 0 0; }
+.correos-automatico[data-activo="no"] { border-color: var(--ambar); }
+.cola-correos td { min-width: 0; }
+.cola-correos td > * { min-width: 0; }
+.cola-correos__nombre { font-weight: 600; overflow-wrap: anywhere; }
+.cola-correos__correo, .cola-correos__gancho, .cola-correos__hitos { overflow-wrap: anywhere; text-align: right; }
+.cola-correos__error { flex: 1 1 100%; margin: 4px 0 0; }
+.cola-correos .tabla__acciones { padding-top: 6px; }
+.hoja-lateral { position: fixed; inset: 0; z-index: 45; background: var(--panel); overflow-y: auto; padding: 12px 16px calc(24px + env(safe-area-inset-bottom)); }
+.hoja-lateral__cabecera { display: flex; justify-content: space-between; align-items: center; gap: 10px; position: sticky; top: -12px; background: var(--panel); padding: 8px 0; z-index: 1; }
+.hoja-lateral__cabecera h2 { margin: 0; font-size: 18px; overflow-wrap: anywhere; min-width: 0; }
+.hoja-lateral .datos { margin: 8px 0; }
+.previa__asunto { font-weight: 600; }
+.previa__marco { display: block; width: 100%; height: 60vh; min-height: 360px; border: 1px solid var(--borde); border-radius: 10px; background: #fff; margin: 8px 0; }
+@media (min-width: 1024px) {
+  .correos-cifras { grid-template-columns: repeat(5, 1fr); gap: 12px; }
+  .correos-cifras > .cifra:first-child { grid-column: auto; }
+  .cola-correos__correo, .cola-correos__gancho, .cola-correos__hitos { text-align: left; }
+  .cola-correos__gancho { max-width: 280px; }
+  .hoja-lateral { left: auto; width: min(640px, 100vw - var(--lateral-ancho)); border-left: 1px solid var(--borde); padding: 16px 20px 24px; }
+}
+@media (min-width: 1280px) {
+  .hoja-lateral { width: 720px; }
+  .previa__marco { height: 64vh; }
+}

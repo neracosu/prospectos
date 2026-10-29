@@ -34,4 +34,10 @@ describe("validar (reglas del navegador, copia de las del servidor)", () => {
     expect(validar({ tipo: "texto", max: 120 }, "info@hotel", false)).toBe("");
     expect(validar({ tipo: "texto", max: 120 }, "x".repeat(121), false)).toBe("Máximo 120 letras.");
   });
+  it("linea: una sola linea sin < ni >, con maximo (copia de GanchoZ)", () => {
+    expect(validar({ tipo: "linea", max: 5 }, "abcde", true)).toBe("");
+    expect(validar({ tipo: "linea", max: 5 }, "abcdef", true)).toBe("Máximo 5 letras.");
+    for (const mal of ["a<b", "a>b", "a\nb", "a\rb"]) expect(validar({ tipo: "linea", max: 280 }, mal, false)).toBe("Va en una sola línea, sin «<» ni «>».");
+    expect(validar({ tipo: "linea", max: 5 }, "", false)).toBe("");
+  });
 });

@@ -7,7 +7,9 @@ import { exigirRol } from "@/lib/sesion";
 import { permitirIntento } from "@/lib/rate-limit";
 import { GANCHO_MAX, normalizarCorreo, type EstadoFicha } from "@/lib/ficha-contrato";
 import { guardarFicha, investigarProspecto, marcarAlAutomatico } from "@/lib/fichas";
-import { enviarA } from "@/lib/correos";
+import { enviarA, colaCorreo, datosCorreoDe } from "@/lib/correos";
+import { armarCorreoPropuesta } from "@/lib/correo-propuesta-contrato";
+import { hoyCaracas } from "@/lib/fecha-caracas";
 import { leerCorreosPorDia } from "@/lib/configuracion";
 import { fallo, exito, type Resultado } from "@/acciones/resultado";
 
@@ -109,5 +111,25 @@ export async function enviarPropuestaCorreo(prospectoId: number, reenviar = fals
   } catch (err) {
     console.error("enviarPropuestaCorreo", err);
     return fallo("No se pudo enviar. Intente de nuevo.");
+  }
+}
+
+// Vista previa del correo tal cual saldria hoy: no reserva envio, no genera PDF y no deja evento. El token no es
+// valido a proposito (23 caracteres): si el pixel o el enlace de la vista previa se piden, no cuentan nada.
+const TOKEN_VISTA_PREVIA = "vista-previa-0000000000";
+export async function vistaPrevia(prospectoId: number): Promise<Resultado<{ asunto: string; html: string; pdfUrl: string }>> {
+  await exigirRol("dueno");
+  const eId = Id.safeParse(prospectoId);
+  if (!eId.success) return fallo("Ese prospecto no existe.");
+  try {
+    const [fila] = (await colaCorreo(hoyCaracas())).filter((f) => f.prospectoId === eId.data);
+    if (!fila) return fallo("Este negocio no está en la cola de correos (le falta correo o ficha).");
+    const d = await datosCorreoDe(eId.data, fila.tocaSeguimiento ? "seguimiento" : "inicial", TOKEN_VISTA_PREVIA);
+    if ("error" in d) return fallo(d.error);
+    const c = armarCorreoPropuesta(d);
+    return exito({ asunto: c.asunto, html: c.html, pdfUrl: `/p/${d.codigo}/pdf` });
+  } catch (err) {
+    console.error("vistaPrevia", err);
+    return fallo("No se pudo armar la vista previa. Intente de nuevo.");
   }
 }

@@ -1,8 +1,9 @@
 // src/lib/navegacion-contrato.ts — las secciones del panel por rol (panel CRM, fase 1, 29-oct-2026). Puro: lo usan
 // la barra lateral (escritorio), la barra inferior con «Mas» (telefono) y los tests. Desde la fase 3 Cobros es
-// seccion propia y va entre las cuatro fijas del telefono (Inicio · Leads · Solicitudes · Cobros · Mas).
+// seccion propia y va entre las cuatro fijas del telefono (Inicio · Leads · Solicitudes · Cobros · Mas). Correos
+// (propuesta por correo, 29-oct) va en «Mas», entre Directorio y Web.
 export type Rol = "dueno" | "prospectador";
-export type Icono = "inicio" | "leads" | "solicitudes" | "cobros" | "proyectos" | "directorio" | "web" | "ajustes" | "pin" | "buscar";
+export type Icono = "inicio" | "leads" | "solicitudes" | "cobros" | "proyectos" | "directorio" | "correos" | "web" | "ajustes" | "pin" | "buscar";
 export type Seccion = { href: string; texto: string; icono: Icono };
 
 const S = {
@@ -12,6 +13,7 @@ const S = {
   cobros: { href: "/cobros", texto: "Cobros", icono: "cobros" },
   proyectos: { href: "/proyectos", texto: "Proyectos", icono: "proyectos" },
   directorio: { href: "/directorio", texto: "Directorio", icono: "directorio" },
+  correos: { href: "/correos", texto: "Correos", icono: "correos" },
   web: { href: "/web", texto: "Web", icono: "web" },
   ajustes: { href: "/ajustes", texto: "Ajustes", icono: "ajustes" },
   pin: { href: "/ajustes/mi-pin", texto: "Mi PIN", icono: "pin" },
@@ -20,7 +22,7 @@ const S = {
 // Barra lateral: todo lo que el rol puede abrir, en el orden de trabajo.
 export function seccionesPara(rol: Rol): Seccion[] {
   return rol === "dueno"
-    ? [S.inicio, S.leads, S.solicitudes, S.cobros, S.proyectos, S.directorio, S.web, S.ajustes]
+    ? [S.inicio, S.leads, S.solicitudes, S.cobros, S.proyectos, S.directorio, S.correos, S.web, S.ajustes]
     : [S.inicio, S.leads, S.directorio, S.pin];
 }
 

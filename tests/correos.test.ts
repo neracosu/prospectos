@@ -143,6 +143,17 @@ describe.runIf(DB_HABILITADA)("correos: preparar, enviar a mano, cola y cifras",
     expect(await colaCorreo(hoy, { arquetipo: "citas-y-servicios" })).toHaveLength(1);
   });
 
+  it("listas deja fuera a los nichos sin plantilla (arquetipo vacio): ni la cola ni el automatico los toman", async () => {
+    const sinPlantilla = await prisma.nicho.create({ data: { slug: `sin-plantilla-${Date.now()}`, nombre: "Sin plantilla", mensajeInicial: "x", mensajeSeguimiento: "y", plantillaPropuesta: "" } });
+    const a = await nuevo({}, sinPlantilla.id);
+    const b = await nuevo({}, comercioId);
+    const listas = (await colaCorreo(hoy, { estado: "listas" })).map((f) => f.prospectoId);
+    expect(listas).toContain(b.id);
+    expect(listas).not.toContain(a.id);
+    expect((await colaCorreo(hoy)).map((f) => f.prospectoId)).toContain(a.id); // sigue en «todas»
+    await prisma.fichaNegocio.deleteMany({ where: { prospectoId: a.id } }); await prisma.prospecto.delete({ where: { id: a.id } }); await prisma.nicho.delete({ where: { id: sinPlantilla.id } });
+  });
+
   it("cifrasCorreo cuenta enviados, abrieron, vieron, descargaron y respondieron (etapa respondio o posterior)", async () => {
     const a = await nuevo({}, comercioId), b = await nuevo({}, comercioId), c = await nuevo({}, citasId);
     for (const p of [a, b, c]) await enviarA(p.id, "inicial", null);

@@ -6,6 +6,7 @@ import { esFechaIso } from "@/lib/fecha-caracas";
 // navegador y los tests.
 export type Regla =
   | { tipo: "texto"; min?: number; max: number }
+  | { tipo: "linea"; max: number } // una sola linea sin < ni > (el gancho del correo, GanchoZ)
   | { tipo: "monto" }
   | { tipo: "fecha" }
   | { tipo: "entero"; min: number; max: number };
@@ -21,6 +22,10 @@ export function validar(regla: Regla, valor: string, requerido: boolean): string
   switch (regla.tipo) {
     case "texto":
       if (regla.min && v.length < regla.min) return `Mínimo ${regla.min} letras.`;
+      if (v.length > regla.max) return `Máximo ${regla.max} letras.`;
+      return "";
+    case "linea":
+      if (/[<>\r\n]/.test(v)) return "Va en una sola línea, sin «<» ni «>».";
       if (v.length > regla.max) return `Máximo ${regla.max} letras.`;
       return "";
     case "monto":

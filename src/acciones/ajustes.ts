@@ -181,3 +181,19 @@ export async function guardarTarifa(formData: FormData): Promise<Resultado> {
     return exito();
   } catch (err) { console.error("guardarTarifa", err); return fallo(ERROR); }
 }
+
+// Correos (propuesta por correo, 29-oct): tope diario y el interruptor del envio automatico. «Pausar/Reanudar» de
+// /correos llama a esta misma accion con el tope actual.
+const CorreosZ = z.object({ tope: z.string().regex(/^\d+$/).transform(Number).pipe(z.number().int().min(1).max(200)), automatico: z.enum(["on", "off"]) });
+export async function guardarCorreos(formData: FormData): Promise<Resultado> {
+  await exigirRol("dueno");
+  const e = CorreosZ.safeParse({ tope: String(formData.get("tope") ?? "").trim(), automatico: String(formData.get("automatico") ?? "") });
+  if (!e.success) return fallo("El tope va de 1 a 200 correos por día y el envío automático, encendido o apagado.");
+  try {
+    await guardarConfig(CLAVES.correosPorDia, String(e.data.tope));
+    await guardarConfig(CLAVES.correosAutomatico, e.data.automatico);
+    revalidatePath("/ajustes");
+    revalidatePath("/correos");
+    return exito();
+  } catch (err) { console.error("guardarCorreos", err); return fallo(ERROR); }
+}

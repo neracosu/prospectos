@@ -21,7 +21,7 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
 import { prisma } from "@/lib/db";
 import { DB_HABILITADA, limpiarBase, sembrarBasico, crearProspectoDePrueba } from "./ayuda-db";
 import { sesionFalsa } from "./ayuda-sesion";
-import { guardarGancho, reinvestigar, bloquearCorreo, ponerAlAutomatico, enviarPropuestaCorreo } from "@/acciones/correos";
+import { guardarGancho, reinvestigar, bloquearCorreo, ponerAlAutomatico, enviarPropuestaCorreo, vistaPrevia } from "@/acciones/correos";
 import { guardarConfig } from "@/lib/configuracion";
 import { _transporteParaTests } from "@/lib/correo-envio";
 
@@ -121,5 +121,22 @@ describe.runIf(DB_HABILITADA)("acciones de correo: enviar a mano", () => {
     expect(await enviarPropuestaCorreo(-1)).toEqual({ ok: false, mensaje: "Ese prospecto no existe." });
     sesionFalsa.actual = { id: ids.prospectadorId, nombre: "María", rol: "prospectador" };
     await expect(enviarPropuestaCorreo(c.id)).rejects.toThrow("REDIRECT");
+  });
+
+  it("vistaPrevia arma asunto y html con el gancho y el enlace al PDF sin crear envio", async () => {
+    const p = await listo();
+    const r = await vistaPrevia(p.id);
+    if (!r.ok) throw new Error(r.mensaje);
+    expect(r.datos.asunto).toContain(p.nombre);
+    expect(r.datos.html).toContain("Un gancho");
+    expect(r.datos.html).toContain("vista-previa-0000000000");
+    expect(r.datos.pdfUrl).toBe(`/p/${p.codigo}/pdf`);
+    expect(await prisma.envioCorreo.count({ where: { prospectoId: p.id } })).toBe(0);
+    expect(await prisma.evento.count({ where: { prospectoId: p.id } })).toBe(0);
+    expect(await vistaPrevia(-1)).toEqual({ ok: false, mensaje: "Ese prospecto no existe." });
+    const sinFicha = await crearProspectoDePrueba(ids.nichoId, { email: "sf@ejemplo.test" });
+    expect((await vistaPrevia(sinFicha.id)).ok).toBe(false);
+    sesionFalsa.actual = { id: ids.prospectadorId, nombre: "María", rol: "prospectador" };
+    await expect(vistaPrevia(p.id)).rejects.toThrow("REDIRECT");
   });
 });
