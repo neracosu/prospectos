@@ -96,7 +96,7 @@ try {
     await pg.goto(`${BASE}/leads?q=${encodeURIComponent(String(sello))}`); await pg.waitForLoadState("networkidle");
     revisar((await pg.locator(".tablero__columna:visible").count()) === 1, `390: una sola columna visible (${await pg.locator(".tablero__columna:visible").count()})`);
     revisar(await visible(pg, ".tablero-chips"), "390: chips de etapa");
-    await pg.locator(".tablero-chips a", { hasText: "Ganado" }).click(); await pg.waitForLoadState("networkidle");
+    await pg.locator(".tablero-chips a", { hasText: "Ganado" }).click(); await pg.waitForURL(/etapa=ganado/); await pg.waitForLoadState("networkidle");
     revisar((await pg.locator('.tablero__columna[data-etapa="ganado"]:visible').count()) === 1, "390: el chip cambia de columna");
     revisar(await visible(pg, "nav.barra a[href='/leads'][aria-current=page]"), "390: la barra marca Leads");
     await pg.screenshot({ path: `${SALIDA}/leads-390.png`, fullPage: true });

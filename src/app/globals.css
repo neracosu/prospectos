@@ -351,7 +351,8 @@ button, input, select, textarea { font: inherit; }
   .tablero[data-activa="descartado"] { grid-template-columns: repeat(6, minmax(0, 1fr)); }
   .tablero__columna { display: block !important; background: var(--fondo); border: 1px solid var(--borde); border-radius: var(--radio); min-width: 0; }
   .tablero__titulo { display: flex; justify-content: space-between; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--borde); font-size: 14px; position: sticky; top: 0; background: var(--fondo); z-index: 1; border-radius: var(--radio) var(--radio) 0 0; }
-  .tablero__lista { padding: 10px; max-height: calc(100vh - 220px); overflow-y: auto; }
+  /* la pagina no se desplaza por el tablero: cada columna se desplaza por dentro */
+  .tablero__lista { padding: 10px; max-height: calc(100vh - 300px); overflow-y: auto; }
   .lead { padding: 10px; }
   .lead__acciones .boton.mini { min-height: 36px; }
 }
