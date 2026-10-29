@@ -94,7 +94,7 @@ export function fechaLarga(iso: string): string {
   return `${d} de ${MESES[m - 1]} de ${a}`;
 }
 
-const escapar = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+export const escapar = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 function bloque(html: string, nombre: string, dejar: boolean): string {
   const re = new RegExp(`<!--si:${nombre}-->([\\s\\S]*?)<!--fin:${nombre}-->`, "g");
   return html.replace(re, dejar ? "$1" : "");

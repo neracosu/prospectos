@@ -2,20 +2,15 @@
 // local del servidor (exim de cPanel); info@neracosu.com reenvia al Gmail de Neri. Usa node: : fuera de la cadena de
 // src/instrumentation.ts.
 import { spawn } from "node:child_process";
+import { codificar, limpiarCabecera } from "@/lib/correo-contrato";
 import { clasificarOrigen, respuestasLegibles, type SolicitudNormal } from "@/lib/web-contrato";
 
 const DE = "info@neracosu.com";
 const PARA = () => process.env.PROSPECTOS_AVISO_CORREO || "info@neracosu.com";
 const PANEL = "https://prospectos.neracosu.com/web";
 
-// Nada que venga de la web llega a una cabecera con un salto de linea (inyeccion de cabeceras).
-export function limpiarCabecera(s: string): string {
-  return s.replace(/[\r\n\t]+/g, " ").replace(/[^\x20-\x7e\u00a0-\uffff]/g, "").trim().slice(0, 200);
-}
-
-function codificar(s: string): string {
-  return /^[\x20-\x7e]*$/.test(s) ? s : `=?UTF-8?B?${Buffer.from(s, "utf8").toString("base64")}?=`;
-}
+// Se reexporta: los tests y otros modulos lo importan de aqui.
+export { limpiarCabecera };
 
 export function armarCorreo(d: SolicitudNormal): string {
   const embudo = d.tipo === "embudo";
