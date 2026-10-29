@@ -1,3 +1,4 @@
+import { sumarDias } from "@/lib/fecha-caracas";
 // src/lib/proyectos.ts — consultas de pantalla de proyectos.
 import { prisma } from "@/lib/db";
 import { estadoCobro, cifrasDelMes, mesDe, type Concepto, type EstadoCobro } from "@/lib/cobros-contrato";
@@ -31,6 +32,26 @@ export async function listarProyectos(hoy: string): Promise<ProyectoResumen[]> {
     id: p.id, nombre: p.nombre, clienteId: p.clienteId, clienteNombre: p.cliente.nombre, estado: p.estado as EstadoProyecto,
     versionActual: versionActualDe(p.versiones), semaforo: semaforo(p.cobros.map((c) => estadoCobro(c, hoy))), avance: porcentajeAvance(p.pendientes),
   }));
+}
+
+// Inicio (panel CRM, fase 1): lo que vence pronto, de todos los proyectos. Sin pagar y sin anular.
+export async function cobrosQueVencen(hoy: string, dias = 7): Promise<{ id: number; proyectoId: number; proyectoNombre: string; concepto: string; detalle: string; monto: number; vence: string }[]> {
+  const filas = await prisma.cobro.findMany({
+    where: { pagadoEn: null, anuladoEn: null, vence: { lte: sumarDias(hoy, dias) } },
+    select: { id: true, proyectoId: true, concepto: true, detalle: true, monto: true, vence: true, proyecto: { select: { nombre: true } } },
+    orderBy: { vence: "asc" }, take: 50,
+  });
+  return filas.map((c) => ({ id: c.id, proyectoId: c.proyectoId, proyectoNombre: c.proyecto.nombre, concepto: c.concepto, detalle: c.detalle, monto: Number(c.monto), vence: c.vence }));
+}
+
+// Hitos con fecha que tocan: pendientes sin hacer con fechaEstimada dentro del plazo.
+export async function hitosQueTocan(hoy: string, dias = 7): Promise<{ id: number; proyectoId: number; proyectoNombre: string; texto: string; fechaEstimada: string | null }[]> {
+  const filas = await prisma.pendiente.findMany({
+    where: { hecho: false, fechaEstimada: { not: null, lte: sumarDias(hoy, dias) } },
+    select: { id: true, proyectoId: true, texto: true, fechaEstimada: true, proyecto: { select: { nombre: true } } },
+    orderBy: { fechaEstimada: "asc" }, take: 50,
+  });
+  return filas.map((h) => ({ id: h.id, proyectoId: h.proyectoId, proyectoNombre: h.proyecto.nombre, texto: h.texto, fechaEstimada: h.fechaEstimada }));
 }
 
 // Ganado sin proyecto: o no tiene cliente todavia, o tiene cliente pero ese
