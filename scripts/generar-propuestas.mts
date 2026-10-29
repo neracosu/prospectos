@@ -6,7 +6,7 @@
 import { paisDeCiudad } from "../src/lib/overpass-contrato";
 import { prisma } from "../src/lib/db";
 import { leerPlantillaPara, generarPdf, hashDe, rutaPdf, fechaDePropuesta } from "../src/lib/propuesta";
-import { renderPropuesta } from "../src/lib/propuesta-contrato";
+import { renderPropuesta, webUsable } from "../src/lib/propuesta-contrato";
 import { leerFicha } from "../src/lib/fichas";
 import { stat } from "node:fs/promises";
 const i = process.argv.indexOf("--primeros");
@@ -23,7 +23,8 @@ for (const p of filas) {
   const llave = `${slug}|${pais}`;
   if (!plantillas.has(llave)) plantillas.set(llave, await leerPlantillaPara(slug, pais));
   const plantilla = plantillas.get(llave); if (!plantilla) { sinPlantilla++; continue; }
-  const html = renderPropuesta(plantilla, p.nombre, "#", { ciudad: p.ciudad, rubro: p.nicho.nombre.toLowerCase(), conWeb: !!p.web, fecha: await fechaDePropuesta(p.id), pais, gancho: (await leerFicha(p.id))?.gancho ?? "", paraPdf: true, plantilla: slug });
+  const ficha = await leerFicha(p.id);
+  const html = renderPropuesta(plantilla, p.nombre, "#", { ciudad: p.ciudad, rubro: p.nicho.nombre.toLowerCase(), conWeb: webUsable(!!p.web, ficha?.hallazgos.web?.estado), fecha: await fechaDePropuesta(p.id), pais, gancho: ficha?.gancho ?? "", paraPdf: true, plantilla: slug });
   const hash = hashDe(html);
   try { await stat(rutaPdf(p.codigo, hash)); existian++; continue; } catch {}
   try { await generarPdf(p.codigo, html, hash); hechos++; }

@@ -4,7 +4,7 @@ import { prisma } from "@/lib/db";
 import { permitirIntento } from "@/lib/rate-limit";
 import { ipCliente } from "@/lib/ip";
 import { leerPlantillaPara, generarPdf, hashDe, fechaDePropuesta } from "@/lib/propuesta";
-import { renderPropuesta } from "@/lib/propuesta-contrato";
+import { renderPropuesta, webUsable } from "@/lib/propuesta-contrato";
 import { CODIGO_VALIDO } from "@/lib/codigo";
 import { leerFicha } from "@/lib/fichas";
 
@@ -36,8 +36,9 @@ export async function GET(_req: Request, ctx: { params: Promise<{ codigo: string
   if (!p || !p.nicho.plantillaPropuesta) return new Response("No encontrado", { status: 404 });
   const plantilla = await leerPlantillaPara(p.nicho.plantillaPropuesta, paisDeCiudad(p.ciudad));
   if (!plantilla) return new Response("No encontrado", { status: 404 });
+  const ficha = await leerFicha(p.id);
   try {
-    const html = renderPropuesta(plantilla, p.nombre, "#", { ciudad: p.ciudad, rubro: p.nicho.nombre.toLowerCase(), conWeb: !!p.web, fecha: await fechaDePropuesta(p.id), pais: paisDeCiudad(p.ciudad), gancho: (await leerFicha(p.id))?.gancho ?? "", paraPdf: true, plantilla: p.nicho.plantillaPropuesta });
+    const html = renderPropuesta(plantilla, p.nombre, "#", { ciudad: p.ciudad, rubro: p.nicho.nombre.toLowerCase(), conWeb: webUsable(!!p.web, ficha?.hallazgos.web?.estado), fecha: await fechaDePropuesta(p.id), pais: paisDeCiudad(p.ciudad), gancho: ficha?.gancho ?? "", paraPdf: true, plantilla: p.nicho.plantillaPropuesta });
     const ruta = await generarPdf(codigo, html, hashDe(html));
     const bytes = await readFile(ruta);
     const nombreArchivo = `Propuesta-NERACOSU-${saneado(p.nombre) || "Propuesta"}.pdf`;

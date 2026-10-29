@@ -74,12 +74,17 @@ export function fraseDePromo(hoy: string): string {
 // <!--si:ve-->…<!--fin:ve--> y <!--si:co-->…<!--fin:co--> (6-oct-2026): lo que solo vale en un pais (pago movil y tasa
 // del dia en Venezuela; Wompi y pesos en Colombia). Se deja el del pais del prospecto; sin decirlo es Venezuela.
 export type ExtraPropuesta = { ciudad?: string; rubro?: string; conWeb?: boolean; fecha?: string; hoy?: string; pais?: "VE" | "CO"; gancho?: string; paraPdf?: boolean; plantilla?: string };
-// La hoja 2 del PDF (carta + resumen) no tiene holgura: con un gancho, aunque sea de una linea, todas las plantillas
-// menos la de hoteles se desbordan del A4 (medido el 29-oct-2026). Esas llevan el gancho en el correo y en la
-// propuesta en linea, pero no en el PDF (`paraPdf: true`). `plantilla` es el slug del nicho (con o sin «-co»).
-export const GANCHOS_SIN_PDF = ["hoteles-estadia", "restaurantes-y-bares", "reservas", "comercio-y-tienda", "cobros-y-pagos", "citas-y-servicios"];
+// Como el gancho reemplaza al parrafo generico de web, cabe en el A4 en todas las plantillas salvo hoteles-estadia
+// (no tiene bloques de web que ceder y su hoja 2 no tiene holgura, ni con 40 caracteres; medido el 29-oct-2026).
+// Esa lleva el gancho en el correo y en la propuesta en linea, pero no en el PDF (`paraPdf: true`). `plantilla` es el slug del nicho (con o sin «-co»).
+export const GANCHOS_SIN_PDF = ["hoteles-estadia"];
 // <!--si:gancho--><p>{{gancho}}</p><!--fin:gancho--> (29-oct-2026): el parrafo «Vi que…» de la ficha del negocio, justo
 // despues del primer parrafo de la carta. Sin gancho el bloque entero se quita.
+
+// Web caida o vendida segun la ficha: la propuesta va como sin web (no se le dice «ya tiene pagina» a quien no abre).
+export function webUsable(tieneWeb: boolean, estadoFicha?: string): boolean {
+  return tieneWeb && estadoFicha !== "caida" && estadoFicha !== "vendida";
+}
 
 export const DIAS_VIGENCIA = 30;
 const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
@@ -109,10 +114,11 @@ export function renderPropuesta(plantilla: string, nombre: string, urlPdf: strin
     .replace(/\{\{rubro\}\}/g, escapar((extra.rubro ?? "").trim().slice(0, 60)) || "su negocio")
     .replace(/\{\{fecha\}\}/g, fechaLarga(fecha))
     .replace(/\{\{vigencia\}\}/g, fechaLarga(sumarDias(fecha, DIAS_VIGENCIA)));
-  cuerpo = bloque(bloque(cuerpo, "web", extra.conWeb === true), "sinweb", extra.conWeb === false);
   cuerpo = bloque(cuerpo, "promo", hoy <= PROMO_HASTA);
   const sinGancho = extra.paraPdf === true && GANCHOS_SIN_PDF.includes((extra.plantilla ?? "").replace(/-co$/, ""));
   const gancho = sinGancho ? "" : (extra.gancho ?? "").trim();
+  // El gancho es mas especifico que el parrafo generico de web: cuando hay, lo reemplaza.
+  cuerpo = bloque(bloque(cuerpo, "web", extra.conWeb === true && !gancho), "sinweb", extra.conWeb === false && !gancho);
   cuerpo = bloque(cuerpo, "gancho", gancho !== "").replace(/\{\{gancho\}\}/g, escapar(gancho));
   cuerpo = bloque(bloque(cuerpo, "ve", extra.pais !== "CO"), "co", extra.pais === "CO");
   cuerpo = cuerpo.replace(

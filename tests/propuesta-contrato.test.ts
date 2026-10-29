@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { renderPropuesta, nombreSeguro, GANCHOS_SIN_PDF } from "@/lib/propuesta-contrato";
+import { renderPropuesta, nombreSeguro, GANCHOS_SIN_PDF, webUsable } from "@/lib/propuesta-contrato";
 
 const plantilla = readFileSync(path.join(import.meta.dirname, "..", "plantillas", "hoteles.html"), "utf8");
 
@@ -101,7 +101,27 @@ describe("renderPropuesta", () => {
       expect(renderPropuesta(pl, "A", "#", { gancho: "Vi que X", paraPdf: true, plantilla: s })).not.toContain("Vi que X");
       expect(renderPropuesta(pl, "A", "#", { gancho: "Vi que X", plantilla: s })).toContain("Vi que X");
     }
-    expect(renderPropuesta(pl, "A", "#", { gancho: "Vi que X", paraPdf: true, plantilla: "cobros-y-pagos-co" })).not.toContain("Vi que X");
-    expect(renderPropuesta(pl, "A", "#", { gancho: "Vi que X", paraPdf: true, plantilla: "hoteles" })).toContain("Vi que X");
+    expect(renderPropuesta(pl, "A", "#", { gancho: "Vi que X", paraPdf: true, plantilla: "hoteles-estadia-co" })).not.toContain("Vi que X");
+    expect(renderPropuesta(pl, "A", "#", { gancho: "Vi que X", paraPdf: true, plantilla: "cobros-y-pagos" })).toContain("Vi que X");
+  });
+  it("con gancho el parrafo generico de web (y de sin web) desaparece y el gancho ocupa su lugar; sin gancho queda como antes", () => {
+    const pl = `<title>x</title><style></style><div class="documento"><!--si:web--><p>Ya tiene web.</p><!--fin:web--><!--si:sinweb--><p>Sin web.</p><!--fin:sinweb--><!--si:gancho--><p>{{gancho}}</p><!--fin:gancho--><button class="boton" id="descargar-pdf" type="button">PDF</button></div>`;
+    const con = renderPropuesta(pl, "A", "#", { conWeb: true, gancho: "Vi que X" });
+    expect(con).toContain("Vi que X");
+    expect(con).not.toContain("Ya tiene web.");
+    const sinW = renderPropuesta(pl, "A", "#", { conWeb: false, gancho: "Vi que X" });
+    expect(sinW).toContain("Vi que X");
+    expect(sinW).not.toContain("Sin web.");
+    const sin = renderPropuesta(pl, "A", "#", { conWeb: true });
+    expect(sin).toContain("Ya tiene web.");
+    expect(sin).not.toContain("Vi que X");
+    expect(renderPropuesta(pl, "A", "#", { conWeb: false })).toContain("Sin web.");
+  });
+  it("webUsable: una web caida o vendida cuenta como sin web", () => {
+    expect(webUsable(true, "viva")).toBe(true);
+    expect(webUsable(true, undefined)).toBe(true);
+    expect(webUsable(true, "caida")).toBe(false);
+    expect(webUsable(true, "vendida")).toBe(false);
+    expect(webUsable(false, "viva")).toBe(false);
   });
 });
