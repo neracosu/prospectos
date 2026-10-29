@@ -249,6 +249,18 @@ export async function datosCorreoDe(prospectoId: number, tipo: "inicial" | "segu
   return "error" in c ? c : { ...c.datos, token };
 }
 
+// El html del PDF de la propuesta (con el gancho de la ficha): lo comparten el envio y el pregenerado.
+async function htmlPdfDeCarga(c: Exclude<Awaited<ReturnType<typeof cargarCorreo>>, { error: string }>): Promise<string> {
+  const { p, arquetipo, pais, plantilla, ficha, gancho } = c;
+  return renderPropuesta(plantilla, p.nombre, "#", { ciudad: p.ciudad, rubro: p.nicho.nombre.toLowerCase(), conWeb: webUsable(!!p.web, ficha?.hallazgos.web?.estado), fecha: await fechaDePropuesta(p.id), pais, gancho, paraPdf: true, plantilla: arquetipo });
+}
+export async function htmlDelPdf(prospectoId: number): Promise<{ codigo: string; html: string; hash: string } | { error: string }> {
+  const c = await cargarCorreo(prospectoId, "inicial");
+  if ("error" in c) return c;
+  const html = await htmlPdfDeCarga(c);
+  return { codigo: c.p.codigo, html, hash: hashDe(html) };
+}
+
 export async function prepararEnvio(prospectoId: number, tipo: "inicial" | "seguimiento", opc: Reserva = {}): Promise<Preparado | { error: string }> {
   const c = await cargarCorreo(prospectoId, tipo);
   if ("error" in c) return c;
@@ -264,7 +276,7 @@ export async function prepararEnvio(prospectoId: number, tipo: "inicial" | "segu
   }
   try {
     // Mismo camino que /p/<codigo>/pdf (mismo html, mismo hash): comparten cache.
-    const html = renderPropuesta(plantilla, p.nombre, "#", { ciudad: p.ciudad, rubro: p.nicho.nombre.toLowerCase(), conWeb: webUsable(!!p.web, ficha?.hallazgos.web?.estado), fecha: await fechaDePropuesta(p.id), pais, gancho, paraPdf: true, plantilla: arquetipo });
+    const html = await htmlPdfDeCarga(c);
     const ruta = await generarPdf(p.codigo, html, hashDe(html));
     const pdf = { ruta, nombre: `Propuesta-NERACOSU-${p.nombre.replace(/[^A-Za-z0-9 _-]/g, "").trim().slice(0, 60) || "Propuesta"}.pdf` };
     const final = { ...datos, token };
