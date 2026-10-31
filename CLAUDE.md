@@ -165,7 +165,14 @@ mensaje de cierre de la sesión.
 - **PDFs por adelantado**: `scripts/pregenerar-pdf-correos.mts [--limite N] [--ids] [--aplicar]` (el hash incluye la
   fecha de la propuesta: vale para el mismo día). Recorrido: `scripts/verificar-correos.mts` (50 comprobaciones a 390 y
   1280; solo clon + base de tests + `PROSPECTOS_CORREO_SIMULADO=1`).
-- Fuera de esta versión (spec): reseñas (Google Places), Colombia por correo, tercer toque, leer el buzón para rebotes.
+- **Dominios muertos y rebotes (31-oct, `cf2cfa5`)**: `enviarA` mira MX/A del dominio (`src/lib/correo-dominio.ts`, caché 6 h;
+  solo NXDOMAIN/sin datos es «no», un DNS caído es «duda» y no bloquea) y sin ninguno bloquea con motivo `dominio`
+  (`bloquearPorSistema`); el automático no lo cuenta como fallo. `scripts/verificar-dominios-correo.mts [--aplicar]` lo
+  adelanta para la cola (17 bloqueados el 31-oct). `scripts/leer-rebotes.mts [--aplicar] [--dias N]` lee el maildir de
+  info@ (`rebotes-contrato.ts`, puro) y bloquea solo rebotes permanentes de direcciones con envío del panel. **No está en
+  el crontab** (pendiente de aprobación de Neri); se corre a mano. Las pruebas usan un DNS simulado por defecto en
+  `tests/preparar-entorno.ts` (todo recibe salvo `*.muerto.test`).
+- Fuera de esta versión (spec): reseñas (Google Places), Colombia por correo, tercer toque.
   Trampa de pruebas: con el env de producción cargado en el shell, `tests/avisos.test.ts` falla 3/9 porque
   `PROSPECTOS_URL_PUBLICA` le gana al `??=` de `preparar-entorno.ts`; sin el env pasan.
 
