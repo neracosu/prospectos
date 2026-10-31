@@ -60,13 +60,20 @@ describe("correo de propuesta", () => {
     expect((c.html.match(/<img/g) ?? []).length).toBe(1);
   });
 
+  it("en la vista previa «Ver la propuesta» va directo a /p/<codigo> (el token de la vista previa no existe y /r/ daria 404)", () => {
+    const e = enlacesDe(d({ vistaPrevia: true }));
+    expect(e.ver).toBe(`https://prospectos.neracosu.com/p/${d({}).codigo}`);
+    expect(enlacesDe(d({})).ver).toBe(`https://prospectos.neracosu.com/r/${d({}).token}`);
+    expect(armarCorreoPropuesta(d({ vistaPrevia: true })).html).not.toContain("/r/");
+  });
+
   it("nada del prospecto rompe una cabecera", () => {
     expect(asuntoPropuesta(d({ nombre: "X\nBcc: y" }))).not.toMatch(/[\r\n]/);
   });
 
   it("ningun texto propone llamadas", () => {
     for (const tipo of ["inicial", "seguimiento"] as const) {
-      for (const a of ["hoteles", "hoteles-estadia", "restaurantes-y-bares", "reservas", "comercio-y-tienda", "cobros-y-pagos", "citas-y-servicios"]) {
+      for (const a of ["hoteles", "hoteles-estadia", "restaurantes-y-bares", "reservas", "comercio-y-tienda", "farmacias", "cobros-y-pagos", "citas-y-servicios"]) {
         const c = armarCorreoPropuesta(d({ tipo, arquetipo: a, enviadoAnteriorEn: "2026-10-20" }));
         expect(c.html + c.texto + c.previo + c.asunto, `${tipo} ${a}`).not.toMatch(PROHIBIDO);
       }

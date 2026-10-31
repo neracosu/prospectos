@@ -4,7 +4,32 @@ Plataforma de Neri para prospectar por nicho y llevar los proyectos vendidos. Pi
 prospección: cola del día, embudo, propuesta por enlace, seguimientos) en producción en
 `prospectos.neracosu.com`. Entra con PIN.
 
-## Embudo /empezar en el panel (desde el 2026-10-29)
+## Farmacias: arquetipo propio (desde el 2026-10-31)
+
+Hasta el 31-oct el nicho `farmacias` usaba el arquetipo `comercio-y-tienda`: el correo salía como «Tiendas y comercios»,
+el PDF era el de comercio (caso «tienda de ropa», tallas y colores) y el gancho de Instagram vendía «página que vende y
+cobra sola». Neri lo vio en `/correos`. Ahora `farmacias` es el **octavo arquetipo**: `plantillas/base/farmacias.cuerpo.html`
+→ `farmacias.html` (**10 hojas**, la 5 es «Lo que exige una farmacia»: los seis puntos del bloque de
+`neracosu.com/para/comercio-y-tienda#farmacias`, que es su página de portafolio), entradas en `PREGUNTA/PROMESA/CREDENCIAL/
+ANTETITULO_POR_ARQUETIPO`, ganchos propios en `ficha-contrato.ts` (`ARQ_INVENTARIO` comparte «tienda a mano» y «catálogo
+en PDF» con comercio; Instagram y web caída tienen su texto con récipe y existencia por sede), `ORDEN_ARQUETIPO` de las
+cifras y `scripts/sembrar-nichos.mjs` (`plantillaPropuesta: "farmacias"`, mensaje de «10 páginas»). Mismos tres precios
+que comercio (2.500 / 4.000 / 6.200), porque son los de esa misma página de `/para/`; **no está en
+`PLANTILLAS_CON_COLOMBIA`** (la adaptación cita la ley venezolana).
+
+- **No hay una farmacia operando con el sistema.** La credencial y la carta dicen «adapto» el inventario y el punto de
+  venta de comercio a lo que exige el rubro; la hoja 6 avisa que las dos referencias (adastram.store y el inventario de
+  dos sedes) no son farmacias. `tests/mensajes-nicho-contrato.test.ts` lo vigila. No prometer lotes ni vencimientos: la
+  web no los ofrece.
+- **Las cadenas no van por plan**: Farmatodo, Locatel, Farmaplus, Farmahorro, Farmarket, Farmayor y Redvital quedaron
+  con nota «Cadena de farmacias: va por diagnóstico» y fuera del automático (`alAutomatico = 0`) el 31-oct, siguiendo
+  el aviso de la web («una cadena no cabe en un plan de un local»). Las farmacias de un local se reactivaron al automático
+  ese mismo día tras regenerar su ficha y su PDF.
+- **Vista previa del correo**: `DatosCorreo.vistaPrevia` hace que «Ver la propuesta» apunte a `/p/<código>` en vez de
+  `/r/<token>` (el token de la vista previa no existe y `/r/` daba 404 «No encontrado»; Neri lo tomó por un enlace roto
+  para todos los clientes). Los envíos reales siguen con su token único.
+
+
 
 `/api/web/solicitud` acepta `type: "embudo"` con `respuestas` (JSON de rubro, actual, objetivo, tamano, sistema; texto, no
 Json), `calificacion` (`demo` | `diagnostico`) y `origen` (el `?de=` del enlace); `/api/web/evento` acepta `t: "paso"` con
@@ -276,8 +301,8 @@ nichos (`hoteles`, `hoteles-estadia`).
   `python3 scripts/armar-plantillas.py`; **no editar los `.html` generados**. `renderPropuesta` rellena `{{nombre}}`,
   `{{ciudad}}`, `{{rubro}}` y deja o quita `<!--si:web-->…<!--fin:web-->` / `<!--si:sinweb-->…` según el prospecto
   tenga web (a quien ya tiene página no se le vende una página: se le conecta). Antes de tocar una plantilla:
-  `npx tsx scripts/verificar-plantillas.mts` (desbordes de hoja A4 y tokens sin rellenar; las siete pasan con un
-  nombre largo). **Texto corrido justificado con silabeo** (regla de Neri, 27-sep): bloque `:where(...)` al final del
+  `npx tsx scripts/verificar-plantillas.mts` (desbordes de hoja A4 y tokens sin rellenar; las diez pasan con un
+  nombre largo; `farmacias` tiene 10 hojas, las demás 9). **Texto corrido justificado con silabeo** (regla de Neri, 27-sep): bloque `:where(...)` al final del
   `<style>` de `base/cabecera.html`, `hoteles.html` y `hoteles-estadia.html`; toda plantilla nueva lo lleva.
   Cifras y precios **solo** los de `neracosu.com/para/<arquetipo>`; `citas-y-servicios` no lleva
   precio (diagnóstico $250). Los mensajes de todos los nichos mandan `{enlace}`. **Fecha y vigencia las pone el panel** (5-oct): `{{fecha}}` es el día
@@ -636,8 +661,7 @@ nichos (`hoteles`, `hoteles-estadia`).
   `~/backups/prospectos` fuera queda pendiente de Neri.
 - Pendientes de Neri: probar una subida real de ~10 MB desde el teléfono (el tope de Apache/ModSecurity de este cPanel
   no se puede probar desde el clon); rotar la contraseña de la base (spec, decisiones abiertas) y decidir los precios
-  de farmacias (bloquea la propuesta de ese nicho; hoy `farmacias` no tiene plantilla y la ficha no
-  muestra enlace de propuesta).
+  de farmacias: **resuelto el 31-oct** (arquetipo propio con los precios de comercio; ver arriba).
 
 **Medición de neracosu.com (21-oct, en producción):** `/web` (solo `dueno`; tarjeta en Hoy con las solicitudes sin
 atender y las personas de 7 días). Dos rutas **públicas** que llama neracosu.com: `POST /api/web/evento` (vistas, clics,

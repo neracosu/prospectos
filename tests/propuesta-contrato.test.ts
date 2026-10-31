@@ -89,8 +89,8 @@ describe("renderPropuesta", () => {
       expect(sin).toContain("<p>resto</p>");
     }
   });
-  it("las nueve plantillas llevan el bloque si:gancho una sola vez, y ninguna propone llamadas", () => {
-    for (const f of ["hoteles", "hoteles-estadia", "restaurantes-y-bares", "reservas", "comercio-y-tienda", "cobros-y-pagos", "cobros-y-pagos-co", "citas-y-servicios"]) {
+  it("las diez plantillas llevan el bloque si:gancho una sola vez, y ninguna propone llamadas", () => {
+    for (const f of ["hoteles", "hoteles-estadia", "restaurantes-y-bares", "reservas", "comercio-y-tienda", "farmacias", "cobros-y-pagos", "cobros-y-pagos-co", "citas-y-servicios"]) {
       const h = readFileSync(path.join(import.meta.dirname, "..", "plantillas", `${f}.html`), "utf8");
       expect(h.match(/<!--si:gancho--><p>\{\{gancho\}\}<\/p><!--fin:gancho-->/g), f).toHaveLength(1);
     }

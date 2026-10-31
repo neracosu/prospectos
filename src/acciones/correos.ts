@@ -126,7 +126,7 @@ export async function vistaPrevia(prospectoId: number): Promise<Resultado<{ asun
     if (!fila) return fallo("Este negocio no está en la cola de correos (le falta correo o ficha).");
     const d = await datosCorreoDe(eId.data, fila.tocaSeguimiento ? "seguimiento" : "inicial", TOKEN_VISTA_PREVIA);
     if ("error" in d) return fallo(d.error);
-    const c = armarCorreoPropuesta(d);
+    const c = armarCorreoPropuesta({ ...d, vistaPrevia: true });
     return exito({ asunto: c.asunto, html: c.html, pdfUrl: `/p/${d.codigo}/pdf` });
   } catch (err) {
     console.error("vistaPrevia", err);

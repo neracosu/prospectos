@@ -12,6 +12,7 @@ export type DatosCorreo = {
   nombre: string; ciudad: string; arquetipo: string; codigo: string; token: string; gancho: string; hojas: number;
   hoy: string; dondeCorreo: string; tipo: "inicial" | "seguimiento";
   enviadoAnteriorEn?: string; // YYYY-MM-DD, solo en el seguimiento
+  vistaPrevia?: boolean; // el boton «Ver la propuesta» va directo a /p/<codigo>: el token no existe y /r/ daria 404
 };
 
 const VERDE = "#1f5a45";
@@ -22,7 +23,7 @@ const SALIDA = "Si prefiere no recibir más correos míos, respóndame «no» y 
 export function enlacesDe(d: DatosCorreo): { ver: string; pdf: string; pixel: string; whatsapp: string } {
   const texto = `Hola Neri, leí la propuesta para ${d.nombre} y quiero ver cómo quedaría con mi marca.`;
   return {
-    ver: `${BASE_PANEL}/r/${d.token}`,
+    ver: d.vistaPrevia ? `${BASE_PANEL}/p/${d.codigo}` : `${BASE_PANEL}/r/${d.token}`,
     pdf: `${BASE_PANEL}/p/${d.codigo}/pdf?e=${d.token}`,
     pixel: `${BASE_PANEL}/api/correo/a/${d.token}.png`,
     whatsapp: `https://wa.me/${WA_NERI}?text=${encodeURIComponent(texto)}`,

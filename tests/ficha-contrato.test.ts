@@ -250,6 +250,20 @@ describe("ola final de la revision", () => {
     }
   });
 
+  it("farmacias: ganchos propios (web caida, Instagram, catalogo en PDF), nunca el de tienda de ropa", () => {
+    const caida = analizarWeb("", URL, "Casa Sol", "caida");
+    expect(armarGancho({ web: caida, base: vacia }, "farmacias")).toBe(
+      "Vi que su dirección web hoy no abre. El sistema trae su propia página, en su dominio, con existencia y precio por sede y el récipe por foto, dentro de lo que permite la norma.");
+    const solo = hallazgosDeBase({ tipo: "", tamano: "", nota: "", instagram: "@farmaciasol", facebook: "", telefono: "", whatsapp: "" });
+    const ig = armarGancho({ base: solo }, "farmacias");
+    expect(ig).toContain("Instagram (@farmaciasol)");
+    expect(ig).toContain("récipe");
+    expect(ig).not.toContain("vende y cobra sola");
+    expect(ig.length).toBeLessThanOrEqual(280);
+    const pdf = analizarWeb(`<html><body><a href="catalogo.pdf">Catálogo</a> Casa Sol</body></html>`, URL, "Casa Sol", "viva");
+    if (pdf.menuEnPdf) expect(armarGancho({ web: pdf, base: vacia }, "farmacias")).toContain("récipe");
+  });
+
   it("Instagram en citas: version honesta, sin pagina que cobra sola", () => {
     const solo = hallazgosDeBase({ tipo: "", tamano: "", nota: "", instagram: "@spa", facebook: "", telefono: "", whatsapp: "" });
     expect(armarGancho({ base: solo }, "citas-y-servicios")).toBe(
