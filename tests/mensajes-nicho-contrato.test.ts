@@ -14,7 +14,7 @@ const VIEJO_SEGUIMIENTO = "Buenas de nuevo, equipo de {nombre}. Le escribí hace
 
 describe("cierre de los mensajes por nicho (enganche: diagnostico gratis + demostracion con su marca)", () => {
   it("cada arquetipo con propuesta tiene su pregunta calificadora", () => {
-    for (const a of ["hoteles", "hoteles-estadia", "restaurantes-y-bares", "reservas", "comercio-y-tienda", "farmacias", "comida-por-encargo", "cobros-y-pagos", "citas-y-servicios"]) {
+    for (const a of ["hoteles", "hoteles-estadia", "restaurantes-y-bares", "reservas", "comercio-y-tienda", "farmacias", "comida-por-encargo", "tienda-por-instagram", "cobros-y-pagos", "citas-y-servicios"]) {
       expect(PREGUNTA_POR_ARQUETIPO[a], a).toBeTruthy();
     }
   });
@@ -69,7 +69,7 @@ describe("la semilla de nichos y los mensajes de Colombia ya traen el enganche",
   });
   it("los iniciales con propuesta ofrecen el diagnostico gratis y llevan {enlace} y {promo}", () => {
     const conPropuesta = mensajes.filter((m) => m.tipo === "Inicial" && m.texto.includes("{enlace}"));
-    expect(conPropuesta.length).toBe(19);
+    expect(conPropuesta.length).toBe(17); // eventos y talleres van por diagnostico desde el 31-oct-2026
     for (const m of conPropuesta) {
       expect(m.texto).toContain("{promo}");
       expect(m.texto).toContain("diagnóstico gratis por escrito");
@@ -84,8 +84,8 @@ describe("la semilla de nichos y los mensajes de Colombia ya traen el enganche",
 });
 
 describe("promesa, credencial y antetitulo por arquetipo", () => {
-  const SIETE = ["hoteles", "hoteles-estadia", "restaurantes-y-bares", "reservas", "comercio-y-tienda", "farmacias", "comida-por-encargo", "cobros-y-pagos", "citas-y-servicios"];
-  it("existen para los 9 arquetipos y no proponen llamadas", () => {
+  const SIETE = ["hoteles", "hoteles-estadia", "restaurantes-y-bares", "reservas", "comercio-y-tienda", "farmacias", "comida-por-encargo", "tienda-por-instagram", "cobros-y-pagos", "citas-y-servicios"];
+  it("existen para los 10 arquetipos y no proponen llamadas", () => {
     for (const lista of [PROMESA_POR_ARQUETIPO, CREDENCIAL_POR_ARQUETIPO, ANTETITULO_POR_ARQUETIPO]) {
       expect(Object.keys(lista).sort()).toEqual([...SIETE].sort());
       for (const a of SIETE) {

@@ -232,16 +232,16 @@ type Regla = "web_caida" | "mantenimiento" | "whatsapp" | "tienda_a_mano" | "car
 const ARQ_WHATSAPP = ["hoteles-estadia", "reservas", "restaurantes-y-bares", "comida-por-encargo", "citas-y-servicios"];
 // Pedidos por mensaje: lo que el sistema convierte en pedido confirmado con pago validado.
 const ARQ_PEDIDOS = ["restaurantes-y-bares", "comida-por-encargo"];
-const ARQ_INSTAGRAM = ["comercio-y-tienda", "farmacias", "restaurantes-y-bares", "comida-por-encargo", "citas-y-servicios", "reservas", "hoteles-estadia"];
+const ARQ_INSTAGRAM = ["comercio-y-tienda", "farmacias", "restaurantes-y-bares", "comida-por-encargo", "tienda-por-instagram", "citas-y-servicios", "reservas", "hoteles-estadia"];
 // Comercio con inventario: tienda a mano y catalogo en PDF valen para los dos.
-const ARQ_INVENTARIO = ["comercio-y-tienda", "farmacias"];
+const ARQ_INVENTARIO = ["comercio-y-tienda", "farmacias", "tienda-por-instagram"];
 
 // Web que no abre: gancho «hoy no abre» y la propuesta va como sin web (lo usa webUsable).
 export const WEB_NO_ABRE: ReadonlySet<string> = new Set<EstadoWeb>(["caida", "vendida"]);
 // Solo estos arquetipos venden la pagina propia como reemplazo; en los demas lo propuesto no depende de la web.
-const ARQ_PAGINA_PROPIA = ["hoteles", "hoteles-estadia", "reservas", "comercio-y-tienda", "farmacias", "comida-por-encargo"];
+const ARQ_PAGINA_PROPIA = ["hoteles", "hoteles-estadia", "reservas", "comercio-y-tienda", "farmacias", "comida-por-encargo", "tienda-por-instagram"];
 const ARQUETIPOS = [
-  "hoteles", "hoteles-estadia", "restaurantes-y-bares", "reservas", "comercio-y-tienda", "farmacias", "comida-por-encargo", "citas-y-servicios", "cobros-y-pagos",
+  "hoteles", "hoteles-estadia", "restaurantes-y-bares", "reservas", "comercio-y-tienda", "farmacias", "comida-por-encargo", "tienda-por-instagram", "citas-y-servicios", "cobros-y-pagos",
 ];
 
 function webViva(h: Hallazgos): HallazgosWeb | undefined {
@@ -344,6 +344,9 @@ function textoGancho(regla: Regla, h: Hallazgos, arq: string): string {
       if (arq === "citas-y-servicios") {
         return `Vi que atienden por Instagram (@${usuarioInstagram(h.base.instagram)}) y la cita se pide por mensaje. Eso es lo primero que el diagnóstico mira: cómo se aparta la hora y cómo se cobra.`;
       }
+      if (arq === "tienda-por-instagram") {
+        return `Vi que venden por Instagram (@${usuarioInstagram(h.base.instagram)}) y el pedido se cierra por mensaje. El sistema le da un catálogo con lo que hay, el pedido armado solo y el pago validado, sin que nadie tenga que contestar.`;
+      }
       if (arq === "comida-por-encargo") {
         return `Vi que atienden por Instagram (@${usuarioInstagram(h.base.instagram)}) y el pedido se cierra por mensaje. El sistema lo arma solo, con el total, la fecha de entrega y el pago validado, sin que nadie tenga que contestar.`;
       }
@@ -367,7 +370,7 @@ export function armarGancho(h: Hallazgos, arquetipo: string): string {
 
 const NOMBRE_ARQUETIPO: Record<string, string> = {
   "hoteles": "hotel de paso", "hoteles-estadia": "hotel o posada de estadía", "restaurantes-y-bares": "restaurante o bar",
-  "reservas": "negocio de reservas", "comercio-y-tienda": "comercio", "farmacias": "farmacia", "comida-por-encargo": "negocio de comida por encargo", "citas-y-servicios": "negocio de citas y servicios",
+  "reservas": "negocio de reservas", "comercio-y-tienda": "comercio", "farmacias": "farmacia", "comida-por-encargo": "negocio de comida por encargo", "tienda-por-instagram": "tienda por Instagram", "citas-y-servicios": "negocio de citas y servicios",
   "cobros-y-pagos": "negocio con cobros recurrentes",
 };
 

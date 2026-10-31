@@ -74,7 +74,7 @@ export async function registrarPdf(token: string, codigo: string, o: Opc = {}): 
 // Envio a mano (29-oct-2026): cola, cifras, preparar y enviar. Solo directorio de Venezuela con correo y ficha.
 // ---------------------------------------------------------------------------------------------------------------
 
-const ORDEN_ARQUETIPO = ["comercio-y-tienda", "farmacias", "restaurantes-y-bares", "comida-por-encargo", "hoteles-estadia", "reservas", "hoteles", "cobros-y-pagos", "citas-y-servicios"];
+const ORDEN_ARQUETIPO = ["comercio-y-tienda", "tienda-por-instagram", "farmacias", "restaurantes-y-bares", "comida-por-encargo", "hoteles-estadia", "reservas", "hoteles", "cobros-y-pagos", "citas-y-servicios"];
 const rangoArquetipo = (a: string) => { const i = ORDEN_ARQUETIPO.indexOf(a); return i < 0 ? ORDEN_ARQUETIPO.length : i; };
 const ETAPAS_RESPUESTA = ["respondio", "reunion", "ganado"];
 

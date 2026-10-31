@@ -73,7 +73,7 @@ describe("correo de propuesta", () => {
 
   it("ningun texto propone llamadas", () => {
     for (const tipo of ["inicial", "seguimiento"] as const) {
-      for (const a of ["hoteles", "hoteles-estadia", "restaurantes-y-bares", "reservas", "comercio-y-tienda", "farmacias", "comida-por-encargo", "cobros-y-pagos", "citas-y-servicios"]) {
+      for (const a of ["hoteles", "hoteles-estadia", "restaurantes-y-bares", "reservas", "comercio-y-tienda", "farmacias", "comida-por-encargo", "tienda-por-instagram", "cobros-y-pagos", "citas-y-servicios"]) {
         const c = armarCorreoPropuesta(d({ tipo, arquetipo: a, enviadoAnteriorEn: "2026-10-20" }));
         expect(c.html + c.texto + c.previo + c.asunto, `${tipo} ${a}`).not.toMatch(PROHIBIDO);
       }

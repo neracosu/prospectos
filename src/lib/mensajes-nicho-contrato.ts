@@ -13,6 +13,7 @@ export const PREGUNTA_POR_ARQUETIPO: Record<string, string> = {
   "comercio-y-tienda": "cuántos productos maneja y cómo lleva hoy el inventario",
   "farmacias": "cuántas sedes tiene, cuántos productos maneja y cómo lleva hoy el inventario",
   "comida-por-encargo": "cuántos pedidos despacha por semana y cómo los confirma y cobra hoy",
+  "tienda-por-instagram": "cuántos productos maneja y cómo cierra y cobra hoy los pedidos",
   "cobros-y-pagos": "cuántos alumnos tiene y cómo cobra hoy la mensualidad",
   "citas-y-servicios": "cuántos profesionales atienden y cómo agendan hoy",
   "": "cómo opera hoy",
@@ -29,6 +30,7 @@ export const PROMESA_POR_ARQUETIPO: Record<string, string> = {
   "comercio-y-tienda": "inventario que cuadra y tienda que cobra sola",
   "farmacias": "inventario que cuadra y mostrador que cobra con el IVA de cada producto",
   "comida-por-encargo": "pedidos que se confirman y se cobran solos",
+  "tienda-por-instagram": "catálogo con lo que hay y pedidos que se cobran solos",
   "cobros-y-pagos": "mensualidades que se cobran solas",
   "citas-y-servicios": "su agenda, con el precio ya definido",
 };
@@ -44,6 +46,9 @@ export const CREDENCIAL_POR_ARQUETIPO: Record<string, string> = {
   // Comida por encargo (31-oct): sin salon ni inventario; el pedido con pago validado y el bot de WhatsApp del sistema de
   // restaurantes, para quien cocina en casa o en un puesto. Precios en neracosu.com/para/restaurantes-y-bares#precios-encargo.
   "comida-por-encargo": "Mis sistemas funcionan en empresas de Caracas, Valencia y el exterior. Para comida por encargo tengo un sistema propio de pedidos: el cliente elige, paga por pago móvil, el sistema lo valida y le confirma por WhatsApp, con un pago único de adaptación y un servicio mensual, y queda a su nombre.",
+  // Tienda por Instagram (31-oct): moda y cosmeticos sin local; catalogo con existencia por variante + pedido con pago validado.
+  // Precios en neracosu.com/para/comercio-y-tienda#precios-instagram (los mismos tres de emprendimiento).
+  "tienda-por-instagram": "Mis sistemas funcionan en empresas de Caracas, Valencia y el exterior. Para quien vende por Instagram tengo un sistema propio de catálogo y pedidos: el cliente ve lo que hay, pide, paga por pago móvil y el sistema lo valida y le confirma por WhatsApp, con un pago único de adaptación y un servicio mensual, y queda a su nombre.",
   "cobros-y-pagos": "Mis sistemas funcionan en empresas de Caracas, Valencia y el exterior. Para gimnasios y academias deportivas tengo un sistema propio de mensualidades con recordatorio automático, pago móvil validado contra el banco y control de quién está al día, que se paga una sola vez y queda a su nombre.",
   "citas-y-servicios": "Mis sistemas funcionan en empresas de Caracas, Valencia y el exterior. Para clínicas y consultorios médicos estoy armando un sistema propio de citas con agenda por profesional, recordatorio al cliente y cobro validado, con un pago único y un servicio mensual, y queda a su nombre.",
 };
@@ -55,6 +60,7 @@ export const ANTETITULO_POR_ARQUETIPO: Record<string, string> = {
   "comercio-y-tienda": "Tiendas y comercios",
   "farmacias": "Farmacias",
   "comida-por-encargo": "Comida por encargo y delivery",
+  "tienda-por-instagram": "Tienda por Instagram",
   "cobros-y-pagos": "Gimnasios, academias e institutos",
   "citas-y-servicios": "Citas y servicios por profesional",
 };

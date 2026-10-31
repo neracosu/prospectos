@@ -17,6 +17,19 @@ de «Referencias verificables» con URLs a «Referencias: a pedido, cuando el ca
 (reabrió el 2026-10-26). También se quitó una «Llamada con el dueño» que quedaba en hoteles y estadía («Contacto»). La web
 `/para/comercio-y-tienda` todavía nombra adastram: es del sitio, no del panel.
 
+## Tienda por Instagram (décimo arquetipo) y nichos sin propuesta (desde el 2026-10-31, noche)
+
+- **`tienda-por-instagram`** para `emprendimientos-moda` y `cosmeticos` (105; casi todos venden solo por Instagram, sin
+  depósito ni sucursales): `plantillas/base/tienda-por-instagram.cuerpo.html` (9 hojas, derivada de comida por encargo con
+  existencia por talla o presentación y «lo agotado no se vende»), textos y ganchos propios (`ARQ_INVENTARIO` comparte «tienda
+  a mano» y «catálogo en PDF» con comercio), mismos tres precios de emprendimiento (290 / 590 / 890 y 25 / 35 / 45), publicados
+  en `neracosu.com/para/comercio-y-tienda#precios-instagram` (`EXTRAS` de `precios.py`). Fuera de Colombia.
+- **`eventos` y `talleres-y-autolavados` quedaron sin plantilla** (`plantillaPropuesta: ""`): sonido, festejos, globos y
+  fotógrafos venden fechas por encargo, no espacios por hora, y un taller vive de la orden de trabajo, no de la cita por
+  profesional. Sus mensajes ofrecen el diagnóstico gratis sin `{enlace}` (el test de la semilla cuenta 17 con propuesta).
+  Si se construye un arquetipo para alguno, va con precio publicado en `/para/` primero.
+- El asistente de `/para/#asistente` ofrece desde hoy «Vendo por Instagram, sin local» y «Comida por encargo o delivery».
+
 ## Comida por encargo: noveno arquetipo (desde el 2026-10-31)
 
 Nicho `emprendimientos-comida` (cocaderías, tortas, pasapalos, hamburgueserías de delivery, dark kitchens; 76 de 79 venden

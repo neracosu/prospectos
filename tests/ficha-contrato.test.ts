@@ -264,6 +264,14 @@ describe("ola final de la revision", () => {
     if (pdf.menuEnPdf) expect(armarGancho({ web: pdf, base: vacia }, "farmacias")).toContain("récipe");
   });
 
+  it("tienda por Instagram: gancho de catalogo con lo que hay y pago validado", () => {
+    const solo = hallazgosDeBase({ tipo: "", tamano: "", nota: "", instagram: "@ccsshopp", facebook: "", telefono: "", whatsapp: "" });
+    const ig = armarGancho({ base: solo }, "tienda-por-instagram");
+    expect(ig).toContain("Instagram (@ccsshopp)");
+    expect(ig).toContain("catálogo con lo que hay");
+    expect(ig.length).toBeLessThanOrEqual(280);
+  });
+
   it("comida por encargo: Instagram y pedidos por WhatsApp hablan de pedido confirmado, no de inventario", () => {
     const solo = hallazgosDeBase({ tipo: "", tamano: "", nota: "", instagram: "@kome.koko", facebook: "", telefono: "", whatsapp: "" });
     const ig = armarGancho({ base: solo }, "comida-por-encargo");
