@@ -254,6 +254,24 @@ describe.runIf(DB_HABILITADA)("correos: preparar, enviar a mano, cola y cifras",
     expect(salidos).toHaveLength(0);
   });
 
+  it("modo pedido: el negocio pidio la propuesta por correo tras el WhatsApp; sale sin ficha, pasa a respondio y se puede repetir", async () => {
+    const p = await crearProspectoDePrueba(ids.nichoId, { email: "info@hotelx.test", etapa: "enviado", esLead: true, fuenteLead: "directorio" });
+    await prisma.evento.create({ data: { prospectoId: p.id, tipo: "enviado", canal: "whatsapp", de: "por_contactar", a: "enviado" } });
+    expect((await enviarA(p.id, "inicial", null, { modo: "manual" })).ok).toBe(false);
+    const r = await enviarA(p.id, "inicial", null, { modo: "pedido" });
+    if (!r.ok) throw new Error(r.mensaje);
+    expect(salidos).toHaveLength(1);
+    expect(salidos[0]).toMatchObject({ to: "info@hotelx.test" });
+    const q = await prisma.prospecto.findUniqueOrThrow({ where: { id: p.id } });
+    expect(q.etapa).toBe("respondio");
+    expect(await prisma.evento.count({ where: { prospectoId: p.id, tipo: "enviado", canal: "email" } })).toBe(1);
+    expect(await prisma.evento.count({ where: { prospectoId: p.id, tipo: "etapa", a: "respondio" } })).toBe(1);
+    const r2 = await enviarA(p.id, "inicial", null, { modo: "pedido" });
+    if (!r2.ok) throw new Error(r2.mensaje);
+    expect(salidos).toHaveLength(2);
+    expect((await prisma.prospecto.findUniqueOrThrow({ where: { id: p.id } })).etapa).toBe("respondio");
+  });
+
   it("dos filas con el mismo correo: la segunda se rechaza", async () => {
     const a = await nuevo({ email: "Dup@Ejemplo.test" });
     const b = await nuevo({ email: "dup@ejemplo.test" });

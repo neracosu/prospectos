@@ -24,7 +24,35 @@ const GanchoZ = z.string().trim().max(GANCHO_MAX).regex(/^[^<>\r\n]*$/);
 const ResumenZ = z.string().trim().max(RESUMEN_MAX);
 
 function refrescar(id: number) {
-  revalidatePath("/correos"); revalidatePath(`/prospectos/${id}`); revalidatePath("/inicio");
+  revalidatePath("/correos"); revalidatePath(`/prospectos/${id}`); revalidatePath(`/leads/${id}`); revalidatePath("/inicio");
+}
+
+// El negocio pidio la propuesta por correo (por ejemplo, respondiendo al WhatsApp): se guarda el correo si es nuevo y
+// sale ahora mismo con el PDF, aunque ya se le haya escrito por otro canal (modo "pedido" de enviarA).
+const CorreoZ = z.string().trim().toLowerCase().max(120).email();
+export async function enviarPropuestaPedida(prospectoId: number, correo: string): Promise<Resultado<{ token: string }>> {
+  const u = await exigirRol("dueno");
+  const eId = Id.safeParse(prospectoId);
+  if (!eId.success) return fallo("Ese prospecto no existe.");
+  const eC = CorreoZ.safeParse(correo);
+  if (!eC.success) return fallo("Revise el correo: parece mal escrito.");
+  try {
+    const p = await prisma.prospecto.findUnique({ where: { id: eId.data }, select: { id: true, email: true, fuentesPorCampo: true } });
+    if (!p) return fallo("Ese prospecto no existe.");
+    if (normalizarCorreo(p.email) !== eC.data) {
+      const fpc = { ...((p.fuentesPorCampo as Record<string, unknown> | null) ?? {}), email: "lo dio el propio negocio al pedir la propuesta" };
+      await prisma.$transaction([
+        prisma.prospecto.update({ where: { id: p.id }, data: { email: eC.data, fuentesPorCampo: fpc } }),
+        prisma.evento.create({ data: { prospectoId: p.id, usuarioId: u.id, tipo: "nota", texto: `Correo ${p.email ? "cambiado" : "agregado"}: ${eC.data} (lo dio el negocio para recibir la propuesta)` } }),
+      ]);
+    }
+    const r = await enviarA(p.id, "inicial", u.id, { modo: "pedido" });
+    if (r.ok) refrescar(p.id); else revalidatePath(`/leads/${p.id}`);
+    return r;
+  } catch (err) {
+    console.error("enviarPropuestaPedida", err);
+    return fallo("No se pudo enviar. Intente de nuevo.");
+  }
 }
 
 export async function guardarGancho(prospectoId: number, fd: FormData): Promise<Resultado> {

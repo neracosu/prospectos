@@ -17,6 +17,18 @@ de «Referencias verificables» con URLs a «Referencias: a pedido, cuando el ca
 (reabrió el 2026-10-26). También se quitó una «Llamada con el dueño» que quedaba en hoteles y estadía («Contacto»). La web
 `/para/comercio-y-tienda` todavía nombra adastram: es del sitio, no del panel.
 
+## «Le pidieron la propuesta por correo» (desde el 2026-10-31, noche)
+
+Un hotel respondió al WhatsApp pidiendo la propuesta a su correo y Neri no encontraba dónde hacerlo «sin tantas vueltas»:
+la cola de `/correos` lo excluía (ya tenía un `enviado` por WhatsApp y no estaba `por_contactar`). Ahora la ficha del lead
+(`/leads/[id]`) y la del directorio (`/prospectos/[id]`) tienen la tarjeta `EnviarPorCorreo` (solo dueño, solo con
+plantilla): un campo con el correo prellenado y «Enviar la propuesta por correo». Acción `enviarPropuestaPedida` →
+`enviarA(..., { modo: "pedido" })`: guarda el correo si es nuevo (fuente «lo dio el propio negocio») con nota, y manda el
+inicial completo con PDF **aunque ya se le haya escrito por otro canal, sin ficha y con un correo genérico** (lo dio él);
+si ya había salido uno por correo, va como reenvío. Sigue respetando país, bloqueados y «esa dirección ya recibió de otro
+negocio». Quien la pide ya respondió: pasa a `respondio` (y a lead) si estaba en `por_contactar` o `enviado`; el evento
+`enviado` lleva «La pidió el negocio». Test en `tests/correos.test.ts`.
+
 ## Tienda por Instagram (décimo arquetipo) y nichos sin propuesta (desde el 2026-10-31, noche)
 
 - **`tienda-por-instagram`** para `emprendimientos-moda` y `cosmeticos` (105; casi todos venden solo por Instagram, sin

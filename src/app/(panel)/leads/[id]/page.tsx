@@ -9,6 +9,7 @@ import { CabeceraPagina } from "@/componentes/CabeceraPagina";
 import { SiguientePaso } from "@/componentes/SiguientePaso";
 import { DatosLead } from "@/componentes/DatosLead";
 import { BotonCopiar } from "@/componentes/BotonCopiar";
+import { EnviarPorCorreo } from "@/componentes/EnviarPorCorreo";
 
 export const dynamic = "force-dynamic";
 
@@ -65,6 +66,7 @@ export default async function FichaLead({ params }: { params: Promise<{ id: stri
               <p className="suave">{p.abrio ? "La abrió." : "Todavía no la ha abierto."}</p>
             </section>
           )}
+          {p.tienePropuesta && u.rol === "dueno" && <EnviarPorCorreo id={p.id} email={p.email} />}
           <details className="acordeon historial-plegado">
             <summary><span>Historial</span><span className="suave">{p.historial.length}</span></summary>
             <div className="acordeon__cuerpo">{historial}</div>

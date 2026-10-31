@@ -291,23 +291,28 @@ export async function prepararEnvio(prospectoId: number, tipo: "inicial" | "segu
 // modo: "manual" desde el boton de Neri, "automatico" desde el cron (por defecto, lo mas estricto).
 export async function enviarA(prospectoId: number, tipo: "inicial" | "seguimiento", usuarioId: number | null, opciones: { reenviar?: boolean; tope?: number; modo?: ModoEnvio } = {}): Promise<Resultado<{ token: string }>> {
   const hoy = hoyCaracas();
-  const p = await prisma.prospecto.findFirst({ where: { AND: [{ id: prospectoId }, DEL_DIRECTORIO] }, select: { id: true, email: true, ciudad: true, etapa: true } });
+  // "pedido": el negocio lo pidio (un lead tambien); se salta la cola, la ficha, el filtro de correos genericos y el
+  // «un negocio, un canal». Lo demas (pais, bloqueado, misma direccion ya servida) sigue igual.
+  const pedido = opciones.modo === "pedido";
+  const p = await prisma.prospecto.findFirst({ where: pedido ? { id: prospectoId } : { AND: [{ id: prospectoId }, DEL_DIRECTORIO] }, select: { id: true, email: true, ciudad: true, etapa: true, esLead: true, fuenteLead: true } });
   if (!p) return fallo("Ese prospecto no existe.");
   if (paisDeCiudad(p.ciudad) !== "VE") return fallo("Solo se envía a negocios de Venezuela.");
   const email = normalizarCorreo(p.email);
   if (!email) return fallo("Este negocio no tiene correo.");
-  if (motivoDeCorreo(email, p.ciudad, paisDeCiudad)) return fallo("Ese correo no sirve para escribirle (inválido, genérico o del Estado).");
+  if (!pedido && motivoDeCorreo(email, p.ciudad, paisDeCiudad)) return fallo("Ese correo no sirve para escribirle (inválido, genérico o del Estado).");
   if (await prisma.correoBloqueado.findUnique({ where: { email } })) return fallo("Ese correo está bloqueado.");
   const [fila] = (await colaCorreo(hoy)).filter((f) => f.prospectoId === prospectoId);
-  if (!fila) return fallo("Este negocio todavía no tiene ficha.");
-  if (!puedeEnviar(fila, opciones.modo ?? "automatico")) {
+  if (!fila && !pedido) return fallo("Este negocio todavía no tiene ficha.");
+  if (fila && !puedeEnviar(fila, opciones.modo ?? "automatico")) {
     return fallo(fila.nombreNoCoincide ? "El nombre de la web no coincide: revise la ficha antes de enviar." : "Este negocio no tiene propuesta armada.");
   }
   const envios = await prisma.envioCorreo.findMany({ where: { prospectoId, ...buenoPrisma() }, select: { tipo: true } });
   const hayInicial = envios.some((e) => e.tipo === "inicial");
   let real: "inicial" | "seguimiento" = "inicial";
-  if (hayInicial && !opciones.reenviar) {
-    if (!fila.tocaSeguimiento) return fallo("A este negocio ya se le envió la propuesta.");
+  if (pedido) {
+    // Siempre la propuesta completa con el PDF; si ya habia salido una, va como reenvio.
+  } else if (hayInicial && !opciones.reenviar) {
+    if (!fila?.tocaSeguimiento) return fallo("A este negocio ya se le envió la propuesta.");
     real = "seguimiento";
   } else if (!hayInicial && tipo === "seguimiento") {
     return fallo("Todavía no se le ha enviado la propuesta inicial.");
@@ -316,7 +321,7 @@ export async function enviarA(prospectoId: number, tipo: "inicial" | "seguimient
     if (p.etapa !== "por_contactar") return fallo("Este negocio ya no está por contactar.");
     if (await prisma.evento.count({ where: { prospectoId, tipo: "enviado" } })) return fallo("A este negocio ya se le envió la propuesta por otro canal.");
   }
-  const prep = await prepararEnvio(prospectoId, real, { reenviar: opciones.reenviar, tope: opciones.tope });
+  const prep = await prepararEnvio(prospectoId, real, { reenviar: opciones.reenviar || (pedido && hayInicial), tope: opciones.tope });
   if ("error" in prep) return fallo(prep.error);
   const r = await enviarCorreo({ para: email, asunto: prep.correo.asunto, html: prep.correo.html, texto: prep.correo.texto, ...(prep.pdf ? { adjunto: { nombre: prep.pdf.nombre, ruta: prep.pdf.ruta } } : {}) });
   if (!r.ok) {
@@ -324,11 +329,16 @@ export async function enviarA(prospectoId: number, tipo: "inicial" | "seguimient
     return fallo("No se pudo enviar el correo. Quedó anotado el motivo; puede reintentar.");
   }
   const dias = (await prisma.nicho.findFirst({ where: { prospectos: { some: { id: prospectoId } } }, select: { diasSeguimiento: true } }))?.diasSeguimiento ?? 3;
+  // Quien pide la propuesta por correo ya respondio: pasa a «respondio» (y a lead) si estaba antes de eso.
+  const pasaARespondio = pedido && (p.etapa === "por_contactar" || p.etapa === "enviado");
   await prisma.$transaction([
     prisma.envioCorreo.update({ where: { token: prep.token }, data: { fallo: "" } }),
-    prisma.evento.create({ data: { prospectoId, usuarioId, tipo: real === "inicial" ? "enviado" : "seguimiento", de: p.etapa, a: "enviado", canal: "email", texto: prep.correo.asunto.slice(0, 200) } }),
-    // No baja de etapa a quien ya respondio. Un correo enviado no asciende a lead (eso pasa al marcar «Respondio»).
-    prisma.prospecto.updateMany({ where: { id: prospectoId, etapa: { in: ["por_contactar", "enviado"] } }, data: { etapa: "enviado", proximoSeguimiento: sumarDias(hoy, dias) } }),
+    prisma.evento.create({ data: { prospectoId, usuarioId, tipo: real === "inicial" ? "enviado" : "seguimiento", de: p.etapa, a: pasaARespondio ? "respondio" : "enviado", canal: "email", texto: (pedido ? "La pidió el negocio · " : "") + prep.correo.asunto.slice(0, 170) } }),
+    ...(pasaARespondio
+      ? [prisma.evento.create({ data: { prospectoId, usuarioId, tipo: "etapa", de: p.etapa, a: "respondio", texto: "Pidió la propuesta por correo" } }),
+         prisma.prospecto.updateMany({ where: { id: prospectoId }, data: { etapa: "respondio", esLead: true, fuenteLead: p.fuenteLead || "directorio", proximoSeguimiento: sumarDias(hoy, dias) } })]
+      // No baja de etapa a quien ya respondio. Un correo enviado no asciende a lead (eso pasa al marcar «Respondio»).
+      : [prisma.prospecto.updateMany({ where: { id: prospectoId, etapa: { in: ["por_contactar", "enviado"] } }, data: { etapa: "enviado", proximoSeguimiento: sumarDias(hoy, dias) } })]),
   ]);
   return exito({ token: prep.token });
 }

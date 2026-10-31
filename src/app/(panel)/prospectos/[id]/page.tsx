@@ -5,6 +5,7 @@ import { ETIQUETA_CANAL, type Canal } from "@/lib/canales-contrato";
 import { Etapa } from "@/componentes/Etapa";
 import { FichaAcciones } from "@/componentes/FichaAcciones";
 import { BotonCopiar } from "@/componentes/BotonCopiar";
+import { EnviarPorCorreo } from "@/componentes/EnviarPorCorreo";
 import { SugerenciasWeb } from "@/componentes/SugerenciasWeb";
 import { FichaNegocioBloque } from "@/componentes/FichaNegocioBloque";
 
@@ -59,6 +60,7 @@ export default async function Ficha({ params }: { params: Promise<{ id: string }
           <p className="suave">{p.abrio ? "El prospecto abrió la propuesta." : "Todavía no la ha abierto."}</p>
         </section>
       )}
+      {p.tienePropuesta && u.rol === "dueno" && <EnviarPorCorreo id={p.id} email={p.email} />}
       <FichaAcciones id={p.id} etapa={p.etapa} nota={p.nota} proximoSeguimiento={p.proximoSeguimiento} contacto={p} mensaje={p.mensaje} rol={u.rol} />
       <section className="tarjeta">
         <b>Historial</b>

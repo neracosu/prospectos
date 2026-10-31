@@ -41,9 +41,12 @@ export function hitosDe(e: EnvioVisible | null): string[] {
 
 // Una sola regla para la tabla, la hoja y el servidor. A mano, una ficha cuyo nombre no coincide con la web sale solo si
 // Neri ya la reviso (al guardar el gancho queda «revisada»); el automatico nunca la toma. Un correo bloqueado no sale nunca.
-export type ModoEnvio = "manual" | "automatico";
+// "pedido" (31-oct-2026): el propio negocio pidio la propuesta por correo (por ejemplo, respondiendo al WhatsApp). Sale
+// aunque ya se le haya escrito por otro canal, sin ficha y con un correo generico: lo dio el mismo.
+export type ModoEnvio = "manual" | "automatico" | "pedido";
 export function puedeEnviar(f: { bloqueado: string; nombreNoCoincide: boolean; estadoFicha: string; arquetipo: string }, modo: ModoEnvio): boolean {
   if (f.bloqueado || f.arquetipo === "") return false;
+  if (modo === "pedido") return true;
   if (f.nombreNoCoincide) return modo === "manual" && f.estadoFicha === "revisada";
   return true;
 }
