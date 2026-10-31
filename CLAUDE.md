@@ -4,6 +4,19 @@ Plataforma de Neri para prospectar por nicho y llevar los proyectos vendidos. Pi
 prospección: cola del día, embudo, propuesta por enlace, seguimientos) en producción en
 `prospectos.neracosu.com`. Entra con PIN.
 
+## Sin nombres de proyectos ni conteos de trabajos (regla de Neri, 2026-10-31)
+
+«No deberíamos hablar directamente de otros proyectos en las propuestas, por ejemplo adastram… solo que tenemos experiencia
+y ya, no citar cantidades de trabajos previos… cuando hablamos de hoteles no tienen que saber cuántos hicimos, solo que ya
+funciona.» Aplica a las diez plantillas, al correo (credenciales de `mensajes-nicho-contrato.ts`) y a los mensajes de nicho:
+**ni nombres ni URLs de clientes o productos propios** (adastram, Hotel VIP, Terrazas, VIP Play, Bowling Park, ArmorPay →
+«una marca de moda», «un hotel de La Guaira», «un parque deportivo», «una plataforma propia de validación de pagos»), **ni
+conteos de dónde corre** («dos negocios», «2 complejos», «dos locales» → «negocios de La Guaira», «locales de La Guaira»).
+Las cifras de producto sí valen (11 métodos, 6 tipos de movimiento, 17 módulos, 1.170 pruebas). La ficha de portada pasó
+de «Referencias verificables» con URLs a «Referencias: a pedido, cuando el caso lo amerita». Terrazas ya no va «en pausa»
+(reabrió el 2026-10-26). También se quitó una «Llamada con el dueño» que quedaba en hoteles y estadía («Contacto»). La web
+`/para/comercio-y-tienda` todavía nombra adastram: es del sitio, no del panel.
+
 ## Farmacias: arquetipo propio (desde el 2026-10-31)
 
 Hasta el 31-oct el nicho `farmacias` usaba el arquetipo `comercio-y-tienda`: el correo salía como «Tiendas y comercios»,
