@@ -1,4 +1,5 @@
 "use client";
+import { MOTIVO_BLOQUEO } from "@/lib/correos-contrato";
 import { useState, useTransition } from "react";
 import { guardarGancho, reinvestigar, bloquearCorreo, ponerAlAutomatico } from "@/acciones/correos";
 import { Campo } from "@/componentes/Campo";
@@ -20,7 +21,7 @@ const ESTADO_WEB: Record<string, string> = {
   red_social: "Solo una red social", sin_web: "Sin web",
   desconocida: "No se pudo leer la web; se mantiene como web existente",
 };
-const MOTIVO: Record<string, string> = { no_quiere: "pidió que no le escriban", rebote: "el correo rebotó" };
+const MOTIVO = MOTIVO_BLOQUEO;
 
 function host(url: string): string {
   try { return new URL(url).hostname.replace(/^www\./, ""); } catch { return url; }

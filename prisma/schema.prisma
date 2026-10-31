@@ -409,7 +409,7 @@ model FichaNegocio {
 
 model CorreoBloqueado {
   email    String   @id @db.VarChar(120)
-  motivo   String   @db.VarChar(20) // no_quiere | rebote
+  motivo   String   @db.VarChar(20) // no_quiere | rebote | dominio (correo-dominio.ts, scripts/leer-rebotes.mts)
   creadoEn DateTime @default(now())
 }
 

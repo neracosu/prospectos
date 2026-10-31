@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import type { FilaCola } from "@/lib/correos";
 import { GANCHO_MAX } from "@/lib/ficha-contrato";
-import { fechaCorta, hitosDe, yaEnviado, puedeEnviar } from "@/lib/correos-contrato";
+import { fechaCorta, hitosDe, yaEnviado, puedeEnviar, MOTIVO_BLOQUEO } from "@/lib/correos-contrato";
 import { guardarGancho, vistaPrevia, enviarPropuestaCorreo, bloquearCorreo, ponerAlAutomatico } from "@/acciones/correos";
 import { Campo } from "@/componentes/Campo";
 import { useFlotante } from "@/componentes/LineaFlotante";
@@ -120,7 +120,7 @@ export function VistaPreviaCorreo({ fila, onCerrar }: { fila: FilaCola; onCerrar
             <button type="button" className="boton boton--peligro" disabled={pendiente} onClick={() => correr(() => bloquearCorreo(id, "no_quiere"), () => { avisar({ texto: `Correo bloqueado: ${fila.nombre}` }); onCerrar(); })}>No quiere correo</button>
             <button type="button" className="boton boton--peligro" disabled={pendiente} onClick={() => correr(() => bloquearCorreo(id, "rebote"), () => { avisar({ texto: `Correo bloqueado: ${fila.nombre}` }); onCerrar(); })}>Rebotó</button>
           </>}
-          {fila.bloqueado && <p className="suave">Correo bloqueado ({fila.bloqueado === "rebote" ? "rebotó" : "no quiere correo"}).</p>}
+          {fila.bloqueado && <p className="suave">Correo bloqueado ({MOTIVO_BLOQUEO[fila.bloqueado] ?? fila.bloqueado}).</p>}
         </div>
       </div>
     </>

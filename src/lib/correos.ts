@@ -6,6 +6,7 @@ import { generarCodigo, CODIGO_VALIDO } from "@/lib/codigo";
 import { DEL_DIRECTORIO } from "@/lib/prospectos";
 import { paisDeCiudad } from "@/lib/overpass-contrato";
 import { hoyCaracas, sumarDias } from "@/lib/fecha-caracas";
+import { dominioRecibeCorreo } from "@/lib/correo-dominio";
 import { normalizarCorreo, motivoDeCorreo, type EstadoFicha } from "@/lib/ficha-contrato";
 import { leerFicha } from "@/lib/fichas";
 import { leerPlantillaPara, generarPdf, hashDe, fechaDePropuesta } from "@/lib/propuesta";
@@ -288,6 +289,20 @@ export async function prepararEnvio(prospectoId: number, tipo: "inicial" | "segu
   }
 }
 
+export const DOMINIO_MUERTO = "El dominio de ese correo no recibe correo: quedó bloqueado.";
+
+// Bloqueo puesto por el sistema (dominio muerto, rebote leido del buzon): idempotente por direccion; el evento solo se crea
+// la primera vez. Devuelve "nuevo" o "ya".
+export async function bloquearPorSistema(prospectoId: number | null, email: string, motivo: "rebote" | "dominio", detalle: string): Promise<"nuevo" | "ya"> {
+  const e = normalizarCorreo(email).slice(0, 120);
+  if (!e) return "ya";
+  if (await prisma.correoBloqueado.findUnique({ where: { email: e } })) return "ya";
+  try { await prisma.correoBloqueado.create({ data: { email: e, motivo } }); }
+  catch (err) { if ((err as { code?: string }).code === "P2002") return "ya"; throw err; }
+  if (prospectoId) await prisma.evento.create({ data: { prospectoId, tipo: "correo_bloqueado", texto: `${e} (${motivo}): ${detalle}`.slice(0, 500) } });
+  return "nuevo";
+}
+
 // modo: "manual" desde el boton de Neri, "automatico" desde el cron (por defecto, lo mas estricto).
 export async function enviarA(prospectoId: number, tipo: "inicial" | "seguimiento", usuarioId: number | null, opciones: { reenviar?: boolean; tope?: number; modo?: ModoEnvio } = {}): Promise<Resultado<{ token: string }>> {
   const hoy = hoyCaracas();
@@ -301,6 +316,11 @@ export async function enviarA(prospectoId: number, tipo: "inicial" | "seguimient
   if (!email) return fallo("Este negocio no tiene correo.");
   if (!pedido && motivoDeCorreo(email, p.ciudad, paisDeCiudad)) return fallo("Ese correo no sirve para escribirle (inválido, genérico o del Estado).");
   if (await prisma.correoBloqueado.findUnique({ where: { email } })) return fallo("Ese correo está bloqueado.");
+  // Dominio sin MX ni A: no se manda (rebotaria) y queda bloqueado con su nota, para que no vuelva a la cola.
+  if ((await dominioRecibeCorreo(email)) === "no") {
+    await bloquearPorSistema(prospectoId, email, "dominio", "sin MX ni A: ese dominio no recibe correo");
+    return fallo(DOMINIO_MUERTO);
+  }
   const [fila] = (await colaCorreo(hoy)).filter((f) => f.prospectoId === prospectoId);
   if (!fila && !pedido) return fallo("Este negocio todavía no tiene ficha.");
   if (fila && !puedeEnviar(fila, opciones.modo ?? "automatico")) {
@@ -370,8 +390,9 @@ export async function enviarAutomatico(ahora: Date = new Date()): Promise<Result
       try { r = await enviarA(f.prospectoId, "inicial", null, { tope, modo: "automatico" }); }
       catch (e) { console.error("[correos]", f.prospectoId, e); r = { ok: false, mensaje: "excepcion" }; }
       if (r.ok) { enviados++; seguidos = 0; continue; }
-      // Otro negocio ya recibio esa direccion (la cola se armo antes): no se mando nada, no es un fallo.
-      if (r.mensaje === YA_RECIBIO) { intentos--; continue; }
+      // Otro negocio ya recibio esa direccion (la cola se armo antes) o el dominio esta muerto (quedo bloqueado): no se
+      // mando nada, no es un fallo del transporte ni gasta el lote.
+      if (r.mensaje === YA_RECIBIO || r.mensaje === DOMINIO_MUERTO) { intentos--; continue; }
       if (r.mensaje.startsWith("Hoy ya salieron")) { motivo = "tope"; break; }
       if (++seguidos >= 2) { motivo = "fallos"; break; }
     }

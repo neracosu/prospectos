@@ -12,7 +12,9 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
 import { prisma } from "@/lib/db";
 import { DB_HABILITADA, limpiarBase, sembrarBasico, crearProspectoDePrueba } from "./ayuda-db";
 import { _transporteParaTests } from "@/lib/correo-envio";
-import { prepararEnvio, enviarA, colaCorreo, cifrasCorreo, enviadosHoy } from "@/lib/correos";
+import { prepararEnvio, enviarA, colaCorreo, cifrasCorreo, enviadosHoy, enviarAutomatico, bloquearPorSistema, DOMINIO_MUERTO } from "@/lib/correos";
+import { _resolvedorParaTests, _vaciarCacheDominios } from "@/lib/correo-dominio";
+import { guardarConfig, CLAVES } from "@/lib/configuracion";
 import { hoyCaracas, sumarDias } from "@/lib/fecha-caracas";
 import { seguimientosQueTocan } from "@/lib/prospectos";
 
@@ -36,9 +38,12 @@ describe.runIf(DB_HABILITADA)("correos: preparar, enviar a mano, cola y cifras",
     await prisma.evento.deleteMany(); await prisma.envioCorreo.deleteMany(); await prisma.correoBloqueado.deleteMany(); await prisma.fichaNegocio.deleteMany();
     await prisma.prospecto.deleteMany();
     salidos.length = 0; fallar = false; pdfFalso.ocupado = false;
+    // Los dominios de prueba no existen en el DNS: todos reciben correo salvo *.muerto.test
+    _vaciarCacheDominios();
+    _resolvedorParaTests({ mx: async (d) => { if (d.endsWith("muerto.test")) throw Object.assign(new Error("ENOTFOUND"), { code: "ENOTFOUND" }); return 1; }, a: async () => { throw Object.assign(new Error("ENOTFOUND"), { code: "ENOTFOUND" }); } });
     _transporteParaTests({ sendMail: async (o) => { if (fallar) throw new Error("smtp caido"); salidos.push(o); return { messageId: "m1" }; } });
   });
-  afterAll(async () => { _transporteParaTests(null); await limpiarBase(); await prisma.$disconnect(); });
+  afterAll(async () => { _transporteParaTests(null); _resolvedorParaTests(null); await limpiarBase(); await prisma.$disconnect(); });
 
   async function nuevo(extra: Parameters<typeof crearProspectoDePrueba>[1] = {}, nichoId = ids.nichoId, gancho = "Su web no tiene reservas en linea") {
     const p = await crearProspectoDePrueba(nichoId, { email: `n${Math.random().toString(36).slice(2, 8)}@ejemplo.test`, ...extra });
@@ -276,6 +281,31 @@ describe.runIf(DB_HABILITADA)("correos: preparar, enviar a mano, cola y cifras",
     if (!r2.ok) throw new Error(r2.mensaje);
     expect(salidos).toHaveLength(2);
     expect((await prisma.prospecto.findUniqueOrThrow({ where: { id: p.id } })).etapa).toBe("respondio");
+  });
+
+  it("dominio sin MX ni A: no se manda, queda bloqueado con motivo dominio y el automatico no lo cuenta como fallo", async () => {
+    const muerto = await nuevo({ email: "ventas@tienda.muerto.test" });
+    const vivo = await nuevo({ email: "hola@vivo.test" });
+    await prisma.fichaNegocio.updateMany({ data: { alAutomatico: true } });
+    const r = await enviarA(muerto.id, "inicial", null, { modo: "manual" });
+    expect(r.ok).toBe(false); if (!r.ok) expect(r.mensaje).toBe(DOMINIO_MUERTO);
+    expect(salidos).toHaveLength(0);
+    expect((await prisma.correoBloqueado.findUniqueOrThrow({ where: { email: "ventas@tienda.muerto.test" } })).motivo).toBe("dominio");
+    expect(await prisma.evento.count({ where: { prospectoId: muerto.id, tipo: "correo_bloqueado" } })).toBe(1);
+    expect((await colaCorreo(hoy, { estado: "listas" })).map((f) => f.prospectoId)).not.toContain(muerto.id);
+    expect((await colaCorreo(hoy, { estado: "bloqueadas" })).map((f) => f.prospectoId)).toContain(muerto.id);
+    // idempotente
+    expect(await bloquearPorSistema(muerto.id, "ventas@tienda.muerto.test", "dominio", "x")).toBe("ya");
+    expect(await prisma.evento.count({ where: { prospectoId: muerto.id, tipo: "correo_bloqueado" } })).toBe(1);
+    // el automatico salta al muerto sin contarlo como fallo y manda al vivo (jueves 10:00 Caracas)
+    const otro = await nuevo({ email: "ventas2@tienda.muerto.test" });
+    await prisma.fichaNegocio.updateMany({ data: { alAutomatico: true } });
+    await guardarConfig(CLAVES.correosAutomatico, "on");
+    const res = await enviarAutomatico(new Date("2026-10-29T14:00:00Z"));
+    expect(res.enviados).toBe(1);
+    expect(salidos.map((s) => s.to)).toEqual(["hola@vivo.test"]);
+    expect((await prisma.correoBloqueado.findUniqueOrThrow({ where: { email: "ventas2@tienda.muerto.test" } })).motivo).toBe("dominio");
+    expect(otro.id).toBeGreaterThan(0);
   });
 
   it("dos filas con el mismo correo: la segunda se rechaza", async () => {

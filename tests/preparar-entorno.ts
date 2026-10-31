@@ -31,3 +31,12 @@ process.env.SESION_SECRET ??= "secreto-de-tests-no-usar-en-produccion";
 // borran <dir>/recibos. Los recibos reales no se regeneran nunca; la suite jamas debe poder verlos.
 process.env.PROSPECTOS_DIR_ARCHIVOS = path.join(os.tmpdir(), "prospectos-tests-archivos");
 process.env.PROSPECTOS_URL_PUBLICA ??= "http://localhost:3013";
+
+// DNS simulado por defecto (31-oct): enviarA consulta MX/A antes de mandar y los dominios de prueba (*.test) no existen.
+// Todo recibe correo salvo *.muerto.test. Un test puede poner su propio resolvedor; al soltarlo vuelve al DNS real.
+import { _resolvedorParaTests } from "@/lib/correo-dominio";
+const sinDatos = () => Object.assign(new Error("ENOTFOUND"), { code: "ENOTFOUND" });
+_resolvedorParaTests({
+  mx: async (d) => { if (d.endsWith("muerto.test")) throw sinDatos(); return 1; },
+  a: async () => { throw sinDatos(); },
+});

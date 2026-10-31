@@ -41,6 +41,10 @@ export function hitosDe(e: EnvioVisible | null): string[] {
 
 // Una sola regla para la tabla, la hoja y el servidor. A mano, una ficha cuyo nombre no coincide con la web sale solo si
 // Neri ya la reviso (al guardar el gancho queda «revisada»); el automatico nunca la toma. Un correo bloqueado no sale nunca.
+// Motivos de CorreoBloqueado y como se leen en las pantallas. "dominio" y "rebote" los pone tambien el sistema
+// (correo-dominio.ts al encolar; scripts/leer-rebotes.mts al leer el buzon).
+export const MOTIVO_BLOQUEO: Record<string, string> = { no_quiere: "pidió que no le escriban", rebote: "el correo rebotó", dominio: "su dominio no recibe correo" };
+
 // "pedido" (31-oct-2026): el propio negocio pidio la propuesta por correo (por ejemplo, respondiendo al WhatsApp). Sale
 // aunque ya se le haya escrito por otro canal, sin ficha y con un correo generico: lo dio el mismo.
 export type ModoEnvio = "manual" | "automatico" | "pedido";
