@@ -229,17 +229,19 @@ export function hallazgosDeBase(p: {
 
 type Regla = "web_caida" | "mantenimiento" | "whatsapp" | "tienda_a_mano" | "carta_pdf" | "motor" | "sedes" | "instagram";
 
-const ARQ_WHATSAPP = ["hoteles-estadia", "reservas", "restaurantes-y-bares", "citas-y-servicios"];
-const ARQ_INSTAGRAM = ["comercio-y-tienda", "farmacias", "restaurantes-y-bares", "citas-y-servicios", "reservas", "hoteles-estadia"];
+const ARQ_WHATSAPP = ["hoteles-estadia", "reservas", "restaurantes-y-bares", "comida-por-encargo", "citas-y-servicios"];
+// Pedidos por mensaje: lo que el sistema convierte en pedido confirmado con pago validado.
+const ARQ_PEDIDOS = ["restaurantes-y-bares", "comida-por-encargo"];
+const ARQ_INSTAGRAM = ["comercio-y-tienda", "farmacias", "restaurantes-y-bares", "comida-por-encargo", "citas-y-servicios", "reservas", "hoteles-estadia"];
 // Comercio con inventario: tienda a mano y catalogo en PDF valen para los dos.
 const ARQ_INVENTARIO = ["comercio-y-tienda", "farmacias"];
 
 // Web que no abre: gancho «hoy no abre» y la propuesta va como sin web (lo usa webUsable).
 export const WEB_NO_ABRE: ReadonlySet<string> = new Set<EstadoWeb>(["caida", "vendida"]);
 // Solo estos arquetipos venden la pagina propia como reemplazo; en los demas lo propuesto no depende de la web.
-const ARQ_PAGINA_PROPIA = ["hoteles", "hoteles-estadia", "reservas", "comercio-y-tienda", "farmacias"];
+const ARQ_PAGINA_PROPIA = ["hoteles", "hoteles-estadia", "reservas", "comercio-y-tienda", "farmacias", "comida-por-encargo"];
 const ARQUETIPOS = [
-  "hoteles", "hoteles-estadia", "restaurantes-y-bares", "reservas", "comercio-y-tienda", "farmacias", "citas-y-servicios", "cobros-y-pagos",
+  "hoteles", "hoteles-estadia", "restaurantes-y-bares", "reservas", "comercio-y-tienda", "farmacias", "comida-por-encargo", "citas-y-servicios", "cobros-y-pagos",
 ];
 
 function webViva(h: Hallazgos): HallazgosWeb | undefined {
@@ -252,7 +254,7 @@ function sinWebPropia(h: Hallazgos): boolean {
 
 function whatsappAplica(w: HallazgosWeb, arq: string): boolean {
   if (!ARQ_WHATSAPP.includes(arq)) return false;
-  return w.reservaPorWhatsApp || (arq === "restaurantes-y-bares" && w.pedidoPorWhatsApp);
+  return w.reservaPorWhatsApp || (ARQ_PEDIDOS.includes(arq) && w.pedidoPorWhatsApp);
 }
 
 function reglaDeGancho(h: Hallazgos, arq: string): Regla | "" {
@@ -315,6 +317,9 @@ function textoGancho(regla: Regla, h: Hallazgos, arq: string): string {
     case "web_caida":
       return `Vi que su dirección web hoy no abre. ${segundaDeWeb(arq)}`;
     case "whatsapp":
+      if (arq === "comida-por-encargo") {
+        return "Vi que en su página los pedidos se hacen por WhatsApp. Eso es justo lo que el sistema convierte en un pedido confirmado solo, con el total, la fecha de entrega y el pago validado.";
+      }
       if (arq === "restaurantes-y-bares") {
         return h.web?.reservaPorWhatsApp
           ? "Vi que en su página las reservas de mesa se piden por WhatsApp. Eso es justo lo que el sistema convierte en una reserva confirmada sola, con el anticipo validado."
@@ -339,6 +344,9 @@ function textoGancho(regla: Regla, h: Hallazgos, arq: string): string {
       if (arq === "citas-y-servicios") {
         return `Vi que atienden por Instagram (@${usuarioInstagram(h.base.instagram)}) y la cita se pide por mensaje. Eso es lo primero que el diagnóstico mira: cómo se aparta la hora y cómo se cobra.`;
       }
+      if (arq === "comida-por-encargo") {
+        return `Vi que atienden por Instagram (@${usuarioInstagram(h.base.instagram)}) y el pedido se cierra por mensaje. El sistema lo arma solo, con el total, la fecha de entrega y el pago validado, sin que nadie tenga que contestar.`;
+      }
       if (arq === "farmacias") {
         return `Vi que atienden por Instagram (@${usuarioInstagram(h.base.instagram)}). El sistema le da una página propia donde el cliente ve existencia y precio, pide con la foto del récipe y paga validado, sin depender de que alguien conteste el mensaje.`;
       }
@@ -359,7 +367,7 @@ export function armarGancho(h: Hallazgos, arquetipo: string): string {
 
 const NOMBRE_ARQUETIPO: Record<string, string> = {
   "hoteles": "hotel de paso", "hoteles-estadia": "hotel o posada de estadía", "restaurantes-y-bares": "restaurante o bar",
-  "reservas": "negocio de reservas", "comercio-y-tienda": "comercio", "farmacias": "farmacia", "citas-y-servicios": "negocio de citas y servicios",
+  "reservas": "negocio de reservas", "comercio-y-tienda": "comercio", "farmacias": "farmacia", "comida-por-encargo": "negocio de comida por encargo", "citas-y-servicios": "negocio de citas y servicios",
   "cobros-y-pagos": "negocio con cobros recurrentes",
 };
 

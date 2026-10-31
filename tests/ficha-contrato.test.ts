@@ -264,6 +264,17 @@ describe("ola final de la revision", () => {
     if (pdf.menuEnPdf) expect(armarGancho({ web: pdf, base: vacia }, "farmacias")).toContain("récipe");
   });
 
+  it("comida por encargo: Instagram y pedidos por WhatsApp hablan de pedido confirmado, no de inventario", () => {
+    const solo = hallazgosDeBase({ tipo: "", tamano: "", nota: "", instagram: "@kome.koko", facebook: "", telefono: "", whatsapp: "" });
+    const ig = armarGancho({ base: solo }, "comida-por-encargo");
+    expect(ig).toContain("Instagram (@kome.koko)");
+    expect(ig).toContain("fecha de entrega");
+    expect(ig).not.toMatch(/inventario|vende y cobra sola/);
+    expect(ig.length).toBeLessThanOrEqual(280);
+    const w = analizarWeb(`<html><body>Cocadas KomeKoKo. Haz tu pedido por <a href="https://wa.me/584120000000">WhatsApp</a></body></html>`, URL, "Cocadas KomeKoKo", "viva");
+    if (w.pedidoPorWhatsApp) expect(armarGancho({ web: w, base: vacia }, "comida-por-encargo")).toContain("pedido confirmado solo");
+  });
+
   it("Instagram en citas: version honesta, sin pagina que cobra sola", () => {
     const solo = hallazgosDeBase({ tipo: "", tamano: "", nota: "", instagram: "@spa", facebook: "", telefono: "", whatsapp: "" });
     expect(armarGancho({ base: solo }, "citas-y-servicios")).toBe(

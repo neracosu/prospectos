@@ -17,6 +17,21 @@ de «Referencias verificables» con URLs a «Referencias: a pedido, cuando el ca
 (reabrió el 2026-10-26). También se quitó una «Llamada con el dueño» que quedaba en hoteles y estadía («Contacto»). La web
 `/para/comercio-y-tienda` todavía nombra adastram: es del sitio, no del panel.
 
+## Comida por encargo: noveno arquetipo (desde el 2026-10-31)
+
+Nicho `emprendimientos-comida` (cocaderías, tortas, pasapalos, hamburgueserías de delivery, dark kitchens; 76 de 79 venden
+solo por Instagram) salía con la propuesta de comercio (inventario, depósito, sucursales) y la de restaurantes tampoco
+servía (salón, mesas, comandas). Neri: «¿qué van a inventariar ellos, cocos?». Arquetipo `comida-por-encargo`:
+`plantillas/base/comida-por-encargo.cuerpo.html` (9 hojas sobre la base de restaurantes: pedido armado solo con fecha y
+hora, pago móvil validado, confirmación por WhatsApp, lista de producción del día, retiro o delivery; sin inventario ni
+salón), pregunta/promesa/credencial/antetítulo, ganchos (`ARQ_PEDIDOS` comparte «pedidos por WhatsApp» con restaurantes;
+Instagram con «fecha de entrega y pago validado»), `ORDEN_ARQUETIPO`, semilla del nicho con mensajes nuevos. **Precios
+propios, aprobados por Neri tras el análisis de mercado: 290 / 590 / 890 y 25 / 35 / 45 al mes**, publicados en
+`neracosu.com/para/restaurantes-y-bares#precios-encargo` (bloque `EXTRAS` de `~/build-para/precios.py`); no lleva «USD
+1.000 menos» (los planes valen menos que eso). Fuera de Colombia. La validación automática contra el banco exige cuenta
+de comercio con API: la propuesta lo dice (Esencial confirma desde el panel con la referencia). OSM trae las cocaderías
+como `shop=beverages` (→ licorerías): se movieron a mano al nicho con nota de/a.
+
 ## Farmacias: arquetipo propio (desde el 2026-10-31)
 
 Hasta el 31-oct el nicho `farmacias` usaba el arquetipo `comercio-y-tienda`: el correo salía como «Tiendas y comercios»,
