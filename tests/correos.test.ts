@@ -228,35 +228,41 @@ describe.runIf(DB_HABILITADA)("correos: preparar, enviar a mano, cola y cifras",
     expect(porArquetipo["citas-y-servicios"]).toEqual({ enviados: 1, abrieron: 0, vieron: 0, descargaron: 0, respondieron: 0 });
   });
 
-  it("un correo enviado no asciende a lead y el seguimiento sale de la cola de WhatsApp", async () => {
-    const p = await nuevo();
+  it("un correo enviado no asciende a lead; el seguimiento por WhatsApp sigue (mas canales)", async () => {
+    const p = await nuevo({ whatsapp: "584120000001" });
     await prisma.prospecto.update({ where: { id: p.id }, data: { fuenteLead: "" } });
     expect((await enviarA(p.id, "inicial", null)).ok).toBe(true);
     const d = await prisma.prospecto.findUniqueOrThrow({ where: { id: p.id } });
     expect(d.esLead).toBe(false);
     expect(d.fuenteLead).toBe("");
     await prisma.prospecto.update({ where: { id: p.id }, data: { proximoSeguimiento: hoy } });
-    expect((await seguimientosQueTocan(hoy)).map((x) => x.id)).not.toContain(p.id);
+    expect((await seguimientosQueTocan(hoy)).map((x) => x.id)).toContain(p.id);
   });
 
-  it("descartado, respondio, con envio previo por otro canal y correos del Estado o genericos no salen ni se mandan", async () => {
+  it("descartado, respondio y correos del Estado o genericos no salen ni se mandan; el que ya recibio el WhatsApp SI (mas canales)", async () => {
     const desc = await nuevo({ etapa: "descartado" });
     const resp = await nuevo({ etapa: "respondio" });
     const gob = await nuevo({ email: "alcaldia@ejemplo.gob.ve" });
     const noreply = await nuevo({ email: "noreply@ejemplo.test" });
-    const previo = await nuevo({});
-    await prisma.evento.create({ data: { prospectoId: previo.id, tipo: "enviado", canal: "whatsapp" } });
+    const previo = await nuevo({ etapa: "enviado" });
+    await prisma.evento.create({ data: { prospectoId: previo.id, tipo: "enviado", canal: "whatsapp", de: "por_contactar", a: "enviado" } });
     const listas = (await colaCorreo(hoy, { estado: "listas" })).map((f) => f.prospectoId);
-    for (const x of [desc, resp, gob, noreply, previo]) {
+    for (const x of [desc, resp, gob, noreply]) {
       expect(listas).not.toContain(x.id);
       expect((await enviarA(x.id, "inicial", null)).ok).toBe(false);
     }
     expect(salidos).toHaveLength(0);
+    expect(listas).toContain(previo.id);
+    expect((await enviarA(previo.id, "inicial", null, { modo: "manual" })).ok).toBe(true);
+    expect(salidos).toHaveLength(1);
+    expect((await prisma.prospecto.findUniqueOrThrow({ where: { id: previo.id } })).etapa).toBe("enviado");
+    expect((await colaCorreo(hoy, { estado: "listas" })).map((f) => f.prospectoId)).not.toContain(previo.id);
   });
 
   it("modo pedido: el negocio pidio la propuesta por correo tras el WhatsApp; sale sin ficha, pasa a respondio y se puede repetir", async () => {
     const p = await crearProspectoDePrueba(ids.nichoId, { email: "info@hotelx.test", etapa: "enviado", esLead: true, fuenteLead: "directorio" });
     await prisma.evento.create({ data: { prospectoId: p.id, tipo: "enviado", canal: "whatsapp", de: "por_contactar", a: "enviado" } });
+    // sin ficha no entra por la cola normal; en modo pedido si
     expect((await enviarA(p.id, "inicial", null, { modo: "manual" })).ok).toBe(false);
     const r = await enviarA(p.id, "inicial", null, { modo: "pedido" });
     if (!r.ok) throw new Error(r.mensaje);
@@ -298,14 +304,16 @@ describe.runIf(DB_HABILITADA)("correos: preparar, enviar a mano, cola y cifras",
     expect(r.datos.dondeCorreo).toBe("un directorio público");
   });
 
-  it("seguimientosQueTocan: 60 enviados por correo vencidos no tapan al de WhatsApp", async () => {
+  it("seguimientosQueTocan: 60 enviados por correo vencidos entran, pero el de WhatsApp va primero y no se tapa", async () => {
     const wa = await nuevo({ etapa: "enviado", proximoSeguimiento: sumarDias(hoy, -1) });
     await prisma.evento.create({ data: { prospectoId: wa.id, tipo: "enviado", canal: "whatsapp" } });
     for (let i = 0; i < 60; i++) {
       const c = await crearProspectoDePrueba(ids.nichoId, { etapa: "enviado", proximoSeguimiento: sumarDias(hoy, -10) });
       await prisma.evento.create({ data: { prospectoId: c.id, tipo: "enviado", canal: "email" } });
     }
-    expect((await seguimientosQueTocan(hoy)).map((x) => x.id)).toEqual([wa.id]);
+    const seg = (await seguimientosQueTocan(hoy)).map((x) => x.id);
+    expect(seg[0]).toBe(wa.id);
+    expect(seg).toHaveLength(50);
   });
 
   it("una reserva en curso de hace 11 minutos no bloquea ni cuenta en el tope y queda interrumpida", async () => {

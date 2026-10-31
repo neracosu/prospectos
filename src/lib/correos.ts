@@ -105,8 +105,7 @@ export async function colaCorreo(hoy: string, filtro: FiltroCola = {}): Promise<
     yaRecibidas.set(e.para, (yaRecibidas.get(e.para) ?? new Set()).add(e.prospectoId));
   }
   const deOtro = (f: FilaCola) => [...(yaRecibidas.get(normalizarCorreo(f.email)) ?? [])].some((id) => id !== f.prospectoId);
-  const conEnviado = new Set((await prisma.evento.findMany({ where: { tipo: "enviado", prospectoId: { in: ve.map((p) => p.id) } }, select: { prospectoId: true }, distinct: ["prospectoId"] })).map((e) => e.prospectoId));
-  const filas = ve.map((p): FilaCola & { yaSeEnvio: boolean } => {
+  const filas = ve.map((p): FilaCola => {
     const ficha = p.ficha!;
     const hallazgos = (ficha.hallazgos ?? {}) as { web?: { nombreCoincide?: boolean } };
     const ultimo = p.envios[p.envios.length - 1] ?? null;
@@ -119,16 +118,17 @@ export async function colaCorreo(hoy: string, filtro: FiltroCola = {}): Promise<
       email: p.email, estadoFicha: ficha.estado as EstadoFicha, gancho: ficha.gancho, resumen: ficha.resumen, alAutomatico: ficha.alAutomatico,
       nombreNoCoincide: hallazgos.web?.nombreCoincide === false, bloqueado: motivos.get(normalizarCorreo(p.email)) ?? "", etapa: p.etapa,
       envio: ultimo && { id: ultimo.id, tipo: ultimo.tipo, enviadoEn: ultimo.enviadoEn, abiertoEn: ultimo.abiertoEn, clicEn: ultimo.clicEn, pdfEn: ultimo.pdfEn, fallo: ultimo.fallo },
-      yaSeEnvio: conEnviado.has(p.id),
       tocaSeguimiento: hayInicial && !haySeguimiento && sinTocar && p.etapa === "enviado" && !!p.proximoSeguimiento && p.proximoSeguimiento <= hoy,
     };
   });
   const conExito = new Set(ps.filter((p) => p.envios.some(esBueno)).map((p) => p.id));
-  const sirve = (f: FilaCola & { yaSeEnvio?: boolean }): boolean => {
+  const sirve = (f: FilaCola): boolean => {
     const enviada = conExito.has(f.prospectoId);
     switch (filtro.estado) {
-      // Sin plantilla no hay propuesta que mandar: fuera de «listas» (y por tanto del automatico).
-      case "listas": return f.arquetipo !== "" && !enviada && !f.bloqueado && !(f.envio && !esBueno(f.envio)) && f.etapa === "por_contactar" && !f.yaSeEnvio && !deOtro(f) && !motivoDeCorreo(normalizarCorreo(f.email), f.ciudad, paisDeCiudad);
+      // Sin plantilla no hay propuesta que mandar: fuera de «listas» (y por tanto del automatico). Desde el 31-oct-2026 un
+      // negocio al que ya se le escribio por WhatsApp SI entra (Neri: mas canales, mas probabilidad); lo que lo saca es haber
+      // recibido ya el correo, haber respondido o estar descartado.
+      case "listas": return f.arquetipo !== "" && !enviada && !f.bloqueado && !(f.envio && !esBueno(f.envio)) && (f.etapa === "por_contactar" || f.etapa === "enviado") && !deOtro(f) && !motivoDeCorreo(normalizarCorreo(f.email), f.ciudad, paisDeCiudad);
       case "enviadas": return enviada;
       case "seguimiento": return f.tocaSeguimiento;
       case "bloqueadas": return !!f.bloqueado;
@@ -136,7 +136,7 @@ export async function colaCorreo(hoy: string, filtro: FiltroCola = {}): Promise<
       default: return true;
     }
   };
-  return filas.filter(sirve).map(({ yaSeEnvio: _ya, ...f }) => f).sort((a, b) =>
+  return filas.filter(sirve).sort((a, b) =>
     Number(!!b.gancho) - Number(!!a.gancho) || rangoArquetipo(a.arquetipo) - rangoArquetipo(b.arquetipo) || a.prospectoId - b.prospectoId);
 }
 
@@ -291,8 +291,8 @@ export async function prepararEnvio(prospectoId: number, tipo: "inicial" | "segu
 // modo: "manual" desde el boton de Neri, "automatico" desde el cron (por defecto, lo mas estricto).
 export async function enviarA(prospectoId: number, tipo: "inicial" | "seguimiento", usuarioId: number | null, opciones: { reenviar?: boolean; tope?: number; modo?: ModoEnvio } = {}): Promise<Resultado<{ token: string }>> {
   const hoy = hoyCaracas();
-  // "pedido": el negocio lo pidio (un lead tambien); se salta la cola, la ficha, el filtro de correos genericos y el
-  // «un negocio, un canal». Lo demas (pais, bloqueado, misma direccion ya servida) sigue igual.
+  // "pedido": el negocio lo pidio (un lead tambien); se salta la cola, la ficha, el filtro de correos genericos y la
+  // etapa (aunque ya haya respondido). Lo demas (pais, bloqueado, misma direccion ya servida) sigue igual.
   const pedido = opciones.modo === "pedido";
   const p = await prisma.prospecto.findFirst({ where: pedido ? { id: prospectoId } : { AND: [{ id: prospectoId }, DEL_DIRECTORIO] }, select: { id: true, email: true, ciudad: true, etapa: true, esLead: true, fuenteLead: true } });
   if (!p) return fallo("Ese prospecto no existe.");
@@ -317,9 +317,9 @@ export async function enviarA(prospectoId: number, tipo: "inicial" | "seguimient
   } else if (!hayInicial && tipo === "seguimiento") {
     return fallo("Todavía no se le ha enviado la propuesta inicial.");
   } else if (!hayInicial) {
-    // Primer envio: solo a quien sigue por contactar y no recibio nunca un envio (de cualquier canal).
-    if (p.etapa !== "por_contactar") return fallo("Este negocio ya no está por contactar.");
-    if (await prisma.evento.count({ where: { prospectoId, tipo: "enviado" } })) return fallo("A este negocio ya se le envió la propuesta por otro canal.");
+    // Primer envio por correo: a quien sigue por contactar o ya recibio el WhatsApp (mas canales, mas probabilidad);
+    // no a quien ya respondio, ni a quien esta descartado o mas adelante.
+    if (p.etapa !== "por_contactar" && p.etapa !== "enviado") return fallo("Este negocio ya respondió o no está por contactar.");
   }
   const prep = await prepararEnvio(prospectoId, real, { reenviar: opciones.reenviar || (pedido && hayInicial), tope: opciones.tope });
   if ("error" in prep) return fallo(prep.error);

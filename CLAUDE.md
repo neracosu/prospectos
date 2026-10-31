@@ -17,6 +17,20 @@ de «Referencias verificables» con URLs a «Referencias: a pedido, cuando el ca
 (reabrió el 2026-10-26). También se quitó una «Llamada con el dueño» que quedaba en hoteles y estadía («Contacto»). La web
 `/para/comercio-y-tienda` todavía nombra adastram: es del sitio, no del panel.
 
+## Más canales, más probabilidad: ya no rige «un negocio, un canal» (desde el 2026-10-31, noche)
+
+Neri: «no limitemos a escribirles por un solo canal, no importa si le mando por WhatsApp y luego por correo, es más
+probabilidad». Lo que cambió:
+
+- **Cola de correo «listas»**: entra quien está `por_contactar` **o `enviado`** (ya recibió el WhatsApp) y no ha recibido el
+  correo; lo que lo saca es haber recibido ya el correo, haber respondido, estar descartado, bloqueado, con correo genérico o
+  del Estado, o que esa dirección ya recibió de otro negocio. `enviarA` (manual y automático) acepta las dos etapas y ya no
+  mira si hubo un `enviado` por otro canal. Al salir el correo, `proximoSeguimiento` se mueve a hoy + días del nicho.
+- **Seguimientos de WhatsApp** (`seguimientosQueTocan`): los enviados por correo también entran. Para que el automático
+  (25 al día) no tape a los que el prospectador escribió a mano, van primero los que tienen un `enviado` por WhatsApp y
+  dentro de cada grupo el más vencido (se traen hasta 300 y se cortan en 50).
+- **Lo que más abajo diga «un negocio, un canal» o «sin ningún evento enviado de cualquier canal» ya no rige.**
+
 ## «Le pidieron la propuesta por correo» (desde el 2026-10-31, noche)
 
 Un hotel respondió al WhatsApp pidiendo la propuesta a su correo y Neri no encontraba dónde hacerlo «sin tantas vueltas»:

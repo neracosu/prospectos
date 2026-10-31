@@ -61,12 +61,14 @@ export async function colaDelDia(limite = 10): Promise<ProspectoTarjeta[]> {
 }
 
 export async function seguimientosQueTocan(hoy: string, ambito: "directorio" | "todos" = "directorio"): Promise<ProspectoTarjeta[]> {
-  // Los enviados por correo se siguen desde /correos (tocaSeguimiento), no por la cola de WhatsApp: se excluyen en la
-  // consulta (no despues) para que no llenen las 50 filas.
+  // Desde el 31-oct-2026 los enviados por correo TAMBIEN se siguen por WhatsApp (Neri: mas canales, mas probabilidad).
+  // Para que el automatico de correo (25 al dia) no tape a los que el prospectador escribio a mano, van primero los que ya
+  // recibieron un WhatsApp, y dentro de cada grupo el seguimiento mas vencido.
   const filas = await prisma.prospecto.findMany({
-    where: { etapa: "enviado", proximoSeguimiento: { lte: hoy }, NOT: { eventos: { some: { tipo: "enviado", canal: "email" } } }, ...(ambito === "directorio" ? DEL_DIRECTORIO : {}) }, select: SELECT, orderBy: { proximoSeguimiento: "asc" }, take: 50,
+    where: { etapa: "enviado", proximoSeguimiento: { lte: hoy }, ...(ambito === "directorio" ? DEL_DIRECTORIO : {}) },
+    select: { ...SELECT, eventos: { where: { tipo: "enviado", canal: "whatsapp" }, select: { id: true }, take: 1 } }, orderBy: { proximoSeguimiento: "asc" }, take: 300,
   });
-  const aWhatsapp = filas;
+  const aWhatsapp = [...filas].sort((a, b) => (b.eventos.length - a.eventos.length) || String(a.proximoSeguimiento).localeCompare(String(b.proximoSeguimiento)) || a.id - b.id).slice(0, 50);
   const ab = await abrieron(aWhatsapp.map((f) => f.id));
   return aWhatsapp.map((f) => aTarjeta(f, ab.has(f.id), "seguimiento"));
 }
