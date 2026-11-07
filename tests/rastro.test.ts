@@ -165,7 +165,8 @@ describe.runIf(DB_HABILITADA)("rastro: enlaces, visitas, propios y visitante de 
     const nuevo = await crearProspectoDePrueba(nichoId);
     await enlace("https://demo-ejemplo.neracosu.com/panel/", "Propuesta", nuevo.id, new Date("2026-11-06T10:00:00Z"));
     const m = await resumenesParaTablero([p.id, otro.id, nuevo.id], ahora);
-    expect(m.get(p.id)).toBe("Vio la demo hace 3 h · la reenvió");
+    // la demo nueva solo la abrio Neri: la tarjeta nombra la propuesta, que si abrio el prospecto
+    expect(m.get(p.id)).toBe("Vio la propuesta hace 3 h · la reenvió");
     expect(m.has(otro.id)).toBe(false);
     expect(m.get(nuevo.id)).toBe("Sin abrir · enviada hace 2 h");
     expect((await resumenesParaTablero([], ahora)).size).toBe(0);
@@ -182,6 +183,25 @@ describe.runIf(DB_HABILITADA)("rastro: enlaces, visitas, propios y visitante de 
       visita(b.id, { huella: "s4", visitante: "v3", tipo: "pdf", ocurrioEn: new Date("2026-11-06T11:59:00Z") }),
     ], { ips: new Set(), visitantes: new Set() });
     expect((await resumenesParaTablero([p.id], ahora)).get(p.id)).toBe("Vio la demo hace 40 min · 2 personas");
+  });
+
+  it("resumenesParaTablero: el enlace abierto de ultimo gana la etiqueta; sin aperturas, el enviado mas reciente", async () => {
+    const ahora = new Date("2026-11-06T12:00:00Z");
+    const prop = await enlace("https://demo-ejemplo.neracosu.com/propuesta/", "Propuesta", p.id, new Date("2026-11-01T12:00:00Z"));
+    const demo = await enlace("https://demo-ejemplo.neracosu.com/factura/", "Demo · factura", p.id, new Date("2026-11-03T12:00:00Z"));
+    await insertarVisitas([
+      visita(prop.id, { huella: "w1", visitante: "v1", ocurrioEn: new Date("2026-11-05T12:00:00Z") }),
+      visita(demo.id, { huella: "w2", visitante: "v1", ocurrioEn: new Date("2026-11-06T11:00:00Z") }),
+    ], { ips: new Set(), visitantes: new Set() });
+    // otro prospecto: solo visitas propias y un reenvio propio -> sin abrir, nombra el enviado mas reciente
+    const q = await crearProspectoDePrueba(nichoId);
+    const q1 = await enlace("https://demo-ejemplo.neracosu.com/q1/", "Propuesta", q.id, new Date("2026-11-04T12:00:00Z"));
+    await enlace("https://demo-ejemplo.neracosu.com/q2/", "Demo · q2", q.id, new Date("2026-11-05T12:00:00Z"));
+    await insertarVisitas([visita(q1.id, { huella: "w3", visitante: "neri", ocurrioEn: new Date("2026-11-06T11:00:00Z") }),
+      visita(q1.id, { huella: "w4", visitante: "neri", tipo: "reenvio", ocurrioEn: new Date("2026-11-06T11:00:00Z") })], { ips: new Set(), visitantes: new Set(["neri"]) });
+    const m = await resumenesParaTablero([p.id, q.id], ahora);
+    expect(m.get(p.id)).toBe("Vio la demo hace 1 h");
+    expect(m.get(q.id)).toBe("Sin abrir · enviada hace 1 d");
   });
 
   it("registrarEventoJs guarda inicio/fin/clic y rechaza token desconocido", async () => {

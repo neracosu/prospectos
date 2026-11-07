@@ -177,11 +177,14 @@ export async function visitasDe(prospectoId: number, limite = 500): Promise<Visi
 }
 
 // Dos consultas en total, sin importar cuantos prospectos haya en el tablero.
+// La tarjeta nombra el enlace que el prospecto abrio de ultimo (nunca uno que no abrio);
+// si no abrio ninguno, el enviado mas reciente con "Sin abrir".
 export async function resumenesParaTablero(prospectoIds: number[], ahora: Date = new Date()): Promise<Map<number, string>> {
   const m = new Map<number, string>();
   if (!prospectoIds.length) return m;
   const enlaces = await prisma.enlaceEnviado.findMany({
     where: { prospectoId: { in: prospectoIds } },
+    orderBy: [{ enviadoEn: "desc" }, { id: "desc" }],
     select: { id: true, prospectoId: true, etiqueta: true, enviadoEn: true },
   });
   if (!enlaces.length) return m;
@@ -190,21 +193,22 @@ export async function resumenesParaTablero(prospectoIds: number[], ahora: Date =
     where: { enlaceId: { in: enlaces.map((e) => e.id) }, propia: false, tipo: { in: ["vista", "inicio", "reenvio"] } },
     _max: { ocurrioEn: true },
   });
-  const prospectoDe = new Map(enlaces.map((e) => [e.id, e.prospectoId]));
-  const datos = new Map<number, { etiqueta: string; enviadoEn: Date; ultimaApertura: Date | null; visitantes: Set<string>; reenvio: boolean }>();
-  for (const e of enlaces) {
-    const d = datos.get(e.prospectoId);
-    if (!d) datos.set(e.prospectoId, { etiqueta: e.etiqueta, enviadoEn: e.enviadoEn, ultimaApertura: null, visitantes: new Set(), reenvio: false });
-    else if (e.enviadoEn > d.enviadoEn) { d.etiqueta = e.etiqueta; d.enviadoEn = e.enviadoEn; }
-  }
+  const porId = new Map(enlaces.map((e) => [e.id, e]));
+  type Acumulado = { enlace: (typeof enlaces)[number]; ultimaApertura: Date | null; visitantes: Set<string>; reenvio: boolean };
+  const datos = new Map<number, Acumulado>();
+  // Los enlaces vienen del mas reciente al mas viejo: el primero de cada prospecto es el de "Sin abrir".
+  for (const e of enlaces) if (!datos.has(e.prospectoId)) datos.set(e.prospectoId, { enlace: e, ultimaApertura: null, visitantes: new Set(), reenvio: false });
   for (const g of grupos) {
-    const d = datos.get(prospectoDe.get(g.enlaceId)!)!;
+    const e = porId.get(g.enlaceId)!;
+    const d = datos.get(e.prospectoId)!;
     if (g.tipo === "reenvio") { d.reenvio = true; continue; }
     d.visitantes.add(g.visitante);
     const t = g._max.ocurrioEn;
-    if (t && (!d.ultimaApertura || t > d.ultimaApertura)) d.ultimaApertura = t;
+    if (t && (!d.ultimaApertura || t > d.ultimaApertura)) { d.ultimaApertura = t; d.enlace = e; }
   }
-  for (const [id, d] of datos) m.set(id, resumenTarjeta({ ...d, visitantes: d.visitantes.size }, ahora));
+  for (const [id, d] of datos) {
+    m.set(id, resumenTarjeta({ etiqueta: d.enlace.etiqueta, enviadoEn: d.enlace.enviadoEn, ultimaApertura: d.ultimaApertura, visitantes: d.visitantes.size, reenvio: d.reenvio }, ahora));
+  }
   return m;
 }
 
