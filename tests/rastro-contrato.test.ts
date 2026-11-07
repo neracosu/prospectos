@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   parsearLinea, clasificarUa, resumirAparato, visitanteDe, huellaDe, rutaPagina, esPdf, descomponerUrl, enlaceQueCoincide, PATRON_P, etiquetaScript,
-  armarLineaTiempo, textoLugar, resumirEnlace, textoResumenEnlace, resumenTarjeta, haceCuanto, type VisitaFila,
+  armarLineaTiempo, textoLugar, resumirEnlace, textoResumenEnlace, resumenTarjeta, haceCuanto, type VisitaFila, normalizarEventoJs,
 } from "@/lib/rastro-contrato";
 
 const L = (ip: string, fecha: string, req: string, estado: number, ref: string, ua: string) => `${ip} - - [${fecha}] "${req}" ${estado} 1234 "${ref}" "${ua}"`;
@@ -174,5 +174,27 @@ describe("haceCuanto y textos: limites", () => {
     const s = resumenTarjeta({ etiqueta: "Demo · factura", enviadoEn: t("12:00"), ultimaApertura: t("13:28"), visitantes: 1, reenvio: false }, t("15:28"));
     expect(s).toBe("Vio la demo hace 2 h");
     expect(s).not.toContain("personas");
+  });
+});
+
+describe("normalizarEventoJs", () => {
+  const T = "A".repeat(22);
+  it("acepta un evento valido y normaliza ruta, origen, segundos y scroll", () => {
+    expect(normalizarEventoJs({ token: T, tipo: "fin", ruta: "/factura/index.html?x=1#y", origen: "https://l.instagram.com/", segundos: 42.6, scroll: 130, detalle: "" }))
+      .toEqual({ token: T, tipo: "fin", ruta: "/factura/", origen: "https://l.instagram.com/", segundos: 43, scroll: 100, detalle: "" });
+    expect(normalizarEventoJs({ token: T, tipo: "clic", ruta: "/x/", origen: "o".repeat(300), segundos: -5, scroll: "mucho", detalle: "boton-whatsapp" }))
+      .toEqual({ token: T, tipo: "clic", ruta: "/x/", origen: "o".repeat(120), segundos: 0, scroll: null, detalle: "boton-whatsapp" });
+    expect(normalizarEventoJs({ token: T, tipo: "inicio", ruta: "/", segundos: 999999 })?.segundos).toBe(86400);
+  });
+  it("rechaza token, tipo, ruta o detalle invalidos", () => {
+    expect(normalizarEventoJs(null)).toBeNull();
+    expect(normalizarEventoJs("x")).toBeNull();
+    expect(normalizarEventoJs({ token: "corto", tipo: "inicio", ruta: "/" })).toBeNull();
+    expect(normalizarEventoJs({ token: T, tipo: "vista", ruta: "/" })).toBeNull();
+    expect(normalizarEventoJs({ token: T, tipo: "inicio", ruta: "/app.js" })).toBeNull();
+    expect(normalizarEventoJs({ token: T, tipo: "inicio", ruta: "sin-barra" })).toBeNull();
+    expect(normalizarEventoJs({ token: T, tipo: "clic", ruta: "/", detalle: "Con Mayuscula" })).toBeNull();
+    expect(normalizarEventoJs({ token: T, tipo: "clic", ruta: "/" })).toBeNull();
+    expect(normalizarEventoJs({ token: T, tipo: "inicio", ruta: "/", detalle: "<script>" })?.detalle).toBe("");
   });
 });

@@ -256,3 +256,37 @@ export function resumenTarjeta(d: DatosTarjeta, ahora: Date): string {
   if (d.visitantes > 1) partes.push(`${d.visitantes} personas`);
   return partes.join(" · ");
 }
+
+// ---- eventos del script rastro.js (vienen de la calle: se normaliza todo) ----
+
+export type EventoJsNormal = { token: string; tipo: "inicio" | "fin" | "clic"; ruta: string; origen: string; segundos: number | null; scroll: number | null; detalle: string };
+
+const TIPOS_JS = new Set(["inicio", "fin", "clic"]);
+const RE_TOKEN = /^[A-Za-z0-9_-]{22}$/;
+const RE_DETALLE = /^[a-z0-9-]{1,40}$/;
+
+function enteroEntre(x: unknown, min: number, max: number): number | null {
+  if (typeof x !== "number" || !Number.isFinite(x)) return null;
+  return Math.min(max, Math.max(min, Math.round(x)));
+}
+
+export function normalizarEventoJs(x: unknown): EventoJsNormal | null {
+  if (!x || typeof x !== "object") return null;
+  const o = x as Record<string, unknown>;
+  if (typeof o.token !== "string" || !RE_TOKEN.test(o.token)) return null;
+  if (typeof o.tipo !== "string" || !TIPOS_JS.has(o.tipo)) return null;
+  if (typeof o.ruta !== "string" || !o.ruta.startsWith("/")) return null;
+  const ruta = rutaPagina(o.ruta);
+  if (ruta === null) return null;
+  const detalle = typeof o.detalle === "string" && RE_DETALLE.test(o.detalle) ? o.detalle : "";
+  if (o.tipo === "clic" && !detalle) return null;
+  return {
+    token: o.token,
+    tipo: o.tipo as EventoJsNormal["tipo"],
+    ruta: ruta.slice(0, 200),
+    origen: typeof o.origen === "string" ? o.origen.trim().slice(0, 120) : "",
+    segundos: enteroEntre(o.segundos, 0, 86400),
+    scroll: enteroEntre(o.scroll, 0, 100),
+    detalle,
+  };
+}

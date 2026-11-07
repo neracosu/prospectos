@@ -1,9 +1,11 @@
 // src/lib/sesion.ts — puerta unica del panel.
 import { cache } from "react";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { verificarToken, type SesionUsuario } from "@/lib/auth";
 import { usuarioVigente } from "@/lib/usuarios";
+import { ipDesdeCabeceras } from "@/lib/ip";
+import { anotarVisitanteSesion } from "@/lib/rastro";
 
 export const COOKIE_SESION = "pr_sesion";
 export const DIAS_SESION = 30;
@@ -14,6 +16,11 @@ export const sesionActual = cache(async (): Promise<SesionUsuario | null> => {
   const u = token ? await verificarToken(token) : null;
   if (!u) return null;
   if (!(await usuarioVigente(u.id))) redirect("/salir");
+  // Rastro de enlaces: quien entra al panel es propio. Sin esperar: no frena el render y si falla no importa.
+  try {
+    const h = await headers();
+    void anotarVisitanteSesion(ipDesdeCabeceras(h.get("x-forwarded-for"), h.get("x-real-ip")), h.get("user-agent") ?? "").catch(() => {});
+  } catch { /* sin cabeceras (fuera de una peticion): no se anota */ }
   return u;
 });
 

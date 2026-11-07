@@ -12,6 +12,8 @@ export const CLAVES = {
   avisoCobro: "mensaje_aviso_cobro",
   correosPorDia: "correos_por_dia",
   correosAutomatico: "correos_automatico",
+  rastroIpsPropias: "rastro_ips_propias",
+  rastroVisitantesSesion: "rastro_visitantes_sesion",
 } as const;
 
 export const DEFECTOS: Record<string, string> = {
@@ -19,6 +21,9 @@ export const DEFECTOS: Record<string, string> = {
   [CLAVES.correosPorDia]: "25",
   // Apagado al desplegar: Neri lo enciende desde Ajustes tras revisar la muestra (la migracion 20261031100000 lo siembra).
   [CLAVES.correosAutomatico]: "off",
+  // Rastro de enlaces: IPs propias a mano (JSON string[]) y visitantes de sesion del panel (JSON {visitante: iso}).
+  [CLAVES.rastroIpsPropias]: "[]",
+  [CLAVES.rastroVisitantesSesion]: "{}",
   // El renglon del portal va solo: mensajeDeCobro lo quita entero si el cliente no tiene acceso (armarMensaje).
   [CLAVES.mensajeRecordatorio]: `Buenas, {cliente}. Le recuerdo el cobro de {concepto} de {proyecto} por {monto}, que vence el {vence}.\n${RENGLON_PORTAL_COBRO}\nCualquier duda me escribe por aquí. Gracias.`,
   [CLAVES.mensajeVencido]: `Buenas, {cliente}. Le escribo por el cobro de {concepto} de {proyecto} por {monto}, que venció el {vence}.\n${RENGLON_PORTAL_COBRO}\n¿Me confirma cuándo lo podemos regularizar? Gracias.`,
