@@ -51,14 +51,16 @@ function Accion({ f }: { f: Apertura }) {
 
 // Una fila: hora · Visitante N (aparato · lugar la primera vez que se lee en el dia) · accion.
 // «Primera vez» es en el orden en que se lee (lo mas reciente arriba): asi el dato esta en la fila que se ve primero.
+// Un reenvio sin alias (su visitante es solo la vista previa) no tiene aparato ni lugar que decir: se omiten.
 function Fila({ f, v, conDatos, esMio, prospectoId }: { f: Apertura; v: Visitante | undefined; conDatos: boolean; esMio: boolean; prospectoId: number }) {
+  const soloReenvio = f.clase === "reenvio" && !v?.aparato;
   return (
     <li className={"rastro__fila" + (f.clase === "reenvio" ? " rastro__fila--reenvio" : "")}>
       <time dateTime={f.ocurrioEn.toISOString()}>{hora(f.ocurrioEn)}</time>
       <span>
         <span className="rastro__visitante">Visitante {v?.numero ?? "?"}</span>
         {v?.propio ? " · mío" : ""}
-        {conDatos && v ? ` · ${v.aparato || "aparato desconocido"} · ${v.lugar}` : ""}
+        {conDatos && v && !soloReenvio ? ` · ${v.aparato || "aparato desconocido"} · ${v.lugar}` : ""}
       </span>
       <Accion f={f} />
       {esMio && v && !v.propio && <BotonEsMio prospectoId={prospectoId} visitante={v.visitante} />}

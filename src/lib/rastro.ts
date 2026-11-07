@@ -206,10 +206,17 @@ export async function visitasDe(prospectoId: number, limite = 500): Promise<Visi
     take: limite,
     include: { enlace: { select: { etiqueta: true } } },
   });
+  // Alias del reenvio: la vista previa sale de la misma IP que el navegador de quien reenvio. Un reenvio cuyo
+  // visitante no abrio nada en este prospecto toma el visitante y el aparato de una fila no-reenvio con su IP
+  // (la mas reciente). Solo en lo devuelto: la base no cambia.
+  const abrieron = new Set(filas.filter((f) => f.tipo === "vista" || f.tipo === "inicio").map((f) => f.visitante));
+  const porIp = new Map<string, { visitante: string; aparato: string }>();
+  for (const f of filas) if (f.tipo !== "reenvio" && !porIp.has(f.ip)) porIp.set(f.ip, { visitante: f.visitante, aparato: f.aparato });
+  const alias = (f: (typeof filas)[number]) => (f.tipo === "reenvio" && !abrieron.has(f.visitante) ? porIp.get(f.ip) : undefined);
   // Sin ip ni ua: la IP se guarda pero no se muestra.
   return filas.map((f) => ({
-    id: f.id, enlaceId: f.enlaceId, etiqueta: f.enlace.etiqueta, fuente: f.fuente as VisitaFila["fuente"], tipo: f.tipo, visitante: f.visitante,
-    aparato: f.aparato, pais: f.pais, ciudad: f.ciudad, red: f.red, geoPendiente: f.geoPendiente, ruta: f.ruta, detalle: f.detalle,
+    id: f.id, enlaceId: f.enlaceId, etiqueta: f.enlace.etiqueta, fuente: f.fuente as VisitaFila["fuente"], tipo: f.tipo, visitante: alias(f)?.visitante ?? f.visitante,
+    aparato: alias(f)?.aparato ?? f.aparato, pais: f.pais, ciudad: f.ciudad, red: f.red, geoPendiente: f.geoPendiente, ruta: f.ruta, detalle: f.detalle,
     origen: f.origen, segundos: f.segundos, scroll: f.scroll, propia: f.propia, ocurrioEn: f.ocurrioEn,
   }));
 }

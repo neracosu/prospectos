@@ -175,6 +175,26 @@ describe.runIf(DB_HABILITADA)("rastro: enlaces, visitas, propios y visitante de 
     expect([f.ua.length, f.origen.length, f.ruta.length, f.detalle.length, f.aparato.length, f.pais.length, f.ciudad.length]).toEqual([300, 120, 200, 40, 60, 60, 80]);
   });
 
+  it("visitasDe: el reenvio desde la IP de un visitante del prospecto toma su visitante y aparato; sin visitante se queda aparte", async () => {
+    const e = await enlace();
+    const WA = "WhatsApp/2.23.20.0";
+    const vIphone = visitanteDe("203.0.113.5", UA_PROSPECTO);
+    const sin = { ips: new Set<string>(), visitantes: new Set<string>(), ipsSesion: new Map<string, Date>() };
+    await insertarVisitas([
+      visita(e.id, { huella: "r1", visitante: vIphone, aparato: "iPhone · iOS 18.7 · Safari", ocurrioEn: new Date("2026-11-06T10:00:00Z") }),
+      visita(e.id, { huella: "r2", tipo: "reenvio", ip: "203.0.113.5", ua: WA, visitante: visitanteDe("203.0.113.5", WA), aparato: "", detalle: "whatsapp", ocurrioEn: new Date("2026-11-06T10:05:00Z") }),
+      visita(e.id, { huella: "r3", tipo: "reenvio", ip: "198.51.100.40", ua: WA, visitante: visitanteDe("198.51.100.40", WA), aparato: "", detalle: "whatsapp", ocurrioEn: new Date("2026-11-06T10:06:00Z") }),
+    ], sin);
+    const vs = await visitasDe(p.id);
+    const r2 = vs.find((x) => x.ocurrioEn.toISOString() === "2026-11-06T10:05:00.000Z")!;
+    const r3 = vs.find((x) => x.ocurrioEn.toISOString() === "2026-11-06T10:06:00.000Z")!;
+    expect(r2).toMatchObject({ tipo: "reenvio", visitante: vIphone, aparato: "iPhone · iOS 18.7 · Safari" });
+    expect(r3).toMatchObject({ tipo: "reenvio", visitante: visitanteDe("198.51.100.40", WA), aparato: "" });
+    expect(r2).not.toHaveProperty("ip");
+    // en la base no cambia nada
+    expect((await prisma.visitaEnlace.findUnique({ where: { huella: "r2" } }))?.visitante).toBe(visitanteDe("203.0.113.5", WA));
+  });
+
   it("visitasDe trae la etiqueta del enlace, mas reciente primero, con limite", async () => {
     const e = await enlace("https://demo-ejemplo.neracosu.com/factura/", "Demo · factura");
     await insertarVisitas([
