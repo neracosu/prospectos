@@ -263,6 +263,11 @@ el log del propio panel (`prospectos.neracosu.com-ssl_log*`): todo visitante con
 > 3. **Un reenvío no propio anterior a la primera apertura no propia de su enlace es el envío** (clase `envio`): se
 >    pinta en gris («Enviado por …»), no crea visitante ni cuenta en «reenviado N veces» ni en el «la reenvió» del
 >    tablero (`resumenesParaTablero` compara el último reenvío de cada grupo con la primera apertura del enlace).
+> 4. **(14b) Vistas sin js de los rastreadores de Meta** (IPs de AWS, UA Android): una vista de log no propia sin
+>    `inicio` js, a ≤ 120 s de una vista previa facebook/instagram del mismo enlace y de un visitante sin ninguna otra
+>    fila fuera de esa ventana, se absorbe en esa vista previa (`absorberRastreadores`): no es apertura, no crea
+>    visitante ni cuenta como primera apertura. El tablero lo aproxima con los grupos (visitante sin `inicio`/`fin`/`clic`
+>    y su grupo `vista` entero dentro de la ventana de un grupo de reenvío facebook/instagram).
 
 ### 5. Cuándo se lee el log
 

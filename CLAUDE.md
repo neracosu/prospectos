@@ -71,7 +71,10 @@ adjunto. Sin avisos: se ve en el panel.
   visitante de un reenvío es la app (`visitanteDe("reenvio", app)`), así la ráfaga es una fila; la IP se guarda para
   `esPropia` y el alias; «Es mío» rechaza ese visitante (marcaría los reenvíos de todos). (3) Un reenvío anterior a la
   primera apertura no propia de su enlace es el **envío** de Neri (clase `envio`, gris, «Enviado por …»): no crea
-  visitante, no suma en «reenviado» ni en el «la reenvió» del tablero.
+  visitante, no suma en «reenviado» ni en el «la reenvió» del tablero. (14b) Meta también pide la página desde IPs de AWS con UA Android
+  sin correr js: una vista de log sin `inicio` a ≤ 120 s de una vista previa facebook/instagram del mismo enlace, de un
+  visitante que no tiene nada más, se absorbe en esa vista previa (`absorberRastreadores`; en el tablero, aproximado por
+  grupos): no es apertura, ni visitante, ni primera apertura.
 - **Lo que se ve**: bloque «Lo que hicieron con lo enviado» (`src/componentes/RastroBloque.tsx`) en `/leads/[id]` y
   `/prospectos/[id]`: agregar enlace, copiar etiqueta, actualizar, cargar lo archivado, quitar
   (`src/acciones/rastro.ts`). En el tablero, la línea `lead__rastro` sale de `resumenesParaTablero` (etiqueta del enlace

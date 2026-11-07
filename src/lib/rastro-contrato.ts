@@ -226,7 +226,40 @@ const esEnvio = (v: VisitaFila, primeras: Map<number, number>) => {
   return primera === undefined || v.ocurrioEn.getTime() < primera;
 };
 
-export function armarLineaTiempo(visitas: VisitaFila[], o: { conPropias?: boolean } = {}): LineaTiempo {
+const VENTANA_RASTREADOR_MS = 120_000;
+const esPreviaDeMeta = (v: VisitaFila) => v.tipo === "reenvio" && (v.detalle === "facebook" || v.detalle === "instagram");
+
+// Meta tambien pide la pagina desde IPs de AWS con UA de navegador Android y sin correr js. Una vista de log no propia
+// a <= 120 s de una vista previa facebook/instagram del mismo enlace, de un visitante que no tiene nada mas que vistas
+// asi (ni inicio js, ni otra fila lejos), es parte de esa vista previa: se reescribe como ella (visitante, detalle)
+// y sigue su suerte (envio o reenvio, y se funde a 60 s). Un prospecto real que abre desde Instagram deja inicio.
+function absorberRastreadores(visitas: VisitaFila[]): VisitaFila[] {
+  const previas = visitas.filter(esPreviaDeMeta);
+  if (!previas.length) return visitas;
+  const cercana = (v: VisitaFila): VisitaFila | undefined => {
+    let mejor: VisitaFila | undefined;
+    let dist = Infinity;
+    for (const r of previas) {
+      const d = Math.abs(r.ocurrioEn.getTime() - v.ocurrioEn.getTime());
+      if (r.enlaceId === v.enlaceId && d <= VENTANA_RASTREADOR_MS && d < dist) { mejor = r; dist = d; }
+    }
+    return mejor;
+  };
+  const candidata = (v: VisitaFila) => v.tipo === "vista" && v.fuente === "log" && !v.propia && cercana(v) !== undefined;
+  const porVisitante = new Map<string, VisitaFila[]>();
+  for (const v of visitas) {
+    const l = porVisitante.get(v.visitante);
+    if (l) l.push(v); else porVisitante.set(v.visitante, [v]);
+  }
+  return visitas.map((v) => {
+    if (!candidata(v) || !porVisitante.get(v.visitante)!.every(candidata)) return v;
+    const r = cercana(v)!;
+    return { ...v, tipo: "reenvio", visitante: r.visitante, detalle: r.detalle, aparato: "" };
+  });
+}
+
+export function armarLineaTiempo(entrada: VisitaFila[], o: { conPropias?: boolean } = {}): LineaTiempo {
+  const visitas = absorberRastreadores(entrada);
   const primeras = primerasAperturas(visitas);
   const orden = visitas.filter((v) => o.conPropias || !v.propia)
     .sort((a, b) => a.ocurrioEn.getTime() - b.ocurrioEn.getTime() || a.id - b.id);

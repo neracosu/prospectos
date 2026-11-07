@@ -244,18 +244,30 @@ export async function resumenesParaTablero(prospectoIds: number[], ahora: Date =
   });
   if (!enlaces.length) return m;
   const grupos = await prisma.visitaEnlace.groupBy({
-    by: ["enlaceId", "visitante", "tipo"],
-    where: { enlaceId: { in: enlaces.map((e) => e.id) }, propia: false, tipo: { in: ["vista", "inicio", "reenvio"] } },
+    by: ["enlaceId", "visitante", "tipo", "detalle"],
+    where: { enlaceId: { in: enlaces.map((e) => e.id) }, propia: false, tipo: { in: ["vista", "inicio", "fin", "clic", "reenvio"] } },
     _max: { ocurrioEn: true },
     _min: { ocurrioEn: true },
   });
   const porId = new Map(enlaces.map((e) => [e.id, e]));
+  // Rastreadores de Meta (aproximacion de absorberRastreadores): un grupo vista de un visitante sin js (ni inicio,
+  // ni fin, ni clic) que cae entero a <= 120 s de las vistas previas facebook/instagram del mismo enlace no es apertura.
+  const conJs = new Set(grupos.filter((g) => g.tipo !== "vista" && g.tipo !== "reenvio").map((g) => g.visitante));
+  const previasMeta = grupos.filter((g) => g.tipo === "reenvio" && (g.detalle === "facebook" || g.detalle === "instagram"));
+  const VENTANA_RASTREADOR_MS = 120_000;
+  const esRastreador = (g: (typeof grupos)[number]) => {
+    if (g.tipo !== "vista" || conJs.has(g.visitante) || !g._min.ocurrioEn || !g._max.ocurrioEn) return false;
+    const [a, b] = [g._min.ocurrioEn.getTime(), g._max.ocurrioEn.getTime()];
+    return previasMeta.some((r) => r.enlaceId === g.enlaceId && r._min.ocurrioEn && r._max.ocurrioEn
+      && a >= r._min.ocurrioEn.getTime() - VENTANA_RASTREADOR_MS && b <= r._max.ocurrioEn.getTime() + VENTANA_RASTREADOR_MS);
+  };
+  const aperturas = grupos.filter((g) => (g.tipo === "vista" || g.tipo === "inicio") && !esRastreador(g));
   // Regla del envio (como armarLineaTiempo): un reenvio cuenta solo si su ultimo es posterior a la primera apertura
   // no propia de su enlace. La rafaga de vistas previas de Neri al enviar es anterior a toda apertura.
   const primeraApertura = new Map<number, Date>();
-  for (const g of grupos) {
+  for (const g of aperturas) {
     const t = g._min.ocurrioEn;
-    if (g.tipo === "reenvio" || !t) continue;
+    if (!t) continue;
     const previa = primeraApertura.get(g.enlaceId);
     if (!previa || t < previa) primeraApertura.set(g.enlaceId, t);
   }
@@ -264,13 +276,13 @@ export async function resumenesParaTablero(prospectoIds: number[], ahora: Date =
   // Los enlaces vienen del mas reciente al mas viejo: el primero de cada prospecto es el de "Sin abrir".
   for (const e of enlaces) if (!datos.has(e.prospectoId)) datos.set(e.prospectoId, { enlace: e, ultimaApertura: null, visitantes: new Set(), reenvio: false });
   for (const g of grupos) {
+    if (g.tipo !== "reenvio") continue;
+    const primera = primeraApertura.get(g.enlaceId);
+    if (primera && g._max.ocurrioEn && g._max.ocurrioEn > primera) datos.get(porId.get(g.enlaceId)!.prospectoId)!.reenvio = true;
+  }
+  for (const g of aperturas) {
     const e = porId.get(g.enlaceId)!;
     const d = datos.get(e.prospectoId)!;
-    if (g.tipo === "reenvio") {
-      const primera = primeraApertura.get(g.enlaceId);
-      if (primera && g._max.ocurrioEn && g._max.ocurrioEn > primera) d.reenvio = true;
-      continue;
-    }
     d.visitantes.add(g.visitante);
     const t = g._max.ocurrioEn;
     if (t && (!d.ultimaApertura || t > d.ultimaApertura)) { d.ultimaApertura = t; d.enlace = e; }

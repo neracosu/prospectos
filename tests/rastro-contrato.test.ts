@@ -275,3 +275,31 @@ describe("armarLineaTiempo: el envio propio", () => {
     expect(f.map((a) => a.clase)).toEqual(["reenvio"]);
   });
 });
+
+describe("armarLineaTiempo: vistas de los rastreadores de Meta (14b)", () => {
+  const t2 = (s: string) => new Date(`2026-11-06T${s}.000-04:00`);
+  const rafaga = [0, 1, 2].map((i) => base({ id: 100 + i, tipo: "reenvio", detalle: "facebook", visitante: "app-facebook", aparato: "", ocurrioEn: t2(`13:31:0${i}`) }));
+  const aws = (i: number, hora: string) => base({ id: 200 + i, visitante: `aws${i}`, aparato: "Android · Chrome 141", ocurrioEn: t2(hora) });
+  it("vistas Android sin js junto a la rafaga de facebook son parte del envio", () => {
+    const vs = [...rafaga, aws(1, "13:31:10"), aws(2, "13:31:40"), aws(3, "13:32:20")];
+    const lt = armarLineaTiempo(vs);
+    expect(lt.visitantes).toEqual([]);
+    expect(lt.dias[0].filas.every((f) => f.clase === "envio")).toBe(true);
+    expect(resumirEnlace(vs, 1)).toEqual({ visitantes: 0, aperturas: 0, reenvios: 0, pdfs: 0 });
+  });
+  it("la misma vista con un inicio js 5 s despues es una apertura real", () => {
+    const vs = [...rafaga, aws(1, "13:31:10"), base({ id: 300, visitante: "aws1", fuente: "js", tipo: "inicio", ocurrioEn: t2("13:31:15") })];
+    const lt = armarLineaTiempo(vs);
+    expect(lt.visitantes.map((v) => v.visitante)).toEqual(["aws1"]);
+    expect(lt.dias[0].filas.map((f) => f.clase)).toEqual(["apertura", "envio"]);
+  });
+  it("una vista 10 min despues de la rafaga es una apertura real", () => {
+    const vs = [...rafaga, aws(1, "13:41:00")];
+    expect(resumirEnlace(vs, 1)).toEqual({ visitantes: 1, aperturas: 1, reenvios: 0, pdfs: 0 });
+  });
+  it("la vista absorbida no cuenta como primera apertura", () => {
+    const vs = [...rafaga, aws(1, "13:31:10"), base({ id: 400, visitante: "v9", ocurrioEn: t2("13:50:00") }), base({ id: 401, tipo: "reenvio", detalle: "facebook", visitante: "app-facebook", aparato: "", ocurrioEn: t2("13:40:00") })];
+    // el reenvio de las 13:40 es anterior a la primera apertura real (13:50): tambien es envio
+    expect(resumirEnlace(vs, 1)).toEqual({ visitantes: 1, aperturas: 1, reenvios: 0, pdfs: 0 });
+  });
+});

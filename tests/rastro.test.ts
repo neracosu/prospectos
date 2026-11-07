@@ -293,6 +293,21 @@ describe.runIf(DB_HABILITADA)("rastro: enlaces, visitas, propios y visitante de 
     expect((await resumenesParaTablero([p.id], ahora)).get(p.id)).toBe("Vio la propuesta hace 20 min · la reenvió");
   });
 
+  it("resumenesParaTablero: la vista sin js de un rastreador de Meta junto a la rafaga no es apertura (14b)", async () => {
+    const ahora = new Date("2026-11-01T18:00:00Z");
+    const e = await enlace("https://demo-ejemplo.neracosu.com/propuesta/", "Propuesta", p.id, new Date("2026-11-01T17:30:00Z"));
+    const vApp = visitanteDe("reenvio", "facebook");
+    const ANDROID_K = "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36";
+    const sin = { ips: new Set<string>(), visitantes: new Set<string>(), ipsSesion: new Map<string, Date>() };
+    await insertarVisitas([
+      ...["173.252.95.5", "69.171.249.10"].map((ip, i) => visita(e.id, { huella: `c${i}`, tipo: "reenvio", ip, ua: "facebookexternalhit/1.1", visitante: vApp, aparato: "", detalle: "facebook", ocurrioEn: new Date(`2026-11-01T17:31:0${i}Z`) })),
+      visita(e.id, { huella: "c5", ip: "198.51.100.77", ua: ANDROID_K, visitante: visitanteDe("198.51.100.77", ANDROID_K), ocurrioEn: new Date("2026-11-01T17:31:40Z") }),
+    ], sin);
+    expect((await resumenesParaTablero([p.id], ahora)).get(p.id)).toBe("Sin abrir · enviada hace 30 min");
+    await insertarVisitas([visita(e.id, { huella: "c9", visitante: "v1", ocurrioEn: new Date("2026-11-01T17:40:00Z") })], sin);
+    expect((await resumenesParaTablero([p.id], ahora)).get(p.id)).toBe("Vio la propuesta hace 20 min");
+  });
+
   it("resumenesParaTablero cuenta personas distintas entre todos los enlaces", async () => {
     const ahora = new Date("2026-11-06T12:00:00Z");
     const a = await enlace("https://demo-ejemplo.neracosu.com/a/", "Demo · a", p.id, new Date("2026-11-01T12:00:00Z"));
