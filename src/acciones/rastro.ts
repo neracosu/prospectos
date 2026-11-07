@@ -7,6 +7,7 @@ import { exigirSesion } from "@/lib/sesion";
 import { fallo, exito, type Resultado } from "@/acciones/resultado";
 import { registrarEnlace, listarEnlaces, desactivarEnlace, marcarVisitantePropio, guardarIpsPropias } from "@/lib/rastro";
 import { leerLogs, importarArchivados } from "@/lib/rastro-lector";
+import { esFechaIso } from "@/lib/fecha-caracas";
 import { etiquetaScript } from "@/lib/rastro-contrato";
 
 const HOST_PANEL = "prospectos.neracosu.com";
@@ -34,12 +35,22 @@ async function comoDueno() {
   return u.rol === "dueno" ? u : null;
 }
 
+// El prospectador solo toca prospectos del directorio (como acciones/leads.ts); el dueno, todos
+async function puedeTocar(u: { rol: string }, prospectoId: number): Promise<boolean> {
+  const p = await prisma.prospecto.findUnique({ where: { id: prospectoId }, select: { id: true, fuenteLead: true } });
+  if (!p) return false;
+  return u.rol === "dueno" || p.fuenteLead === "directorio";
+}
+
 export async function agregarEnlace(prospectoId: number, formData: FormData): Promise<Resultado<{ id: number; etiqueta: string; script: string }>> {
-  await exigirSesion();
+  const u = await exigirSesion();
+  if (!(await puedeTocar(u, prospectoId))) return fallo("Ese prospecto no existe.");
   const e = NuevoEnlace.safeParse(Object.fromEntries(formData));
   if (!e.success) return fallo("Revisa el enlace (https://, de neracosu.com), la etiqueta (2 a 40 letras) y la fecha.");
   const { url, etiqueta, enviadoEn } = e.data;
-  const r = await registrarEnlace({ prospectoId, url, etiqueta, enviadoEn: enviadoEn ? new Date(`${enviadoEn}T12:00:00-04:00`) : undefined });
+  const fecha = enviadoEn ? new Date(`${enviadoEn}T12:00:00-04:00`) : undefined;
+  if (enviadoEn && (!esFechaIso(enviadoEn) || !fecha || Number.isNaN(fecha.getTime()))) return fallo("La fecha de envío no es válida.");
+  const r = await registrarEnlace({ prospectoId, url, etiqueta, enviadoEn: fecha });
   if (!r.ok) return fallo(MENSAJES[r.error] ?? r.error);
   const { enlace } = r;
   try {
@@ -61,7 +72,8 @@ export async function quitarEnlace(id: number): Promise<Resultado> {
 }
 
 export async function actualizarRastro(prospectoId: number): Promise<Resultado<{ visitas: number }>> {
-  await exigirSesion();
+  const u = await exigirSesion();
+  if (!(await puedeTocar(u, prospectoId))) return fallo("Ese prospecto no existe.");
   try {
     const hosts = [...new Set([...(await listarEnlaces(prospectoId)).filter((x) => x.activo).map((x) => x.host), HOST_PANEL])];
     const { visitas } = await leerLogs({ hosts, silencioso: true });

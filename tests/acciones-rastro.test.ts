@@ -97,4 +97,24 @@ describe.runIf(DB_HABILITADA)("acciones de rastro", () => {
     expect((await prisma.enlaceEnviado.findUniqueOrThrow({ where: { id: enlace.id } })).activo).toBe(false);
     expect(await quitarEnlace(999999)).toEqual({ ok: false, mensaje: "Ese enlace no existe." });
   });
+
+  it("agregarEnlace con prospecto inexistente o fecha imposible devuelve fallo, no excepcion", async () => {
+    expect(await agregarEnlace(999999, fd({ url: `https://${HOST}/x1/`, etiqueta: "Nada" }))).toEqual({ ok: false, mensaje: "Ese prospecto no existe." });
+    expect(await agregarEnlace(prospectoId, fd({ url: `https://${HOST}/x2/`, etiqueta: "Fecha mala", enviadoEn: "2026-02-31" }))).toEqual({ ok: false, mensaje: "La fecha de envío no es válida." });
+  });
+
+  it("el prospectador solo agrega y actualiza en prospectos del directorio", async () => {
+    const web = await crearProspectoDePrueba(ids.nichoId, { esLead: true, fuenteLead: "web" });
+    const dir = await crearProspectoDePrueba(ids.nichoId, { esLead: true, fuenteLead: "directorio" });
+    sesionFalsa.actual = { id: ids.prospectadorId, nombre: "Pro", rol: "prospectador" };
+    const no = { ok: false, mensaje: "Ese prospecto no existe." };
+    expect(await agregarEnlace(web.id, fd({ url: `https://${HOST}/p1/`, etiqueta: "Web" }))).toEqual(no);
+    expect(await actualizarRastro(web.id)).toEqual(no);
+    expect((await agregarEnlace(dir.id, fd({ url: `https://${HOST}/p2/`, etiqueta: "Directorio" }))).ok).toBe(true);
+    expect((await actualizarRastro(dir.id)).ok).toBe(true);
+  });
+
+  it("importarArchivadosAccion con enlace inexistente devuelve fallo", async () => {
+    expect(await importarArchivadosAccion(999999)).toEqual({ ok: false, mensaje: "Ese enlace no existe." });
+  });
 });
