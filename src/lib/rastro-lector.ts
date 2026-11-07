@@ -1,6 +1,6 @@
 // src/lib/rastro-lector.ts — lee los access-logs de Apache y los convierte en visitas a enlaces enviados.
 // El log vivo se trunca cada dia (cPanel lo pasa al .gz del mes): si el archivo encogio o cambio de inode,
-// se relee el .gz del mes en curso y despues el vivo desde cero; la huella unica evita duplicar.
+// se releen los .gz del mes anterior y del actual y despues el vivo desde cero; la huella unica evita duplicar.
 // Lo puro (visitasDeLinea) no toca archivos ni base, para probarlo solo.
 import { closeSync, createReadStream, existsSync, openSync, readdirSync, readSync, statSync } from "node:fs";
 import { join } from "node:path";

@@ -226,6 +226,13 @@ IP entera igual.
 el log del propio panel (`prospectos.neracosu.com-ssl_log*`): todo visitante con 200 en páginas con sesión (`/inicio`,
 `/hoy`, `/leads`, `/prospectos`, …) en los 30 días anteriores a la visita es propio. Más la lista 1 sembrada a mano.
 
+> **Decisión de la revisión final (2026-11-06): esa reconstrucción no se implementó.** `cargarPropios` solo lee la
+> configuración, así que la carga hacia atrás excluye por la lista de IPs (regla 1) y por los visitantes e IPs de
+> sesión que existan en el momento de importar; una visita vieja de Neri desde otro aparato se marca a mano con «Es
+> mío». Se suma además una regla para los reenvíos: WhatsApp arma la vista previa desde el teléfono del remitente, así
+> que un **reenvío** (solo reenvíos) desde una IP con sesión del panel a menos de 24 h es propio
+> (`Configuracion.rastro_ips_sesion`, JSON `{ip: últimaVez}`, ≤ 60).
+
 ### 4. Cruce de las dos fuentes
 
 - La tabla de visitas (**`VisitaEnlace`**) guarda cada evento con `fuente = log | js`, `tipo = vista | reenvio | pdf |

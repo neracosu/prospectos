@@ -17,8 +17,13 @@ adjunto. Sin avisos: se ve en el panel.
   `Configuracion`). `EnlaceEnviado`: `token` de 22, `host` + `prefijo`, `origen` `manual|plantilla`, único por
   `(host, prefijo, prospectoId)`. `VisitaEnlace`: `fuente` `log|js`, `tipo` `vista|reenvio|pdf|inicio|fin|clic`,
   `visitante` = sha256(`ip|ua`) en 16 hex, `huella` única por línea cruda del log, `geoPendiente`, `propia`. La IP se
-  guarda (agrupar, excluir, re-geolocalizar) pero nunca se muestra. La poda a 400 días está prevista en el spec y
-  **todavía no existe en el código**. `LecturaLog`: inode y posición por archivo.
+  guarda (agrupar, excluir, re-geolocalizar) pero nunca se muestra. Las visitas se podan a 400 días en cada pasada del
+  cron (`podarVisitasViejas`; imprime `[rastro] poda: N visitas` solo si borró). `LecturaLog`: inode y posición por
+  archivo.
+- **Prefijo del enlace** (`descomponerUrl`): una URL limpia sin barra final es su propia carpeta
+  (`/propuesta/x-1` → `/propuesta/x-1/`); solo un archivo con extensión se recorta al directorio; la raíz `/` se
+  rechaza. `/factura` en el log cuenta para el prefijo `/factura/`. El host del panel no se agrega a mano
+  («La propuesta de /p/ se registra sola»): un prefijo `/p/` manual se tragaría las propuestas de todos.
 - **Fuente 1, access-logs** (`src/lib/rastro-lector.ts`, puro en `rastro-contrato.ts`): lee
   `~/access-logs/<host>-ssl_log` y `<host>` (`RASTRO_DIR_LOGS`; archivados en `~/logs/`, `RASTRO_DIR_ARCHIVO`). Cuenta
   solo GET con 200/206/304. ⚠️ **El archivo vivo se trunca a diario ~04:12 hora del servidor** y cPanel anexa lo suyo
@@ -26,7 +31,9 @@ adjunto. Sin avisos: se ve en el panel.
   relee los `.gz` del mes anterior y el actual y luego el vivo desde cero. La huella única evita duplicados. Candado
   `candado_rastro` (`SELECT … FOR UPDATE`) contra pasadas dobles. Un error en un archivo se aísla con
   `console.error("[rastro] error en …")` y no frena a los demás. `/p/<codigo>` del host del panel se registra solo
-  (`obtenerOCrearEnlacePlantilla`, origen `plantilla`).
+  (`obtenerOCrearEnlacePlantilla`, origen `plantilla`): la ruta lo crea al servir, **salvo con sesión del panel** (Neri
+  revisando antes de enviar: se sirve sin script y sin fila); el lector lo crea solo con una línea que no es propia y
+  nunca en un ensayo.
 - **Fuente 2, `public/rastro.js`**: etiqueta
   `<script src="https://prospectos.neracosu.com/rastro.js?v=1" data-enlace="<token>" defer>` en la página del
   enlace. Manda `inicio`/`fin`/`clic` por `sendBeacon` a `POST /api/rastro/evento` (público, 204 a robots, CORS solo
@@ -41,12 +48,22 @@ adjunto. Sin avisos: se ve en el panel.
   anterior si da 404), exige >50 MB y que 8.8.8.8 resuelva, y rota dejando `.anterior`. ⚠️ **El panel nunca carga el
   `.mmdb`**: solo los scripts (no importar `rastro-geo` desde rutas, acciones ni páginas). Por eso las visitas recién
   llegadas dicen «ubicación: en unos minutos» hasta la siguiente pasada.
-- **Importar hacia atrás**: `node_modules/.bin/tsx scripts/rastro-leer.mts --importar --enlace <id> [--desde AAAA-MM-DD] [--aplicar]`.
-  Sin `--aplicar` es ensayo: cuenta lo que coincide sin escribir (puede incluir lo ya guardado). `--desde` se lee como
+- **Importar hacia atrás**: `node_modules/.bin/tsx scripts/rastro-leer.mts --importar (--enlace <id> | --host <host>) [--desde AAAA-MM-DD] [--aplicar]`.
+  `--host prospectos.neracosu.com` carga los `/p/`, que no tienen fila hasta la primera petición. Sin `--aplicar` es
+  ensayo: cuenta lo que coincide sin escribir ni crear filas (puede incluir lo ya guardado). `--desde` se lee como
   medianoche de Caracas. En la ficha, el botón «cargar lo archivado» hace lo mismo (`importarArchivadosAccion`).
-- **Visitas propias**: lista de IPs en Ajustes › Rastro de enlaces (`rastro_ips_propias`) y el visitante (IP+UA) de
-  cualquier sesión del panel en los últimos 30 días (`rastro_visitantes_sesion`). «Es mío» en la ficha reclasifica
-  (`marcarVisitanteMio`); «Mostrar las mías» es `?mias=1`.
+- **Visitas propias**: lista de IPs en Ajustes › Rastro de enlaces (`rastro_ips_propias`), el visitante (IP+UA) de
+  cualquier sesión del panel en los últimos 30 días (`rastro_visitantes_sesion`) y, **solo para reenvíos**, la IP de una
+  sesión del panel a menos de 24 h (`rastro_ips_sesion`, ≤ 60, misma cadencia de una hora): WhatsApp arma la vista
+  previa desde el teléfono del remitente, con un UA que no es el del navegador. «Es mío» en la ficha reclasifica
+  (`marcarVisitanteMio`); «Mostrar las mías» es `?mias=1`. **Desvío del spec §3:** la carga hacia atrás no reconstruye
+  las sesiones viejas desde el log del panel; excluye solo por la lista de IPs y por los visitantes e IPs de sesión que
+  existan al importar (lo demás, «Es mío» a mano).
+- **Permisos**: el dueño quita enlaces, marca «Es mío», edita las IPs propias y carga lo archivado; el prospectador
+  agrega y actualiza solo en prospectos con `fuenteLead` «directorio».
+- **Reenvíos en la ficha**: `visitasDe` le da a un reenvío cuyo visitante no abrió nada el visitante y el aparato de
+  otra fila del prospecto con la misma IP (solo en lo devuelto, la IP no sale); el que queda sin alias sale sin
+  aparato ni lugar. `rastro.js` manda en cada `fin` el total de segundos visibles (gana el último).
 - **Lo que se ve**: bloque «Lo que hicieron con lo enviado» (`src/componentes/RastroBloque.tsx`) en `/leads/[id]` y
   `/prospectos/[id]`: agregar enlace, copiar etiqueta, actualizar, cargar lo archivado, quitar
   (`src/acciones/rastro.ts`). En el tablero, la línea `lead__rastro` sale de `resumenesParaTablero` (etiqueta del enlace
@@ -55,7 +72,7 @@ adjunto. Sin avisos: se ve en el panel.
   (`npm test` y `PROSPECTOS_TEST_DB=1 npm test`). Recorrido a 390 px: `scripts/verificar-flujo-rastro.mts` contra el
   clon (`~/dev-clon-prospectos`, `next dev -p 3021`, base de tests; se niega a correr si `DATABASE_URL` no es de
   tests). ⚠️ Tras cada migración el clon necesita `npx prisma generate`.
-- **Pendientes menores conocidos (2026-11-06)**: el visitante que solo reenvió sale como «aparato desconocido»; las IPs
+- **Pendientes menores conocidos (2026-11-06)**: las IPs
   inválidas en Ajustes se descartan sin aviso; `esIpPrivada` no cubre `::ffff:`; si el `.gz` de una rotación falla al
   leerse, se pierden esas líneas (queda el aviso en `rastro.log`).
 
