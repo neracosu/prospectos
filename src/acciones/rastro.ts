@@ -23,6 +23,7 @@ const Visitante = z.string().regex(/^[0-9a-f]{16}$/);
 const MENSAJES: Record<string, string> = {
   "URL no es de neracosu.com": "El enlace debe ser de neracosu.com o de un subdominio.",
   "Ese enlace ya esta registrado": "Ese enlace ya está registrado para este prospecto.",
+  "El enlace /p/ se registra solo": "La propuesta de /p/ se registra sola al abrirla; no hace falta agregarla.",
 };
 
 function refrescar(id: number) {

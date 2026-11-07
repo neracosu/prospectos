@@ -8,6 +8,7 @@ import { hoyCaracas, sumarDias, fechaVisible } from "@/lib/fecha-caracas";
 import { BotonCopiar } from "@/componentes/BotonCopiar";
 import { AgregarEnlace, AccionesEnlace, BotonActualizarRastro, BotonEsMio } from "@/componentes/RastroAcciones";
 
+const HOST_PANEL = "prospectos.neracosu.com";
 const DESFASE_CARACAS_MS = -4 * 3600_000; // UTC-4 fijo, como fecha-caracas.ts
 const hora = (d: Date) => new Date(d.getTime() + DESFASE_CARACAS_MS).toISOString().slice(11, 16);
 
@@ -75,8 +76,9 @@ export async function RastroBloque({ prospectoId, propuestaUrl, rol, conPropias,
   const base = process.env.PROSPECTOS_URL_PUBLICA ?? "https://prospectos.neracosu.com";
   const hoy = hoyCaracas();
 
-  // «Seguir este enlace»: la propuesta del lead es nuestra y todavia no tiene enlace registrado
-  const partes = propuestaUrl ? descomponerUrl(propuestaUrl) : null;
+  // «Seguir este enlace»: la propuesta del lead es nuestra y todavia no tiene enlace registrado (el /p/ del panel se registra solo)
+  const descompuesta = propuestaUrl ? descomponerUrl(propuestaUrl) : null;
+  const partes = descompuesta && descompuesta.host !== HOST_PANEL ? descompuesta : null;
   const sugerida = partes && !enlaces.some((e) => e.host === partes.host && e.prefijo === partes.prefijo) ? propuestaUrl : null;
 
   const vistosEnTodo = new Set<string>();

@@ -104,19 +104,31 @@ export function esPdf(ruta: string): boolean {
   return /\.pdf$/i.test(ruta.split("#")[0].split("?")[0]);
 }
 
+const RE_EXTENSION = /\.[a-z0-9]{1,5}$/i;
+
 export function descomponerUrl(url: string): { host: string; prefijo: string } | null {
   let u: URL;
   try { u = new URL(url); } catch { return null; }
   const host = u.hostname.toLowerCase();
   if (host !== "neracosu.com" && !host.endsWith(".neracosu.com")) return null;
-  const ruta = u.pathname.endsWith("/index.html") ? u.pathname.slice(0, -"index.html".length) : u.pathname;
-  return { host, prefijo: ruta.slice(0, ruta.lastIndexOf("/") + 1) };
+  let ruta = u.pathname;
+  if (ruta.endsWith("/index.html")) ruta = ruta.slice(0, -"index.html".length);
+  else if (!ruta.endsWith("/")) {
+    // URL limpia sin barra final (/propuesta/x-1) es su propia carpeta; solo un archivo con extension se recorta al directorio
+    const corte = ruta.lastIndexOf("/") + 1;
+    ruta = RE_EXTENSION.test(ruta.slice(corte)) ? ruta.slice(0, corte) : ruta + "/";
+  }
+  // La raiz abarcaria todo el sitio: no es un enlace enviado
+  if (ruta === "/") return null;
+  return { host, prefijo: ruta };
 }
 
+// "/factura" (sin barra final) tambien es la carpeta "/factura/"
 export function enlaceQueCoincide<T extends { prefijo: string }>(ruta: string, enlaces: T[]): T | null {
   let mejor: T | null = null;
   for (const e of enlaces) {
-    if (ruta.startsWith(e.prefijo) && (!mejor || e.prefijo.length > mejor.prefijo.length)) mejor = e;
+    const coincide = ruta.startsWith(e.prefijo) || ruta + "/" === e.prefijo;
+    if (coincide && (!mejor || e.prefijo.length > mejor.prefijo.length)) mejor = e;
   }
   return mejor;
 }

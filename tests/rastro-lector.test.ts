@@ -44,6 +44,10 @@ describe("visitasDeLinea (pura)", () => {
     expect(de(L("203.0.113.5", "06/Nov/2026:10:00:00 -0400", "GET /factura/ HTTP/2.0", 200, "https://www.neracosu.com/para/", WIN))!.origen).toBe("");
   });
 
+  it("GET /factura (sin barra final) con 200 cuenta para el enlace /factura/", () => {
+    expect(de(L("203.0.113.5", "06/Nov/2026:10:00:00 -0400", "GET /factura HTTP/1.1", 200, "-", IPHONE))).toMatchObject({ enlaceId: 7, tipo: "vista", ruta: "/factura" });
+  });
+
   it("pdf, POST, 404 y assets", () => {
     expect(de(L("203.0.113.5", "06/Nov/2026:10:00:00 -0400", "GET /factura/cotizacion.pdf?x=1 HTTP/2.0", 200, "-", WIN))).toMatchObject({ tipo: "pdf", ruta: "/factura/cotizacion.pdf" });
     expect(de(L("203.0.113.5", "06/Nov/2026:10:00:00 -0400", "POST /factura/ HTTP/2.0", 200, "-", WIN))).toBeNull();

@@ -67,6 +67,8 @@ describe.runIf(DB_HABILITADA)("acciones de rastro", () => {
     expect(corta.ok).toBe(false);
     const http = await agregarEnlace(prospectoId, fd({ url: `http://${HOST}/otra/`, etiqueta: "Sin https" }));
     expect(http.ok).toBe(false);
+    const panel = await agregarEnlace(prospectoId, fd({ url: "https://prospectos.neracosu.com/p/AAAAAAAAAAAAAAAAAAAAAA", etiqueta: "Propuesta" }));
+    expect(panel).toEqual({ ok: false, mensaje: "La propuesta de /p/ se registra sola al abrirla; no hace falta agregarla." });
   });
 
   it("quitarEnlace, marcarVisitanteMio y guardarIpsPropiasAccion exigen dueno", async () => {

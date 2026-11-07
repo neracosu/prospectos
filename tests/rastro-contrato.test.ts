@@ -80,6 +80,22 @@ describe("rutas y prefijos", () => {
     const es = [{ prefijo: "/demo/" }, { prefijo: "/demo/panel/" }];
     expect(enlaceQueCoincide("/demo/panel/", es)).toBe(es[1]); expect(enlaceQueCoincide("/demo/factura/", es)).toBe(es[0]); expect(enlaceQueCoincide("/otra/", es)).toBeNull();
   });
+  it("descomponerUrl: URL limpia sin barra final es su propia carpeta; con extension se recorta; la raiz no vale", () => {
+    expect(descomponerUrl("https://neracosu.com/propuesta/x-1")).toEqual({ host: "neracosu.com", prefijo: "/propuesta/x-1/" });
+    expect(descomponerUrl("https://neracosu.com/propuesta/x-1/")).toEqual({ host: "neracosu.com", prefijo: "/propuesta/x-1/" });
+    expect(descomponerUrl("https://neracosu.com/propuesta/x-1/index.html")).toEqual({ host: "neracosu.com", prefijo: "/propuesta/x-1/" });
+    expect(descomponerUrl("https://neracosu.com/factura")).toEqual({ host: "neracosu.com", prefijo: "/factura/" });
+    expect(descomponerUrl("https://neracosu.com/propuesta/x-1/cotizacion.pdf")).toEqual({ host: "neracosu.com", prefijo: "/propuesta/x-1/" });
+    expect(descomponerUrl("https://neracosu.com/")).toBeNull();
+    expect(descomponerUrl("https://neracosu.com/index.html")).toBeNull();
+    expect(descomponerUrl("https://neracosu.com/hoja.pdf")).toBeNull();
+  });
+  it("enlaceQueCoincide: la ruta sin barra final coincide con su carpeta, pero no con otra que empiece igual", () => {
+    const es = [{ prefijo: "/factura/" }];
+    expect(enlaceQueCoincide("/factura", es)).toBe(es[0]);
+    expect(enlaceQueCoincide("/facturas", es)).toBeNull();
+    expect(enlaceQueCoincide("/propuesta/", [{ prefijo: "/propuesta/x-1/" }])).toBeNull();
+  });
   it("PATRON_P y etiquetaScript", () => {
     expect("/p/AAAAAAAAAAAAAAAAAAAAAA".match(PATRON_P)?.[1]).toBe("A".repeat(22));
     expect("/p/AAAAAAAAAAAAAAAAAAAAAA/pdf".match(PATRON_P)?.[2]).toBe("/pdf");

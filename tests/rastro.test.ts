@@ -41,6 +41,11 @@ describe.runIf(DB_HABILITADA)("rastro: enlaces, visitas, propios y visitante de 
     expect(await registrarEnlace({ prospectoId: p.id, url: "no es url", etiqueta: "X" })).toEqual({ ok: false, error: "URL no es de neracosu.com" });
   });
 
+  it("registrarEnlace rechaza el host del panel: el /p/ se registra solo", async () => {
+    expect(await registrarEnlace({ prospectoId: p.id, url: `https://prospectos.neracosu.com/p/${p.codigo}`, etiqueta: "Propuesta" })).toEqual({ ok: false, error: "El enlace /p/ se registra solo" });
+    expect(await prisma.enlaceEnviado.count()).toBe(0);
+  });
+
   it("recorta la etiqueta a 40, lista, agrupa activos por host y desactiva", async () => {
     const a = await enlace("https://demo-ejemplo.neracosu.com/factura/", "  " + "e".repeat(60) + "  ");
     expect(a.etiqueta).toBe("e".repeat(40));
