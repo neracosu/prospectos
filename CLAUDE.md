@@ -64,6 +64,14 @@ adjunto. Sin avisos: se ve en el panel.
 - **Reenvíos en la ficha**: `visitasDe` le da a un reenvío cuyo visitante no abrió nada el visitante y el aparato de
   otra fila del prospecto con la misma IP (solo en lo devuelto, la IP no sale); el que queda sin alias sale sin
   aparato ni lugar. `rastro.js` manda en cada `fin` el total de segundos visibles (gana el último).
+- **Envío propio y robots de Meta (tarea 14, 2026-11-06)**: con datos del 1-nov (propuesta enviada por Instagram),
+  Meta pidió la página desde ~12 IPs con `facebookexternalhit` y desde IPs suyas y de AWS con UA de navegador: la ficha
+  decía «la reenvió · 6 personas» sin que el prospecto hiciera nada. (1) Desde los rangos de Meta (`esIpDeMeta` en
+  `rastro-contrato.ts`) solo cuenta la línea de vista previa; `/api/rastro/evento` responde 204 sin guardar. (2) El
+  visitante de un reenvío es la app (`visitanteDe("reenvio", app)`), así la ráfaga es una fila; la IP se guarda para
+  `esPropia` y el alias; «Es mío» rechaza ese visitante (marcaría los reenvíos de todos). (3) Un reenvío anterior a la
+  primera apertura no propia de su enlace es el **envío** de Neri (clase `envio`, gris, «Enviado por …»): no crea
+  visitante, no suma en «reenviado» ni en el «la reenvió» del tablero.
 - **Lo que se ve**: bloque «Lo que hicieron con lo enviado» (`src/componentes/RastroBloque.tsx`) en `/leads/[id]` y
   `/prospectos/[id]`: agregar enlace, copiar etiqueta, actualizar, cargar lo archivado, quitar
   (`src/acciones/rastro.ts`). En el tablero, la línea `lead__rastro` sale de `resumenesParaTablero` (etiqueta del enlace

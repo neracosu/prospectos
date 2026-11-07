@@ -181,6 +181,10 @@ PDF).
 - La **IP se guarda** en la visita (hace falta para agrupar, excluir y re-geolocalizar) y se **poda a 400 días**, igual
   que `EventoWeb`. Nunca se muestra en la interfaz; solo el país, la ciudad y «misma red que …» si hace falta.
 
+> **Nota (2026-11-06, tarea 14):** desde los rangos de Meta (`esIpDeMeta`) solo cuenta la línea con UA de vista previa
+> (`reenvio`); las demás se descartan, y el visitante de un reenvío es la app (`visitanteDe("reenvio", app)`), no la
+> IP. Ver la nota al final de §4.
+
 **b) El script en la página (fuente `js`).** Añade lo que el log no sabe: **cuánto estuvo**, **hasta dónde bajó**,
 **qué tocó** y **de dónde venía el clic** (referer y `?de=`).
 
@@ -245,6 +249,20 @@ el log del propio panel (`prospectos.neracosu.com-ssl_log*`): todo visitante con
   ej. el log todavía no se leyó) se muestra igual con lo que trajo el `js`; cuando llegue la línea se funde. Un
   `inicio` sin `vista` **sigue siendo una apertura** (el `js` no miente sobre que la página cargó).
 - Recargas del mismo visitante y ruta dentro de 60 s son una sola apertura.
+
+> **Nota (2026-11-06, tarea 14): el envío propio y los robots de Meta.** Con datos reales del 1-nov (una propuesta
+> enviada por Instagram), pegar el enlace en un mensaje hizo que Meta pidiera la página desde ~12 IPs en el mismo
+> minuto con `facebookexternalhit` y, además, desde IPs de Meta y de AWS con UA de navegador Android: la ficha decía
+> «la reenvió · 6 personas» sin que el prospecto hiciera nada. Tres reglas:
+> 1. **IPs de Meta** (`esIpDeMeta`, CIDR de AS32934 más `2a03:2880::/32`): la línea se descarta salvo que su UA sea de
+>    vista previa (`reenvio`); un evento `js` desde ellas recibe 204 sin guardar.
+> 2. **El visitante de un reenvío es la app** (`visitanteDe("reenvio", app)`), no IP+UA: la ráfaga es un solo
+>    visitante y la fusión de 60 s la deja en una fila. La IP se guarda igual; el alias de `visitasDe` le sigue
+>    poniendo el visitante real con la misma IP (WhatsApp o Telegram desde el teléfono de alguien). «Es mío» no acepta
+>    el visitante de una app (marcaría todos los reenvíos de todos los prospectos).
+> 3. **Un reenvío no propio anterior a la primera apertura no propia de su enlace es el envío** (clase `envio`): se
+>    pinta en gris («Enviado por …»), no crea visitante ni cuenta en «reenviado N veces» ni en el «la reenvió» del
+>    tablero (`resumenesParaTablero` compara el último reenvío de cada grupo con la primera apertura del enlace).
 
 ### 5. Cuándo se lee el log
 
