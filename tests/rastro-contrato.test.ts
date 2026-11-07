@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   parsearLinea, clasificarUa, resumirAparato, visitanteDe, huellaDe, rutaPagina, esPdf, descomponerUrl, enlaceQueCoincide, PATRON_P, etiquetaScript,
   armarLineaTiempo, textoLugar, resumirEnlace, textoResumenEnlace, resumenTarjeta, haceCuanto, type VisitaFila, normalizarEventoJs,
+  esIpDeMeta,
 } from "@/lib/rastro-contrato";
 
 const L = (ip: string, fecha: string, req: string, estado: number, ref: string, ua: string) => `${ip} - - [${fecha}] "${req}" ${estado} 1234 "${ref}" "${ua}"`;
@@ -221,5 +222,56 @@ describe("normalizarEventoJs", () => {
     expect(normalizarEventoJs({ token: T, tipo: "clic", ruta: "/", detalle: "Con Mayuscula" })).toBeNull();
     expect(normalizarEventoJs({ token: T, tipo: "clic", ruta: "/" })).toBeNull();
     expect(normalizarEventoJs({ token: T, tipo: "inicio", ruta: "/", detalle: "<script>" })?.detalle).toBe("");
+  });
+});
+
+describe("esIpDeMeta", () => {
+  it("reconoce los rangos de Meta en IPv4 e IPv6", () => {
+    expect(esIpDeMeta("173.252.95.5")).toBe(true);
+    expect(esIpDeMeta("57.141.16.113")).toBe(true);
+    expect(esIpDeMeta("2a03:2880:f12f::1")).toBe(true);
+    expect(esIpDeMeta("2A03:2880:F12F::1")).toBe(true);
+    expect(esIpDeMeta("31.13.31.255")).toBe(true);
+    expect(esIpDeMeta("31.13.32.0")).toBe(false);
+  });
+  it("lo demas no es de Meta", () => {
+    for (const ip of ["203.0.113.5", "198.51.100.7", "2001:db8::5", "2a03:2881::1", "", "desconocida", "999.1.1.1", "57.141"]) expect(esIpDeMeta(ip)).toBe(false);
+  });
+});
+
+describe("armarLineaTiempo: el envio propio", () => {
+  const reenvio = (x: Partial<VisitaFila>) => base({ tipo: "reenvio", detalle: "facebook", visitante: "app-facebook", aparato: "", ...x });
+  it("un reenvio anterior a la primera apertura es el envio; uno posterior sigue siendo reenvio", () => {
+    const vs = [reenvio({ id: 1, ocurrioEn: t("13:31") }), base({ id: 2, ocurrioEn: t("13:40") }), reenvio({ id: 3, ocurrioEn: t("14:00") })];
+    const lt = armarLineaTiempo(vs);
+    expect(lt.dias[0].filas.map((f) => f.clase)).toEqual(["reenvio", "apertura", "envio"]);
+    expect(lt.visitantes.map((v) => v.visitante)).toEqual(["v1", "app-facebook"]);
+    expect(resumirEnlace(vs, 1)).toEqual({ visitantes: 1, aperturas: 1, reenvios: 1, pdfs: 0 });
+  });
+  it("sin ninguna apertura del enlace, el reenvio es el envio y no crea visitante", () => {
+    const vs = [reenvio({ id: 1, ocurrioEn: t("13:31") })];
+    const lt = armarLineaTiempo(vs);
+    expect(lt.dias[0].filas.map((f) => f.clase)).toEqual(["envio"]);
+    expect(lt.visitantes).toEqual([]);
+    expect(textoResumenEnlace(resumirEnlace(vs, 1))).toBe("Sin abrir");
+  });
+  it("la rafaga de envio se funde en una fila", () => {
+    const vs = [reenvio({ id: 1, ocurrioEn: t("13:31") }), reenvio({ id: 2, ocurrioEn: t("13:31") }), reenvio({ id: 3, ocurrioEn: t("13:32") })];
+    expect(armarLineaTiempo(vs).dias[0].filas.map((f) => f.clase)).toEqual(["envio"]);
+  });
+  it("la primera apertura es por enlace y no cuenta las propias, ni con conPropias", () => {
+    const vs = [
+      base({ id: 1, visitante: "neri", propia: true, ocurrioEn: t("13:00") }),
+      base({ id: 2, enlaceId: 2, ocurrioEn: t("13:10") }),
+      reenvio({ id: 3, ocurrioEn: t("13:31") }),
+    ];
+    for (const conPropias of [false, true]) {
+      const filas = armarLineaTiempo(vs, { conPropias }).dias[0].filas;
+      expect(filas.find((f) => f.enlaceId === 1 && f.ocurrioEn.getTime() === t("13:31").getTime())?.clase).toBe("envio");
+    }
+  });
+  it("un reenvio propio no se vuelve envio", () => {
+    const f = armarLineaTiempo([reenvio({ id: 1, propia: true })], { conPropias: true }).dias[0].filas;
+    expect(f.map((a) => a.clase)).toEqual(["reenvio"]);
   });
 });

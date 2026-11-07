@@ -86,6 +86,36 @@ export function clasificarUa(ua: string): ClaseUa {
   return { clase: "visita", aparato: resumirAparato(ua), enApp: enAppDe(ua) };
 }
 
+// Rangos de Meta (AS32934): sus vistas previas piden la pagina desde muchas IPs a la vez, algunas con UA de navegador.
+const CIDR_META = ["31.13.24.0/21", "31.13.64.0/18", "45.64.40.0/22", "57.141.0.0/16", "57.144.0.0/14", "66.220.144.0/20", "69.63.176.0/20",
+  "69.171.224.0/19", "74.119.76.0/22", "102.132.96.0/20", "103.4.96.0/22", "129.134.0.0/16", "157.240.0.0/16", "163.70.128.0/17",
+  "173.252.64.0/18", "179.60.192.0/22", "185.60.216.0/22", "185.89.216.0/22", "204.15.20.0/22"];
+const PREFIJO_META_V6 = "2a03:2880:"; // 2a03:2880::/32
+
+function ipv4ANumero(ip: string): number | null {
+  const partes = ip.split(".");
+  if (partes.length !== 4) return null;
+  let n = 0;
+  for (const p of partes) {
+    if (!/^\d{1,3}$/.test(p) || Number(p) > 255) return null;
+    n = n * 256 + Number(p);
+  }
+  return n;
+}
+
+const RANGOS_META = CIDR_META.map((c) => {
+  const [red, bits] = c.split("/");
+  const tam = 2 ** (32 - Number(bits));
+  const inicio = Math.floor(ipv4ANumero(red)! / tam) * tam;
+  return { inicio, fin: inicio + tam };
+});
+
+export function esIpDeMeta(ip: string): boolean {
+  const n = ipv4ANumero(ip);
+  if (n !== null) return RANGOS_META.some((r) => n >= r.inicio && n < r.fin);
+  return ip.toLowerCase().startsWith(PREFIJO_META_V6);
+}
+
 const hash16 = (s: string) => createHash("sha256").update(s).digest("hex").slice(0, 16);
 export const visitanteDe = (ip: string, ua: string) => hash16(`${ip}|${ua}`);
 export const huellaDe = (linea: string) => hash16(linea);
@@ -143,7 +173,7 @@ export function etiquetaScript(token: string, base = "https://prospectos.neracos
 // ---- linea de tiempo fundida (log + js) y resumenes ----
 
 export type VisitaFila = { id: number; enlaceId: number; etiqueta: string; fuente: "log" | "js"; tipo: string; visitante: string; aparato: string; pais: string; ciudad: string; red: string; geoPendiente: boolean; ruta: string; detalle: string; origen: string; segundos: number | null; scroll: number | null; propia: boolean; ocurrioEn: Date };
-export type Apertura = { clase: "apertura" | "vuelta" | "reenvio" | "pdf" | "clic"; enlaceId: number; etiqueta: string; visitante: string; ruta: string; ocurrioEn: Date; segundos: number | null; scroll: number | null; origen: string; detalle: string; clics: string[] };
+export type Apertura = { clase: "apertura" | "vuelta" | "reenvio" | "envio" | "pdf" | "clic"; enlaceId: number; etiqueta: string; visitante: string; ruta: string; ocurrioEn: Date; segundos: number | null; scroll: number | null; origen: string; detalle: string; clics: string[] };
 export type Visitante = { visitante: string; numero: number; aparato: string; lugar: string; red: string; propio: boolean };
 export type LineaTiempo = { visitantes: Visitante[]; dias: { dia: string; filas: Apertura[] }[] };
 
@@ -173,7 +203,27 @@ function armarVisitantes(orden: VisitaFila[]): Visitante[] {
   });
 }
 
+// Primera apertura no propia de cada enlace (aunque se muestren las propias: Neri abriendo no es el prospecto).
+function primerasAperturas(visitas: VisitaFila[]): Map<number, number> {
+  const m = new Map<number, number>();
+  for (const v of visitas) {
+    if (v.propia || (v.tipo !== "vista" && v.tipo !== "inicio")) continue;
+    const ms = v.ocurrioEn.getTime();
+    const previa = m.get(v.enlaceId);
+    if (previa === undefined || ms < previa) m.set(v.enlaceId, ms);
+  }
+  return m;
+}
+
+// Un reenvio no propio antes de que nadie abra el enlace es la vista previa del envio de Neri, no del prospecto.
+const esEnvio = (v: VisitaFila, primeras: Map<number, number>) => {
+  if (v.tipo !== "reenvio" || v.propia) return false;
+  const primera = primeras.get(v.enlaceId);
+  return primera === undefined || v.ocurrioEn.getTime() < primera;
+};
+
 export function armarLineaTiempo(visitas: VisitaFila[], o: { conPropias?: boolean } = {}): LineaTiempo {
+  const primeras = primerasAperturas(visitas);
   const orden = visitas.filter((v) => o.conPropias || !v.propia)
     .sort((a, b) => a.ocurrioEn.getTime() - b.ocurrioEn.getTime() || a.id - b.id);
   const filas: Apertura[] = [];
@@ -211,7 +261,7 @@ export function armarLineaTiempo(visitas: VisitaFila[], o: { conPropias?: boolea
     } else if (v.tipo === "reenvio") {
       const previo = ultimoReenvio.get(clave);
       ultimoReenvio.set(clave, ms);
-      if (previo === undefined || ms - previo > VENTANA_RECARGA_MS) nueva("reenvio", v);
+      if (previo === undefined || ms - previo > VENTANA_RECARGA_MS) nueva(esEnvio(v, primeras) ? "envio" : "reenvio", v);
     } else if (v.tipo === "pdf") {
       nueva("pdf", v);
     }
@@ -224,7 +274,8 @@ export function armarLineaTiempo(visitas: VisitaFila[], o: { conPropias?: boolea
     const ultimo = dias[dias.length - 1];
     if (ultimo && ultimo.dia === dia) ultimo.filas.push(f); else dias.push({ dia, filas: [f] });
   }
-  return { visitantes: armarVisitantes(orden), dias };
+  // El envio no es un visitante del prospecto
+  return { visitantes: armarVisitantes(orden.filter((v) => !esEnvio(v, primeras))), dias };
 }
 
 export type ResumenEnlace = { visitantes: number; aperturas: number; reenvios: number; pdfs: number };
