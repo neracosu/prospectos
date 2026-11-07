@@ -21,7 +21,7 @@
         o.token = token; o.ruta = ruta;
         var j = JSON.stringify(o);
         if (navigator.sendBeacon && navigator.sendBeacon(url, new Blob([j], { type: "text/plain;charset=UTF-8" }))) return;
-        fetch(url, { method: "POST", body: j, keepalive: true, mode: "cors", credentials: "omit", headers: { "Content-Type": "text/plain;charset=UTF-8" } });
+        fetch(url, { method: "POST", body: j, keepalive: true, mode: "cors", credentials: "omit", headers: { "Content-Type": "text/plain;charset=UTF-8" } }).catch(function () {});
       } catch (e) {}
     }
     function param(k) {
@@ -47,7 +47,7 @@
         if (p > scroll) scroll = Math.min(100, Math.max(0, p));
       } catch (e) {}
     }
-    // un solo fin por ciclo visible -> oculto
+    // un solo fin por ciclo visible -> oculto; cada fin lleva el TOTAL de segundos visibles (gana el ultimo)
     function cerrar() {
       try {
         if (enviado) return;
@@ -62,7 +62,7 @@
     mandar({ tipo: "inicio", origen: origen(), ancho: window.innerWidth });
     document.addEventListener("visibilitychange", function () {
       try {
-        if (visible()) { enviado = false; acum = 0; desde = Date.now(); } else cerrar();
+        if (visible()) { enviado = false; desde = Date.now(); } else cerrar();
       } catch (e) {}
     });
     window.addEventListener("pagehide", cerrar);

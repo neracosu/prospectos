@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterAll } from "vitest";
 import { readFileSync } from "node:fs";
+import { runInNewContext } from "node:vm";
 import { prisma } from "@/lib/db";
 import { DB_HABILITADA, limpiarBase, sembrarBasico, crearProspectoDePrueba } from "./ayuda-db";
 import { _reiniciarIntentos } from "@/lib/rate-limit";
@@ -22,6 +23,36 @@ describe("public/rastro.js", () => {
     expect(Buffer.byteLength(js)).toBeLessThanOrEqual(4096);
     expect(js).toContain("/api/rastro/evento");
     expect(js).toContain("nc_soyyo");
+  });
+
+  // Simula el navegador lo justo para correr el script: reloj, visibilidad y sendBeacon.
+  function navegador() {
+    let ahora = 1_000_000; // Date.now() nunca es 0
+    const oyentes: Record<string, (() => void)[]> = {};
+    const enviados: Blob[] = [];
+    const on = (t: string, f: () => void) => { (oyentes[t] ??= []).push(f); };
+    const document = {
+      currentScript: { getAttribute: () => "t".repeat(22), src: "https://prospectos.neracosu.com/rastro.js?v=1" },
+      querySelectorAll: () => [], visibilityState: "visible", documentElement: { scrollHeight: 1000 }, referrer: "", addEventListener: on,
+    };
+    const window = { addEventListener: on, pageYOffset: 0, innerHeight: 500, innerWidth: 390 };
+    const navigator = { webdriver: false, sendBeacon: (_u: string, b: Blob) => { enviados.push(b); return true; } };
+    runInNewContext(js, { document, window, navigator, location: { search: "", pathname: "/factura/" }, Blob, URL, Date: { now: () => ahora } });
+    return {
+      a: (seg: number) => { ahora = 1_000_000 + seg * 1000; },
+      visibilidad: (v: "visible" | "hidden") => { document.visibilityState = v; for (const f of oyentes.visibilitychange ?? []) f(); },
+      cerrar: () => { for (const f of oyentes.pagehide ?? []) f(); },
+      fines: async () => (await Promise.all(enviados.map((b) => b.text()))).map((t) => JSON.parse(t)).filter((o) => o.tipo === "fin").map((o) => o.segundos),
+    };
+  }
+
+  it("cada fin lleva el total de segundos visibles: leer 2 min, salir 80 s, volver 5 s y cerrar da 125", async () => {
+    const n = navegador();
+    n.a(120); n.visibilidad("hidden");
+    n.a(200); n.visibilidad("visible");
+    n.a(205); n.visibilidad("hidden");
+    n.cerrar(); // pagehide tras ocultarse: no manda un segundo fin
+    expect(await n.fines()).toEqual([120, 125]);
   });
 });
 
