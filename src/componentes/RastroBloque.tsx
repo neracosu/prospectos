@@ -52,7 +52,19 @@ function Accion({ f }: { f: Apertura }) {
 // Una fila: hora · Visitante N (aparato · lugar la primera vez que se lee en el dia) · accion.
 // «Primera vez» es en el orden en que se lee (lo mas reciente arriba): asi el dato esta en la fila que se ve primero.
 // Un reenvio sin alias (su visitante es solo la vista previa) no tiene aparato ni lugar que decir: se omiten.
+// El envio (vista previa antes de que nadie abra) es de Neri: en gris, sin visitante ni «Es mío».
+const ENVIO: Record<string, string> = { whatsapp: "WhatsApp", facebook: "Instagram o Facebook", instagram: "Instagram o Facebook", telegram: "Telegram" };
+
 function Fila({ f, v, conDatos, esMio, prospectoId }: { f: Apertura; v: Visitante | undefined; conDatos: boolean; esMio: boolean; prospectoId: number }) {
+  if (f.clase === "envio") {
+    const app = ENVIO[f.detalle] ?? APP[f.detalle] ?? (f.detalle && f.detalle !== "otro" ? mayuscula(f.detalle) : "");
+    return (
+      <li className="rastro__fila rastro__fila--envio">
+        <time dateTime={f.ocurrioEn.toISOString()}>{hora(f.ocurrioEn)}</time>
+        <span>Enviado{app ? ` por ${app}` : ""} · <i>{f.etiqueta}</i></span>
+      </li>
+    );
+  }
   const soloReenvio = f.clase === "reenvio" && !v?.aparato;
   return (
     <li className={"rastro__fila" + (f.clase === "reenvio" ? " rastro__fila--reenvio" : "")}>
@@ -63,7 +75,7 @@ function Fila({ f, v, conDatos, esMio, prospectoId }: { f: Apertura; v: Visitant
         {conDatos && v && !soloReenvio ? ` · ${v.aparato || "aparato desconocido"} · ${v.lugar}` : ""}
       </span>
       <Accion f={f} />
-      {esMio && v && !v.propio && <BotonEsMio prospectoId={prospectoId} visitante={v.visitante} />}
+      {esMio && v && !v.propio && !soloReenvio && <BotonEsMio prospectoId={prospectoId} visitante={v.visitante} />}
     </li>
   );
 }

@@ -497,6 +497,7 @@ button, input, select, textarea { font: inherit; }
 .rastro__fila { padding: 6px 0; border-bottom: 1px solid var(--borde); font-size: 14px; display: flex; gap: 8px; flex-wrap: wrap; align-items: baseline; overflow-wrap: anywhere; }
 .rastro__fila time { color: var(--tinta-suave); font-size: 12px; min-width: 44px; }
 .rastro__fila--reenvio { color: var(--ambar); }
+.rastro__fila--envio { color: var(--tinta-suave); }
 .rastro__visitante { font-weight: 600; }
 .rastro__pie { margin: 10px 0 0; font-size: 12px; }
 @media (max-width: 480px) {
