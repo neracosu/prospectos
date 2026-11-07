@@ -120,8 +120,7 @@ export function descomponerUrl(url: string): { host: string; prefijo: string } |
     const corte = ruta.lastIndexOf("/") + 1;
     ruta = RE_EXTENSION.test(ruta.slice(corte)) ? ruta.slice(0, corte) : ruta + "/";
   }
-  // La raiz abarcaria todo el sitio: no es un enlace enviado
-  if (ruta === "/") return null;
+  // La raiz ("/") se devuelve igual: es de neracosu.com, y registrarEnlace la rechaza con su propio mensaje
   return { host, prefijo: ruta };
 }
 

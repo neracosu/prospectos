@@ -41,6 +41,13 @@ describe.runIf(DB_HABILITADA)("rastro: enlaces, visitas, propios y visitante de 
     expect(await registrarEnlace({ prospectoId: p.id, url: "no es url", etiqueta: "X" })).toEqual({ ok: false, error: "URL no es de neracosu.com" });
   });
 
+  it("registrarEnlace rechaza la raiz del sitio", async () => {
+    for (const url of ["https://demo-ejemplo.neracosu.com", "https://demo-ejemplo.neracosu.com/"]) {
+      expect(await registrarEnlace({ prospectoId: p.id, url, etiqueta: "Raiz" })).toEqual({ ok: false, error: "La raiz del sitio no se puede seguir; use una pagina concreta" });
+    }
+    expect(await prisma.enlaceEnviado.count()).toBe(0);
+  });
+
   it("registrarEnlace rechaza el host del panel: el /p/ se registra solo", async () => {
     expect(await registrarEnlace({ prospectoId: p.id, url: `https://prospectos.neracosu.com/p/${p.codigo}`, etiqueta: "Propuesta" })).toEqual({ ok: false, error: "El enlace /p/ se registra solo" });
     expect(await prisma.enlaceEnviado.count()).toBe(0);

@@ -34,6 +34,8 @@ const corto = (s: string, n: number) => s.slice(0, n);
 export async function registrarEnlace(d: { prospectoId: number; url: string; etiqueta: string; enviadoEn?: Date }): Promise<{ ok: true; enlace: EnlaceFila } | { ok: false; error: string }> {
   const partes = descomponerUrl(d.url.trim());
   if (!partes) return { ok: false, error: "URL no es de neracosu.com" };
+  // La raiz abarcaria todo el sitio: no es un enlace enviado
+  if (partes.prefijo === "/") return { ok: false, error: "La raiz del sitio no se puede seguir; use una pagina concreta" };
   // /p/<codigo> lo crea obtenerOCrearEnlacePlantilla; uno manual con prefijo /p/ se tragaria los de todos
   if (partes.host === HOST_PANEL) return { ok: false, error: "El enlace /p/ se registra solo" };
   const repetido = { ok: false as const, error: "Ese enlace ya esta registrado" };

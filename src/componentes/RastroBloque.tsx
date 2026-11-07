@@ -78,9 +78,9 @@ export async function RastroBloque({ prospectoId, propuestaUrl, rol, conPropias,
   const base = process.env.PROSPECTOS_URL_PUBLICA ?? "https://prospectos.neracosu.com";
   const hoy = hoyCaracas();
 
-  // «Seguir este enlace»: la propuesta del lead es nuestra y todavia no tiene enlace registrado (el /p/ del panel se registra solo)
+  // «Seguir este enlace»: la propuesta del lead es nuestra y todavia no tiene enlace registrado (el /p/ del panel se registra solo y la raiz no se sigue)
   const descompuesta = propuestaUrl ? descomponerUrl(propuestaUrl) : null;
-  const partes = descompuesta && descompuesta.host !== HOST_PANEL ? descompuesta : null;
+  const partes = descompuesta && descompuesta.host !== HOST_PANEL && descompuesta.prefijo !== "/" ? descompuesta : null;
   const sugerida = partes && !enlaces.some((e) => e.host === partes.host && e.prefijo === partes.prefijo) ? propuestaUrl : null;
 
   const vistosEnTodo = new Set<string>();
