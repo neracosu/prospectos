@@ -16,7 +16,9 @@ const WHATSAPP = "WhatsApp/2.23.20.0";
 const ROBOT = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/120.0.0.0 Safari/537.36";
 const HOST = "demo-ejemplo.neracosu.com";
 const PANEL = "prospectos.neracosu.com";
-const ahoraMes = () => { const d = new Date(); return `${d.toLocaleString("en-US", { month: "short" })}-${d.getFullYear()}`; };
+const mes = (d: Date) => `${d.toLocaleString("en-US", { month: "short" })}-${d.getFullYear()}`;
+const ahoraMes = () => mes(new Date());
+const mesAnterior = () => { const d = new Date(); return mes(new Date(d.getFullYear(), d.getMonth() - 1, 1)); };
 const texto = (ls: string[]) => ls.join("\n") + "\n";
 
 // 7 lineas: 3 cuentan (vista 200, vista 304 por index.html, reenvio 206 de WhatsApp)
@@ -107,7 +109,7 @@ describe.runIf(DB_HABILITADA)("rastro-lector: access-logs a visitas", () => {
     writeFileSync(join(dirArchivo, `${HOST}-ssl_log-${ahoraMes()}.gz`), Buffer.concat([gzipSync(texto(SIETE)), gzipSync(antesDeRotar + "\n")]));
     writeFileSync(vivo(), texto([L("203.0.113.9", "07/Nov/2026:00:01:00 -0400", "GET /factura/ HTTP/2.0", 200, "-", IPHONE)]));
     const r = await leerLogs(o());
-    expect(r.archivosReleidos).toEqual([vivo()]);
+    expect(r.archivosReleidos).toEqual([join(dirArchivo, `${HOST}-ssl_log-${ahoraMes()}.gz`)]);
     expect(r.visitas).toBe(2);
     expect(await prisma.visitaEnlace.count()).toBe(3 + 1 + 1);
   });
@@ -116,6 +118,50 @@ describe.runIf(DB_HABILITADA)("rastro-lector: access-logs a visitas", () => {
     expect(await leerLogs(o())).toEqual({ lineas: 0, visitas: 0, archivosReleidos: [] });
     writeFileSync(join(dirLogs, HOST), texto([SIETE[0]]));
     expect((await leerLogs(o())).visitas).toBe(1);
+  });
+
+  it("truncado que vuelve a crecer por encima de la posicion con el mismo inode: lo detecta y no pierde lineas", async () => {
+    const tres = SIETE.slice(0, 3);
+    writeFileSync(vivo(), texto(tres));
+    await leerLogs(o());
+    const cinco = [1, 2, 3, 4, 5].map((i) => L(`203.0.113.${20 + i}`, `07/Nov/2026:00:0${i}:00 -0400`, `GET /factura/?v=${"x".repeat(80)} HTTP/2.0`, 200, "-", WIN));
+    expect(Buffer.byteLength(texto(cinco))).toBeGreaterThan(Buffer.byteLength(texto(tres)));
+    writeFileSync(vivo(), texto(cinco));
+    const r = await leerLogs(o());
+    expect(r.visitas).toBe(5);
+    expect(await prisma.visitaEnlace.count()).toBe(3 + 5);
+    expect((await leerLogs(o())).visitas).toBe(0);
+  });
+
+  it("rotacion a fin de mes: relee el .gz del mes anterior y el del mes en curso", async () => {
+    writeFileSync(vivo(), texto([SIETE[0]]));
+    await leerLogs(o());
+    const gzAnterior = join(dirArchivo, `${HOST}-ssl_log-${mesAnterior()}.gz`);
+    const gzActual = join(dirArchivo, `${HOST}-ssl_log-${ahoraMes()}.gz`);
+    writeFileSync(gzAnterior, gzipSync(texto([SIETE[0], L("203.0.113.30", "31/Oct/2026:23:58:00 -0400", "GET /factura/ HTTP/2.0", 200, "-", WIN)])));
+    writeFileSync(gzActual, gzipSync(texto([L("203.0.113.31", "01/Nov/2026:23:58:00 -0400", "GET /factura/ HTTP/2.0", 200, "-", WIN)])));
+    writeFileSync(vivo(), "");
+    const r = await leerLogs(o());
+    expect(r.archivosReleidos).toEqual([gzAnterior, gzActual]);
+    expect(r.visitas).toBe(2);
+    expect(await prisma.visitaEnlace.count()).toBe(3);
+  });
+
+  it("un archivo que falla (gz cortado) no tumba la pasada ni los otros hosts", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    const OTRO = "otra-demo.neracosu.com";
+    const r2 = await registrarEnlace({ prospectoId: p.id, url: `https://${OTRO}/panel/`, etiqueta: "Panel" });
+    if (!r2.ok) throw new Error(r2.error);
+    writeFileSync(vivo(), texto(SIETE));
+    await leerLogs(o());
+    writeFileSync(join(dirArchivo, `${HOST}-ssl_log-${ahoraMes()}.gz`), gzipSync(texto(SIETE)).subarray(0, 20));
+    writeFileSync(vivo(), texto([L("203.0.113.40", "07/Nov/2026:00:01:00 -0400", "GET /factura/ HTTP/2.0", 200, "-", WIN)]));
+    writeFileSync(join(dirLogs, `${OTRO}-ssl_log`), texto([L("203.0.113.41", "07/Nov/2026:00:02:00 -0400", "GET /panel/ HTTP/2.0", 200, "-", WIN)]));
+    const r = await leerLogs({ dirLogs, dirArchivo, hosts: [HOST, OTRO] });
+    expect(r.visitas).toBe(2);
+    expect(r.archivosReleidos).toEqual([]);
+    expect(error).toHaveBeenCalledWith(expect.stringMatching(/^\[rastro\] error en .*\.gz: /));
+    expect(await prisma.visitaEnlace.count()).toBe(3 + 2);
   });
 
   it("una linea rota no tira la pasada", async () => {

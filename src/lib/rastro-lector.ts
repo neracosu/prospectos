@@ -2,9 +2,9 @@
 // El log vivo se trunca cada dia (cPanel lo pasa al .gz del mes): si el archivo encogio o cambio de inode,
 // se relee el .gz del mes en curso y despues el vivo desde cero; la huella unica evita duplicar.
 // Lo puro (visitasDeLinea) no toca archivos ni base, para probarlo solo.
-import { createReadStream, existsSync, readdirSync, statSync } from "node:fs";
+import { closeSync, createReadStream, existsSync, openSync, readdirSync, readSync, statSync } from "node:fs";
 import { join } from "node:path";
-import { createInterface } from "node:readline";
+import { pipeline } from "node:stream";
 import { createGunzip } from "node:zlib";
 import { prisma } from "@/lib/db";
 import { hoyCaracas } from "@/lib/fecha-caracas";
@@ -112,33 +112,61 @@ class Procesador {
 
 // ---- lectura de archivos ----
 
+// Parte un flujo de bytes en lineas completas; `bytes` cuenta hasta el salto de linea incluido.
+// Con `conResto` tambien entrega la ultima linea sin salto (archivos cerrados como el .gz).
+async function* lineasDe(flujo: AsyncIterable<Buffer>, conResto = false): AsyncGenerator<{ linea: string; bytes: number }> {
+  let resto = Buffer.alloc(0);
+  for await (const trozo of flujo) {
+    let buf = resto.length ? Buffer.concat([resto, trozo]) : trozo;
+    let corte: number;
+    while ((corte = buf.indexOf(0x0a)) !== -1) {
+      yield { linea: buf.subarray(0, corte).toString("utf8").replace(/\r$/, ""), bytes: corte + 1 };
+      buf = buf.subarray(corte + 1);
+    }
+    resto = Buffer.from(buf);
+  }
+  if (conResto && resto.length) yield { linea: resto.toString("utf8").replace(/\r$/, ""), bytes: resto.length };
+}
+
 // Lee desde `inicio` solo las lineas completas: una linea a medio escribir queda para la proxima pasada.
 // Devuelve la posicion en bytes justo despues del ultimo salto de linea leido.
 async function leerVivo(ruta: string, inicio: number, alLinea: (s: string) => Promise<void>): Promise<number> {
   let posicion = inicio;
-  let resto = Buffer.alloc(0);
-  for await (const trozo of createReadStream(ruta, { start: inicio })) {
-    let buf = resto.length ? Buffer.concat([resto, trozo as Buffer]) : (trozo as Buffer);
-    let corte: number;
-    while ((corte = buf.indexOf(0x0a)) !== -1) {
-      await alLinea(buf.subarray(0, corte).toString("utf8").replace(/\r$/, ""));
-      posicion += corte + 1;
-      buf = buf.subarray(corte + 1);
-    }
-    resto = Buffer.from(buf);
+  for await (const { linea, bytes } of lineasDe(createReadStream(ruta, { start: inicio }))) {
+    await alLinea(linea);
+    posicion += bytes;
   }
   return posicion;
 }
 
 // Node descomprime los .gz de varios miembros (cPanel agrega uno por dia) sin nada especial.
+// pipeline propaga el error de cualquier tramo (EACCES, gz cortado) al for await.
 async function leerGz(ruta: string, alLinea: (s: string) => Promise<void>): Promise<void> {
-  const rl = createInterface({ input: createReadStream(ruta).pipe(createGunzip()), crlfDelay: Infinity });
-  for await (const linea of rl) await alLinea(linea);
+  const flujo = pipeline(createReadStream(ruta), createGunzip(), () => {});
+  for await (const { linea } of lineasDe(flujo, true)) await alLinea(linea);
 }
 
-function mesEnCurso(ahora = new Date()): string {
-  return `${ahora.toLocaleString("en-US", { month: "short" })}-${ahora.getFullYear()}`;
+const nombreMes = (d: Date) => `${d.toLocaleString("en-US", { month: "short" })}-${d.getFullYear()}`;
+
+// El mes anterior va primero: lo escrito entre la ultima pasada y la rotacion de fin de mes quedo alli.
+function mesesARevisar(ahora = new Date()): string[] {
+  return [nombreMes(new Date(ahora.getFullYear(), ahora.getMonth() - 1, 1)), nombreMes(ahora)];
 }
+
+// Mismo inode y no encogio, pero si el byte anterior a la posicion no es un salto de linea,
+// el archivo se trunco y volvio a crecer por encima de la posicion: hay que releerlo.
+function sigueIgual(ruta: string, posicion: number): boolean {
+  if (posicion === 0) return true;
+  const fd = openSync(ruta, "r");
+  try {
+    const b = Buffer.alloc(1);
+    return readSync(fd, b, 0, 1, posicion - 1) === 1 && b[0] === 0x0a;
+  } finally {
+    closeSync(fd);
+  }
+}
+
+const avisarError = (ruta: string, err: unknown) => console.error(`[rastro] error en ${ruta}: ${err instanceof Error ? err.message : String(err)}`);
 
 async function leerHost(host: string, p: Procesador, o: OpcionesLector, guardarEstado: boolean, releidos: string[]): Promise<void> {
   const dirLogs = dirLogsDe(o);
@@ -148,25 +176,35 @@ async function leerHost(host: string, p: Procesador, o: OpcionesLector, guardarE
     try { st = statSync(ruta); } catch { continue; } // sin ese archivo: nada que leer
     if (!st.isFile()) continue;
     const alLinea = (s: string) => p.linea(host, s);
-    let inicio = 0;
-    if (!o.desdeCero) {
-      const previa = await prisma.lecturaLog.findUnique({ where: { archivo: ruta } });
-      if (previa) {
-        if (previa.inode !== BigInt(st.ino) || st.size < Number(previa.posicion)) {
-          // Rotado o truncado: lo que faltaba por leer quedo en el .gz del mes.
-          const gz = join(dirArchivoDe(o), `${nombre}-${mesEnCurso()}.gz`);
-          if (existsSync(gz)) await leerGz(gz, alLinea);
-          releidos.push(ruta);
-        } else {
-          inicio = Number(previa.posicion);
+    // Un archivo que falla (permisos, gz cortado) no tumba la pasada ni guarda su posicion: se reintenta en la proxima.
+    try {
+      let inicio = 0;
+      if (!o.desdeCero) {
+        const previa = await prisma.lecturaLog.findUnique({ where: { archivo: ruta } });
+        if (previa) {
+          const pos = Number(previa.posicion);
+          if (previa.inode === BigInt(st.ino) && st.size >= pos && sigueIgual(ruta, pos)) {
+            inicio = pos;
+          } else {
+            // Rotado o truncado: lo que faltaba por leer quedo en el .gz del mes (o del anterior, a fin de mes).
+            for (const mes of mesesARevisar()) {
+              const gz = join(dirArchivoDe(o), `${nombre}-${mes}.gz`);
+              if (!existsSync(gz)) continue;
+              // Un gz roto no impide leer el vivo: se avisa y se sigue.
+              try { await leerGz(gz, alLinea); releidos.push(gz); } catch (err) { avisarError(gz, err); }
+            }
+          }
         }
       }
-    }
-    const posicion = await leerVivo(ruta, inicio, alLinea);
-    await p.vaciar();
-    if (guardarEstado) {
-      const datos = { inode: BigInt(st.ino), posicion: BigInt(posicion), leidoEn: new Date() };
-      await prisma.lecturaLog.upsert({ where: { archivo: ruta }, create: { archivo: ruta, ...datos }, update: datos });
+      const posicion = await leerVivo(ruta, inicio, alLinea);
+      await p.vaciar();
+      if (guardarEstado) {
+        const datos = { inode: BigInt(st.ino), posicion: BigInt(posicion), leidoEn: new Date() };
+        await prisma.lecturaLog.upsert({ where: { archivo: ruta }, create: { archivo: ruta, ...datos }, update: datos });
+      }
+    } catch (err) {
+      avisarError(ruta, err);
+      await p.vaciar();
     }
   }
 }
@@ -182,6 +220,7 @@ export async function leerLogs(o: OpcionesLector = {}): Promise<ResultadoLectura
   await prisma.$executeRaw`INSERT IGNORE INTO Configuracion (clave, valor) VALUES ('candado_rastro', '1')`;
   return prisma.$transaction(async (tx) => {
     // Dos pasadas a la vez (cron + alta de enlace) se ponen en fila: la segunda ve la posicion ya guardada.
+    // El candado evita trabajo doble; la garantia final contra duplicados es la huella unica de VisitaEnlace.
     await tx.$queryRaw`SELECT clave FROM Configuracion WHERE clave = 'candado_rastro' FOR UPDATE`;
     const enlaces = await enlacesActivosPorHost();
     const hosts = o.soloPrefijo ? [o.soloPrefijo.host] : o.hosts ?? [...new Set([...enlaces.keys(), HOST_PANEL])];
@@ -192,7 +231,7 @@ export async function leerLogs(o: OpcionesLector = {}): Promise<ResultadoLectura
     for (const host of hosts) await leerHost(host, p, o, guardarEstado, releidos);
     avisar(p);
     return { lineas: p.lineas, visitas: p.visitas, archivosReleidos: releidos };
-  }, { timeout: 60_000, maxWait: 60_000 });
+  }, { timeout: 300_000, maxWait: 60_000 });
 }
 
 const escaparRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -206,7 +245,8 @@ export async function importarArchivados(o: { host: string; prefijo?: string; de
   try { nombres = readdirSync(dir).filter((n) => re.test(n)).sort(); } catch { nombres = []; }
   const p = new Procesador(await enlacesActivosPorHost(), await cargarPropios(), { prefijo: o.prefijo, desde: o.desde });
   for (const n of nombres) {
-    await leerGz(join(dir, n), (s) => p.linea(o.host, s));
+    const ruta = join(dir, n);
+    try { await leerGz(ruta, (s) => p.linea(o.host, s)); } catch (err) { avisarError(ruta, err); }
     await p.vaciar();
   }
   avisar(p);
