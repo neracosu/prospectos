@@ -76,4 +76,13 @@ describe.runIf(DB_HABILITADA)("esquema", () => {
     expect(h.avisadoEn).toBeNull();
     expect(k.avisadoEn).toBeNull();
   });
+  it("un token de enlace es unico y una huella de visita tambien", async () => {
+    const { nichoId } = await sembrarBasico();
+    const p = await crearProspectoDePrueba(nichoId);
+    const e = await prisma.enlaceEnviado.create({ data: { prospectoId: p.id, etiqueta: "Propuesta", host: "neracosu.com", prefijo: "/propuesta/x-1/", token: "a".repeat(22), origen: "manual", enviadoEn: new Date() } });
+    await expect(prisma.enlaceEnviado.create({ data: { prospectoId: p.id, etiqueta: "Otra", host: "neracosu.com", prefijo: "/propuesta/y-2/", token: "a".repeat(22), origen: "manual", enviadoEn: new Date() } })).rejects.toThrow(/Unique/);
+    const v = { enlaceId: e.id, fuente: "log", tipo: "vista", visitante: "0123456789abcdef", ip: "203.0.113.5", huella: "f".repeat(16), ocurrioEn: new Date() };
+    await prisma.visitaEnlace.create({ data: v });
+    await expect(prisma.visitaEnlace.create({ data: v })).rejects.toThrow(/Unique/);
+  });
 });

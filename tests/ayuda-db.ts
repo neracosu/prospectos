@@ -13,6 +13,9 @@ export const PIN_PROSPECTADOR = "654321";
 
 // La base de tests no guarda historia: se vacia entera, en orden de claves foraneas.
 export async function limpiarBase(): Promise<void> {
+  await prisma.visitaEnlace.deleteMany(); // rastro de enlaces: visitas cuelgan del enlace, el enlace del prospecto
+  await prisma.enlaceEnviado.deleteMany();
+  await prisma.lecturaLog.deleteMany();
   await prisma.envioCorreo.deleteMany(); // correo por propuesta (31-oct): cuelgan del prospecto
   await prisma.fichaNegocio.deleteMany();
   await prisma.correoBloqueado.deleteMany();

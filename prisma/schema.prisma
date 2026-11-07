@@ -86,6 +86,7 @@ model Prospecto {
   revisiones         Revision[]
   ficha              FichaNegocio?
   envios             EnvioCorreo[]
+  enlaces            EnlaceEnviado[]
 
   @@unique([nichoId, clave])
   @@index([etapa, ordenCola])
@@ -431,4 +432,60 @@ model EnvioCorreo {
   fallo       String    @default("") @db.VarChar(300)
 
   @@index([prospectoId, enviadoEn])
+}
+
+// Rastro de enlaces enviados (6-nov-2026): que enlaces se mandaron a cada prospecto y quien los abrio.
+model EnlaceEnviado {
+  id          Int            @id @default(autoincrement())
+  prospectoId Int
+  prospecto   Prospecto      @relation(fields: [prospectoId], references: [id])
+  etiqueta    String         @db.VarChar(40)
+  host        String         @db.VarChar(120)
+  prefijo     String         @db.VarChar(200)
+  token       String         @unique @db.VarChar(22)
+  origen      String         @db.VarChar(10) // manual | plantilla
+  activo      Boolean        @default(true)
+  enviadoEn   DateTime
+  creadoEn    DateTime       @default(now())
+  visitas     VisitaEnlace[]
+
+  @@unique([host, prefijo, prospectoId])
+  @@index([prospectoId])
+  @@index([host, activo])
+}
+
+model VisitaEnlace {
+  id           Int           @id @default(autoincrement())
+  enlaceId     Int
+  enlace       EnlaceEnviado @relation(fields: [enlaceId], references: [id])
+  fuente       String        @db.VarChar(3) // log | js
+  tipo         String        @db.VarChar(8) // vista | reenvio | pdf | inicio | fin | clic
+  visitante    String        @db.VarChar(16)
+  ip           String        @db.VarChar(45)
+  aparato      String        @default("") @db.VarChar(60)
+  ua           String        @default("") @db.VarChar(300)
+  pais         String        @default("") @db.VarChar(60)
+  ciudad       String        @default("") @db.VarChar(80)
+  red          String        @default("") @db.VarChar(10) // "" | vpn | relay | hosting
+  geoPendiente Boolean       @default(false)
+  ruta         String        @default("") @db.VarChar(200)
+  detalle      String        @default("") @db.VarChar(40)
+  origen       String        @default("") @db.VarChar(120)
+  segundos     Int?
+  scroll       Int?
+  propia       Boolean       @default(false)
+  huella       String?       @unique @db.VarChar(16)
+  ocurrioEn    DateTime
+  creadoEn     DateTime      @default(now())
+
+  @@index([enlaceId, ocurrioEn])
+  @@index([ip])
+  @@index([visitante])
+}
+
+model LecturaLog {
+  archivo  String   @id @db.VarChar(300)
+  inode    BigInt
+  posicion BigInt
+  leidoEn  DateTime @default(now())
 }
