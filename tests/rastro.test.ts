@@ -195,6 +195,38 @@ describe.runIf(DB_HABILITADA)("rastro: enlaces, visitas, propios y visitante de 
     expect((await prisma.visitaEnlace.findUnique({ where: { huella: "r2" } }))?.visitante).toBe(visitanteDe("203.0.113.5", WA));
   });
 
+  it("«Es mío» sobre el visitante de un reenvio con alias marca tambien el reenvio de su IP", async () => {
+    const e = await enlace();
+    const WA = "WhatsApp/2.23.20.0";
+    const vIphone = visitanteDe("203.0.113.5", UA_PROSPECTO);
+    const sin = { ips: new Set<string>(), visitantes: new Set<string>(), ipsSesion: new Map<string, Date>() };
+    await insertarVisitas([
+      visita(e.id, { huella: "m1", visitante: vIphone, ocurrioEn: new Date("2026-11-06T10:00:00Z") }),
+      visita(e.id, { huella: "m2", tipo: "reenvio", ip: "203.0.113.5", ua: WA, visitante: visitanteDe("203.0.113.5", WA), aparato: "", detalle: "whatsapp", ocurrioEn: new Date("2026-11-06T10:05:00Z") }),
+      visita(e.id, { huella: "m3", tipo: "reenvio", ip: "198.51.100.40", ua: WA, visitante: visitanteDe("198.51.100.40", WA), aparato: "", detalle: "whatsapp", ocurrioEn: new Date("2026-11-06T10:06:00Z") }),
+    ], sin);
+    expect((await visitasDe(p.id)).find((x) => x.tipo === "reenvio" && x.visitante === vIphone)).toBeDefined();
+    expect(await marcarVisitantePropio(vIphone)).toBe(2);
+    expect((await prisma.visitaEnlace.findUnique({ where: { huella: "m2" } }))?.propia).toBe(true);
+    expect((await prisma.visitaEnlace.findUnique({ where: { huella: "m3" } }))?.propia).toBe(false);
+    const ajenas = (await visitasDe(p.id)).filter((x) => !x.propia);
+    expect(ajenas.map((x) => x.ocurrioEn.toISOString())).toEqual(["2026-11-06T10:06:00.000Z"]);
+  });
+
+  it("visitasDe no le da a un reenvio el alias de un visitante propio", async () => {
+    const e = await enlace();
+    const WA = "WhatsApp/2.23.20.0";
+    const vNeri = visitanteDe("203.0.113.7", UA_NERI);
+    await insertarVisitas([
+      visita(e.id, { huella: "n1", ip: "203.0.113.7", ua: UA_NERI, visitante: vNeri, ocurrioEn: new Date("2026-11-06T10:00:00Z") }),
+    ], { ips: new Set<string>(), visitantes: new Set([vNeri]), ipsSesion: new Map<string, Date>() });
+    await insertarVisitas([
+      visita(e.id, { huella: "n2", tipo: "reenvio", ip: "203.0.113.7", ua: WA, visitante: visitanteDe("203.0.113.7", WA), aparato: "", detalle: "whatsapp", ocurrioEn: new Date("2026-11-06T10:05:00Z") }),
+    ], { ips: new Set<string>(), visitantes: new Set<string>(), ipsSesion: new Map<string, Date>() });
+    const r = (await visitasDe(p.id)).find((x) => x.tipo === "reenvio")!;
+    expect(r).toMatchObject({ propia: false, visitante: visitanteDe("203.0.113.7", WA), aparato: "" });
+  });
+
   it("visitasDe trae la etiqueta del enlace, mas reciente primero, con limite", async () => {
     const e = await enlace("https://demo-ejemplo.neracosu.com/factura/", "Demo · factura");
     await insertarVisitas([

@@ -162,7 +162,11 @@ export async function marcarVisitantePropio(visitante: string): Promise<number> 
   const mapa = await leerVisitantesSesion();
   mapa[visitante] = FECHA_PERMANENTE;
   await guardarConfig(CLAVES.rastroVisitantesSesion, JSON.stringify(mapa));
-  return (await prisma.visitaEnlace.updateMany({ where: { visitante }, data: { propia: true } })).count;
+  const propias = await prisma.visitaEnlace.updateMany({ where: { visitante }, data: { propia: true } });
+  // El reenvio que visitasDe le muestra con este visitante (alias por IP) tambien es suyo: sin esto «Es mío» no lo quita.
+  const ips = (await prisma.visitaEnlace.findMany({ where: { visitante }, distinct: ["ip"], select: { ip: true } })).map((f) => f.ip);
+  const reenvios = ips.length ? await prisma.visitaEnlace.updateMany({ where: { tipo: "reenvio", ip: { in: ips }, propia: false }, data: { propia: true } }) : { count: 0 };
+  return propias.count + reenvios.count;
 }
 
 const RE_IPV4 = /^\d{1,3}(\.\d{1,3}){3}$/;
@@ -211,7 +215,8 @@ export async function visitasDe(prospectoId: number, limite = 500): Promise<Visi
   // (la mas reciente). Solo en lo devuelto: la base no cambia.
   const abrieron = new Set(filas.filter((f) => f.tipo === "vista" || f.tipo === "inicio").map((f) => f.visitante));
   const porIp = new Map<string, { visitante: string; aparato: string }>();
-  for (const f of filas) if (f.tipo !== "reenvio" && !porIp.has(f.ip)) porIp.set(f.ip, { visitante: f.visitante, aparato: f.aparato });
+  // Solo de filas no propias: un reenvio ajeno no se disfraza de visitante de Neri.
+  for (const f of filas) if (f.tipo !== "reenvio" && !f.propia && !porIp.has(f.ip)) porIp.set(f.ip, { visitante: f.visitante, aparato: f.aparato });
   const alias = (f: (typeof filas)[number]) => (f.tipo === "reenvio" && !abrieron.has(f.visitante) ? porIp.get(f.ip) : undefined);
   // Sin ip ni ua: la IP se guarda pero no se muestra.
   return filas.map((f) => ({
