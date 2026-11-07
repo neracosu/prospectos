@@ -480,3 +480,25 @@ button, input, select, textarea { font: inherit; }
   .hoja-lateral { width: 720px; }
   .previa__marco { height: 64vh; }
 }
+
+/* Rastro de enlaces: bloque «Lo que hicieron con lo enviado» de la ficha. El reenvio va en ambar: es la senal que
+   mas importa. En el telefono cada fila es un parrafo corrido (la hora en linea) y nada pasa de 390 px. */
+.rastro__cabecera { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.rastro__cabecera .fila-botones { margin: 0; }
+.rastro__enlace { padding: 10px 0; border-bottom: 1px solid var(--borde); }
+.rastro__enlace p { margin: 2px 0; overflow-wrap: anywhere; }
+.rastro__url { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; overflow-wrap: anywhere; }
+.rastro__agregar, .rastro__script { margin-top: 10px; }
+.rastro__script textarea { width: 100%; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; }
+.rastro__dia h3 { font-size: 14px; color: var(--tinta-suave); margin: 16px 0 4px; font-weight: 600; }
+.rastro__filas { list-style: none; padding: 0; margin: 0; }
+.rastro__fila { padding: 6px 0; border-bottom: 1px solid var(--borde); font-size: 14px; display: flex; gap: 8px; flex-wrap: wrap; align-items: baseline; overflow-wrap: anywhere; }
+.rastro__fila time { color: var(--tinta-suave); font-size: 12px; min-width: 44px; }
+.rastro__fila--reenvio { color: var(--ambar); }
+.rastro__visitante { font-weight: 600; }
+.rastro__pie { margin: 10px 0 0; font-size: 12px; }
+@media (max-width: 480px) {
+  .rastro__fila { display: block; }
+  .rastro__fila > * { margin-right: 6px; }
+  .rastro__fila .boton { margin-top: 4px; }
+}

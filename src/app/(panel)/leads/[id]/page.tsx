@@ -10,6 +10,7 @@ import { SiguientePaso } from "@/componentes/SiguientePaso";
 import { DatosLead } from "@/componentes/DatosLead";
 import { BotonCopiar } from "@/componentes/BotonCopiar";
 import { EnviarPorCorreo } from "@/componentes/EnviarPorCorreo";
+import { RastroBloque } from "@/componentes/RastroBloque";
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +18,7 @@ const TEXTO_EVENTO: Record<string, string> = { enviado: "Propuesta enviada", seg
 
 // Ficha de un lead (panel CRM, fase 2): siguiente paso al frente, datos, contacto, propuesta, nota; historial a la
 // derecha en escritorio y plegado en el telefono. Una fila del directorio sigue en /prospectos/<id>.
-export default async function FichaLead({ params }: { params: Promise<{ id: string }> }) {
+export default async function FichaLead({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<Record<string, string | undefined>> }) {
   const u = await exigirSesion();
   const id = Number((await params).id);
   const p = Number.isInteger(id) ? await fichaProspecto(id) : null;
@@ -27,6 +28,7 @@ export default async function FichaLead({ params }: { params: Promise<{ id: stri
   if (u.rol !== "dueno" && p.fuenteLead !== "directorio") notFound();
   const conValor = u.rol === "dueno" && p.valorEstimado !== null;
   const nichos = await listarNichos();
+  const conPropias = (await searchParams).mias === "1";
   const contacto: [string, string][] = [
     ["WhatsApp", p.whatsapp ? `https://wa.me/${p.whatsapp}` : ""], ["Teléfono", p.telefono ? `tel:${p.telefono.replace(/[^\d+]/g, "")}` : ""],
     ["Correo", p.email ? `mailto:${p.email}` : ""], ["Web", p.web], ["Instagram", p.instagram], ["Facebook", p.facebook], ["TikTok", p.tiktok],
@@ -67,6 +69,7 @@ export default async function FichaLead({ params }: { params: Promise<{ id: stri
             </section>
           )}
           {p.tienePropuesta && u.rol === "dueno" && <EnviarPorCorreo id={p.id} email={p.email} />}
+          <RastroBloque prospectoId={p.id} propuestaUrl={p.propuestaUrl} rol={u.rol} conPropias={conPropias} ruta={`/leads/${p.id}`} />
           <details className="acordeon historial-plegado">
             <summary><span>Historial</span><span className="suave">{p.historial.length}</span></summary>
             <div className="acordeon__cuerpo">{historial}</div>

@@ -7,6 +7,8 @@ import { FormularioNicho, FormularioUsuario } from "@/componentes/FormularioAjus
 import { FormularioMensajesCobro, FormularioEmisor, FormularioTarifa, FormularioMensajesAviso } from "@/componentes/FormularioAjustesCobros";
 import { FormularioPin } from "@/componentes/FormularioPin";
 import { FormularioAjustesCorreos } from "@/componentes/FormularioAjustesCorreos";
+import { FormularioAjustesRastro } from "@/componentes/FormularioAjustesRastro";
+import { leerIpsPropias } from "@/lib/rastro";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +17,7 @@ const SECCIONES = [
   { id: "nichos", texto: "Mensajes por nicho" },
   { id: "cobros", texto: "Cobros" },
   { id: "correos", texto: "Correos" },
+  { id: "rastro", texto: "Rastro de enlaces" },
   { id: "pin", texto: "Mi PIN" },
 ] as const;
 
@@ -23,7 +26,7 @@ const SECCIONES = [
 export default async function Ajustes({ searchParams }: { searchParams: Promise<{ abrir?: string }> }) {
   await exigirRol("dueno");
   const abrir = (await searchParams).abrir ?? "";
-  const [nichos, usuarios, mensajeRecordatorio, mensajeVencido, emisor, tarifaHora, avisoHito, avisoVersion, avisoCobro, correosPorDia, correosAutomatico] = await Promise.all([
+  const [nichos, usuarios, mensajeRecordatorio, mensajeVencido, emisor, tarifaHora, avisoHito, avisoVersion, avisoCobro, correosPorDia, correosAutomatico, ipsPropias] = await Promise.all([
     prisma.nicho.findMany({ orderBy: { nombre: "asc" } }),
     listarUsuarios(),
     leerConfig(CLAVES.mensajeRecordatorio),
@@ -35,6 +38,7 @@ export default async function Ajustes({ searchParams }: { searchParams: Promise<
     leerConfig(CLAVES.avisoCobro),
     leerCorreosPorDia(),
     leerCorreosAutomatico(),
+    leerIpsPropias(),
   ]);
   const abierta = (id: string) => abrir === id || (id === "nichos" && abrir.startsWith("nicho-"));
   return (
@@ -81,6 +85,11 @@ export default async function Ajustes({ searchParams }: { searchParams: Promise<
         <details className="acordeon" id="correos" open={abierta("correos")}>
           <summary><span>Correos</span><span className="suave">{correosPorDia} por día · {correosAutomatico ? "automático encendido" : "automático en pausa"}</span></summary>
           <div className="acordeon__cuerpo"><FormularioAjustesCorreos key={`${correosPorDia}-${correosAutomatico}`} tope={correosPorDia} automatico={correosAutomatico} /></div>
+        </details>
+
+        <details className="acordeon" id="rastro" open={abierta("rastro")}>
+          <summary><span>Rastro de enlaces</span><span className="suave">IPs propias que no cuentan</span></summary>
+          <div className="acordeon__cuerpo"><FormularioAjustesRastro key={ipsPropias.join(",")} ips={ipsPropias} /></div>
         </details>
 
         <details className="acordeon" id="pin" open={abierta("pin")}>

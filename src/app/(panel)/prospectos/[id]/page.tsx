@@ -8,18 +8,20 @@ import { BotonCopiar } from "@/componentes/BotonCopiar";
 import { EnviarPorCorreo } from "@/componentes/EnviarPorCorreo";
 import { SugerenciasWeb } from "@/componentes/SugerenciasWeb";
 import { FichaNegocioBloque } from "@/componentes/FichaNegocioBloque";
+import { RastroBloque } from "@/componentes/RastroBloque";
 
 export const dynamic = "force-dynamic";
 
 const TEXTO_EVENTO: Record<string, string> = { enviado: "Enviado", seguimiento: "Escribió de nuevo", abierto: "Abrió la propuesta", etapa: "Cambio de etapa", nota: "Nota", saltado: "Saltado", salto_deshecho: "Salto deshecho", importado: "Ingresó", lectura_web: "Leyó la web", correo_abierto: "Abrió el correo", correo_clic: "Tocó “Ver la propuesta” en el correo", pdf_descargado: "Descargó el PDF", correo_bloqueado: "Correo bloqueado", ficha_generada: "Ficha investigada", ficha_revisada: "Ficha revisada" };
 
-export default async function Ficha({ params }: { params: Promise<{ id: string }> }) {
+export default async function Ficha({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<Record<string, string | undefined>> }) {
   const u = await exigirSesion();
   const id = Number((await params).id);
   const p = Number.isInteger(id) ? await fichaProspecto(id) : null;
   if (!p) notFound();
   // Un lead tiene su propia ficha (fase 2); aqui queda la fila del directorio con las acciones de la cola.
   if (p.esLead) redirect(`/leads/${id}`);
+  const conPropias = (await searchParams).mias === "1";
   // [etiqueta, enlace, campo]: el campo es el que guarda fuentesPorCampo, para
   // poder mostrar al lado de cada dato donde lo publica el negocio.
   const contacto: [string, string, string][] = [
@@ -62,6 +64,7 @@ export default async function Ficha({ params }: { params: Promise<{ id: string }
       )}
       {p.tienePropuesta && u.rol === "dueno" && <EnviarPorCorreo id={p.id} email={p.email} />}
       <FichaAcciones id={p.id} etapa={p.etapa} nota={p.nota} proximoSeguimiento={p.proximoSeguimiento} contacto={p} mensaje={p.mensaje} rol={u.rol} />
+      <RastroBloque prospectoId={p.id} propuestaUrl={p.propuestaUrl} rol={u.rol} conPropias={conPropias} ruta={`/prospectos/${p.id}`} />
       <section className="tarjeta">
         <b>Historial</b>
         <ul className="historial" style={{ listStyle: "none", padding: 0, margin: 0 }}>
