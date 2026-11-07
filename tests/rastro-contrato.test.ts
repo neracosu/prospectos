@@ -20,6 +20,23 @@ describe("parsearLinea", () => {
     expect(parsearLinea("")).toBeNull();
   });
 });
+describe("parsearLinea, casos de borde", () => {
+  it("peticion sin ruta devuelve null", () => {
+    expect(parsearLinea(L("203.0.113.5", "06/Nov/2026:09:08:32 -0800", "-", 408, "-", IPHONE))).toBeNull();
+  });
+  it("acepta IPv6 y peticion sin protocolo", () => {
+    expect(parsearLinea(L("2001:db8::5", "06/Nov/2026:09:08:32 -0800", "GET /x HTTP/1.1", 200, "-", IPHONE))?.ip).toBe("2001:db8::5");
+    expect(parsearLinea(L("203.0.113.5", "06/Nov/2026:09:08:32 -0800", "GET /x", 200, "-", IPHONE))?.ruta).toBe("/x");
+  });
+});
+describe("clasificarUa, limites de palabra", () => {
+  it("curly y previewer no son robot ni reenvio", () => {
+    expect(clasificarUa(WIN + " Curly").clase).toBe("visita");
+    expect(clasificarUa(WIN + " previewer").clase).toBe("visita");
+    expect(clasificarUa("curl/7.81.0").clase).toBe("robot");
+    expect(clasificarUa("Algo preview de enlaces")).toEqual({ clase: "reenvio", app: "otro" });
+  });
+});
 describe("clasificarUa", () => {
   it("reenvio por app", () => {
     expect(clasificarUa("WhatsApp/2.23.20.0")).toEqual({ clase: "reenvio", app: "whatsapp" });

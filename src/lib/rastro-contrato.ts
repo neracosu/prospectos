@@ -18,6 +18,7 @@ export function parsearLinea(linea: string): LineaLog | null {
   const desfase = (m[8] === "-" ? -1 : 1) * (Number(m[9]) * 60 + Number(m[10]));
   const ms = Date.UTC(Number(m[4]), mes, Number(m[2]), Number(m[5]), Number(m[6]), Number(m[7])) - desfase * 60_000;
   const partes = desescapar(m[11]).split(" ");
+  if (!partes[1] || !partes[1].startsWith("/")) return null;
   const ref = desescapar(m[14]);
   return {
     ip: m[1], fecha: new Date(ms), metodo: partes[0] ?? "", ruta: partes[1] ?? "", estado: Number(m[12]),
@@ -38,11 +39,11 @@ function appDeReenvio(ua: string): string | null {
   if (u.includes("linkedinbot")) return "linkedin";
   if (u.includes("instagram") && u.includes("externalhit")) return "instagram";
   if (u.includes("imessage")) return "imessage";
-  if (u.includes("preview")) return "otro";
+  if (/\bpreview\b/.test(u)) return "otro";
   return null;
 }
 
-const RE_ROBOT = /bot\b|crawl|spider|headlesschrome|curl|python-requests|go-http|atalaya-monitor|claudebot|getdomaindata|semrush|lighthouse/i;
+const RE_ROBOT = /bot\b|\bcrawl|spider|headlesschrome|\bcurl|python-requests|go-http|atalaya-monitor|claudebot|getdomaindata|semrush|lighthouse/i;
 
 function enAppDe(ua: string): boolean {
   if (/iPhone|iPad/.test(ua) && !ua.includes("Safari/")) return true;
