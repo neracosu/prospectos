@@ -214,6 +214,18 @@ describe.runIf(DB_HABILITADA)("rastro-lector: access-logs a visitas", () => {
     expect((await importarArchivados({ host: HOST, dirArchivo })).visitas).toBe(1);
   });
 
+  it("importarArchivados con ensayo cuenta lo que coincide y no escribe; sin ensayo inserta", async () => {
+    writeFileSync(join(dirArchivo, `${HOST}-ssl_log-Oct-2026.gz`), gzipSync(texto([
+      L("203.0.113.5", "20/Oct/2026:10:00:00 -0400", "GET /factura/ HTTP/2.0", 200, "-", IPHONE),
+      L("203.0.113.5", "30/Oct/2026:10:00:00 -0400", "GET /factura/ HTTP/2.0", 200, "-", IPHONE),
+    ])));
+    const r = await importarArchivados({ host: HOST, dirArchivo, ensayo: true });
+    expect(r.visitas).toBeGreaterThan(0);
+    expect(await prisma.visitaEnlace.count()).toBe(0);
+    expect((await importarArchivados({ host: HOST, dirArchivo })).visitas).toBe(r.visitas);
+    expect(await prisma.visitaEnlace.count()).toBe(r.visitas);
+  });
+
   it("dos lecturas a la vez: la segunda espera el candado y no duplica", async () => {
     writeFileSync(vivo(), texto(SIETE));
     const [a, b] = await Promise.all([leerLogs(o()), leerLogs(o())]);

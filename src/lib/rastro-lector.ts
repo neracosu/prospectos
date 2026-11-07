@@ -17,7 +17,7 @@ import {
   type EnlaceFila, type VisitaNueva, type Propios,
 } from "@/lib/rastro";
 
-export type OpcionesLector = { dirLogs?: string; dirArchivo?: string; hosts?: string[]; desdeCero?: boolean; soloPrefijo?: { host: string; prefijo: string } };
+export type OpcionesLector = { dirLogs?: string; dirArchivo?: string; hosts?: string[]; desdeCero?: boolean; soloPrefijo?: { host: string; prefijo: string }; silencioso?: boolean };
 export type ResultadoLectura = { lineas: number; visitas: number; archivosReleidos: string[] };
 
 export const DIR_LOGS_DEFECTO = "/home/neracosu/access-logs";
@@ -58,7 +58,7 @@ export function visitasDeLinea(l: LineaLog, enlacesDelHost: Pick<EnlaceFila, "id
 
 // ---- procesador de lineas de una pasada (enlaces, cache de /p/, lotes) ----
 
-type Filtro = { prefijo?: string; desde?: Date };
+type Filtro = { prefijo?: string; desde?: Date; ensayo?: boolean };
 
 class Procesador {
   lineas = 0;
@@ -105,7 +105,8 @@ class Procesador {
     if (!this.lote.length) return;
     const lote = this.lote;
     this.lote = [];
-    this.visitas += await insertarVisitas(lote, this.propios);
+    // ensayo: se cuentan las que coinciden (pueden incluir huellas ya guardadas) y no se escribe nada
+    this.visitas += this.filtro.ensayo ? lote.length : await insertarVisitas(lote, this.propios);
     for (const v of lote) this.enlacesConVisita.add(v.enlaceId);
   }
 }
@@ -229,7 +230,7 @@ export async function leerLogs(o: OpcionesLector = {}): Promise<ResultadoLectura
     const guardarEstado = !o.soloPrefijo;
     const releidos: string[] = [];
     for (const host of hosts) await leerHost(host, p, o, guardarEstado, releidos);
-    avisar(p);
+    if (!o.silencioso) avisar(p);
     return { lineas: p.lineas, visitas: p.visitas, archivosReleidos: releidos };
   }, { timeout: 300_000, maxWait: 60_000 });
 }
@@ -238,17 +239,17 @@ const escaparRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 // Carga la historia de un host desde todos sus .gz (p. ej. al registrar un enlace enviado hace dias).
 // No toca LecturaLog: la huella unica evita duplicar lo que el lector ya guardo.
-export async function importarArchivados(o: { host: string; prefijo?: string; desde?: Date; dirArchivo?: string }): Promise<ResultadoLectura> {
+export async function importarArchivados(o: { host: string; prefijo?: string; desde?: Date; dirArchivo?: string; ensayo?: boolean }): Promise<ResultadoLectura> {
   const dir = dirArchivoDe(o);
   const re = new RegExp(`^${escaparRe(o.host)}-(ssl_log-)?[A-Z][a-z]{2}-\\d{4}\\.gz$`);
   let nombres: string[];
   try { nombres = readdirSync(dir).filter((n) => re.test(n)).sort(); } catch { nombres = []; }
-  const p = new Procesador(await enlacesActivosPorHost(), await cargarPropios(), { prefijo: o.prefijo, desde: o.desde });
+  const p = new Procesador(await enlacesActivosPorHost(), await cargarPropios(), { prefijo: o.prefijo, desde: o.desde, ensayo: o.ensayo });
   for (const n of nombres) {
     const ruta = join(dir, n);
     try { await leerGz(ruta, (s) => p.linea(o.host, s)); } catch (err) { avisarError(ruta, err); }
     await p.vaciar();
   }
-  avisar(p);
+  if (!o.ensayo) avisar(p);
   return { lineas: p.lineas, visitas: p.visitas, archivosReleidos: [] };
 }
