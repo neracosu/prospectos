@@ -6,7 +6,7 @@ import { gzipSync } from "node:zlib";
 import { prisma } from "@/lib/db";
 import { DB_HABILITADA, limpiarBase, sembrarBasico, crearProspectoDePrueba } from "./ayuda-db";
 import { registrarEnlace, guardarIpsPropias, obtenerOCrearEnlacePlantilla, type EnlaceFila } from "@/lib/rastro";
-import { parsearLinea } from "@/lib/rastro-contrato";
+import { parsearLinea, armarLineaTiempo, resumirEnlace, visitanteDe, type VisitaFila } from "@/lib/rastro-contrato";
 import { leerLogs, importarArchivados, visitasDeLinea } from "@/lib/rastro-lector";
 
 const L = (ip: string, fecha: string, req: string, estado: number, ref: string, ua: string) => `${ip} - - [${fecha}] "${req}" ${estado} 1234 "${ref}" "${ua}"`;
@@ -53,6 +53,36 @@ describe("visitasDeLinea (pura)", () => {
     expect(de(L("203.0.113.5", "06/Nov/2026:10:00:00 -0400", "POST /factura/ HTTP/2.0", 200, "-", WIN))).toBeNull();
     expect(de(L("203.0.113.5", "06/Nov/2026:10:00:00 -0400", "GET /factura/ HTTP/2.0", 404, "-", WIN))).toBeNull();
     expect(de(L("203.0.113.5", "06/Nov/2026:10:00:00 -0400", "GET /factura/app.js HTTP/2.0", 200, "-", WIN))).toBeNull();
+  });
+});
+
+describe("visitasDeLinea: Meta y el visitante del reenvio", () => {
+  const enlaces = [{ id: 7, prefijo: "/factura/" }] as EnlaceFila[];
+  const de = (linea: string) => visitasDeLinea(parsearLinea(linea)!, enlaces, linea);
+  const ANDROID_K = "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36";
+  const FB = "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)";
+
+  it("una vista con UA de navegador desde una IP de Meta se descarta; la vista previa de Meta sigue siendo reenvio", () => {
+    expect(de(L("57.141.16.113", "01/Nov/2026:13:31:00 -0400", "GET /factura/ HTTP/1.1", 200, "-", ANDROID_K))).toBeNull();
+    expect(de(L("2a03:2880:f12f::1", "01/Nov/2026:13:31:00 -0400", "GET /factura/ HTTP/1.1", 200, "-", ANDROID_K))).toBeNull();
+    expect(de(L("173.252.95.5", "01/Nov/2026:13:31:00 -0400", "GET /factura/ HTTP/1.1", 200, "-", FB))).toMatchObject({ tipo: "reenvio", detalle: "facebook", ip: "173.252.95.5" });
+    expect(de(L("203.0.113.5", "01/Nov/2026:13:31:00 -0400", "GET /factura/ HTTP/1.1", 200, "-", ANDROID_K))).toMatchObject({ tipo: "vista" });
+  });
+
+  it("el visitante de un reenvio es la app: la rafaga de 3 IPs es una fila y no es visitante", () => {
+    const lineas = ["173.252.95.5", "69.171.249.10", "31.13.115.7"].map((ip, i) => L(ip, `01/Nov/2026:13:31:0${i} -0400`, "GET /factura/ HTTP/1.1", 200, "-", FB));
+    const vs = lineas.map(de);
+    expect(new Set(vs.map((v) => v!.visitante))).toEqual(new Set([visitanteDe("reenvio", "facebook")]));
+    expect(vs.map((v) => v!.ip)).toEqual(["173.252.95.5", "69.171.249.10", "31.13.115.7"]);
+    expect(vs.every((v) => v!.aparato === "")).toBe(true);
+    // una apertura del prospecto antes: la rafaga es un reenvio de verdad, uno solo
+    const filas: VisitaFila[] = vs.map((v, i) => ({ ...v!, id: i + 2, etiqueta: "Demo", propia: false }));
+    const apertura = { ...de(L("203.0.113.5", "01/Nov/2026:13:00:00 -0400", "GET /factura/ HTTP/2.0", 200, "-", IPHONE))!, id: 1, etiqueta: "Demo", propia: false };
+    const todas = [apertura, ...filas];
+    expect(armarLineaTiempo(todas).dias[0].filas.filter((f) => f.clase === "reenvio")).toHaveLength(1);
+    // sola (sin apertura) es el envio de Neri: ni reenvio ni visitante (regla 3)
+    expect(resumirEnlace(filas, 7)).toMatchObject({ reenvios: 0, visitantes: 0 });
+    expect(resumirEnlace(todas, 7)).toMatchObject({ reenvios: 1, visitantes: 1 });
   });
 });
 

@@ -9,7 +9,7 @@ import { createGunzip } from "node:zlib";
 import { prisma } from "@/lib/db";
 import { hoyCaracas } from "@/lib/fecha-caracas";
 import {
-  parsearLinea, clasificarUa, resumirAparato, visitanteDe, huellaDe, rutaPagina, esPdf, enlaceQueCoincide, PATRON_P,
+  parsearLinea, clasificarUa, resumirAparato, visitanteDe, esIpDeMeta, huellaDe, rutaPagina, esPdf, enlaceQueCoincide, PATRON_P,
   type LineaLog,
 } from "@/lib/rastro-contrato";
 import {
@@ -38,6 +38,8 @@ function origenDe(referer: string): string {
 }
 
 // Pura. Solo necesita id y prefijo del enlace: el lector la prueba con un enlace provisional antes de crear el de /p/.
+// El visitante de un reenvio es la app, no la IP: la vista previa sale de muchas IPs a la vez (Meta usa una docena).
+// La IP se guarda igual (esPropia por IP/sesion y el alias de visitasDe).
 export function visitasDeLinea(l: LineaLog, enlacesDelHost: Pick<EnlaceFila, "id" | "prefijo">[], crudo: string): VisitaNueva | null {
   if (l.metodo !== "GET" || !ESTADOS_VALIDOS.has(l.estado)) return null;
   const ruta = rutaPagina(l.ruta);
@@ -46,10 +48,12 @@ export function visitasDeLinea(l: LineaLog, enlacesDelHost: Pick<EnlaceFila, "id
   if (!enlace) return null;
   const ua = clasificarUa(l.ua);
   if (ua.clase === "robot") return null;
+  // Meta tambien pide la pagina con UA de navegador al armar la vista previa: desde sus rangos solo vale el reenvio
+  if (ua.clase !== "reenvio" && esIpDeMeta(l.ip)) return null;
   const pdf = esPdf(l.ruta) || Boolean(PATRON_P.exec(ruta)?.[2]);
   const tipo = ua.clase === "reenvio" ? "reenvio" : pdf ? "pdf" : "vista";
   return {
-    enlaceId: enlace.id, fuente: "log", tipo, visitante: visitanteDe(l.ip, l.ua), ip: l.ip, ua: l.ua,
+    enlaceId: enlace.id, fuente: "log", tipo, visitante: ua.clase === "reenvio" ? visitanteDe("reenvio", ua.app) : visitanteDe(l.ip, l.ua), ip: l.ip, ua: l.ua,
     aparato: ua.clase === "visita" ? resumirAparato(l.ua) : "", pais: "", ciudad: "", red: "", geoPendiente: true,
     ruta, detalle: ua.clase === "reenvio" ? ua.app : "", origen: origenDe(l.referer), segundos: null, scroll: null,
     huella: huellaDe(crudo), ocurrioEn: l.fecha,
