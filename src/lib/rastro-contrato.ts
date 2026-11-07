@@ -105,6 +105,7 @@ export function esPdf(ruta: string): boolean {
 }
 
 const RE_EXTENSION = /\.[a-z0-9]{1,5}$/i;
+const RE_HTML = /\.html?$/i;
 
 export function descomponerUrl(url: string): { host: string; prefijo: string } | null {
   let u: URL;
@@ -113,6 +114,7 @@ export function descomponerUrl(url: string): { host: string; prefijo: string } |
   if (host !== "neracosu.com" && !host.endsWith(".neracosu.com")) return null;
   let ruta = u.pathname;
   if (ruta.endsWith("/index.html")) ruta = ruta.slice(0, -"index.html".length);
+  else if (RE_HTML.test(ruta)) ruta = ruta.replace(RE_HTML, "/"); // /x-1.html es la pagina /x-1 (URL limpia)
   else if (!ruta.endsWith("/")) {
     // URL limpia sin barra final (/propuesta/x-1) es su propia carpeta; solo un archivo con extension se recorta al directorio
     const corte = ruta.lastIndexOf("/") + 1;

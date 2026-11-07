@@ -90,6 +90,11 @@ describe("rutas y prefijos", () => {
     expect(descomponerUrl("https://neracosu.com/index.html")).toBeNull();
     expect(descomponerUrl("https://neracosu.com/hoja.pdf")).toBeNull();
   });
+  it("descomponerUrl: .html/.htm es la pagina misma (sin extension y con barra); index.html sigue siendo la carpeta", () => {
+    expect(descomponerUrl("https://neracosu.com/propuesta/x-1.html")).toEqual({ host: "neracosu.com", prefijo: "/propuesta/x-1/" });
+    expect(descomponerUrl("https://neracosu.com/propuesta/x-1.HTM")).toEqual({ host: "neracosu.com", prefijo: "/propuesta/x-1/" });
+    expect(descomponerUrl("https://neracosu.com/propuesta/x-1/index.html")).toEqual({ host: "neracosu.com", prefijo: "/propuesta/x-1/" });
+  });
   it("enlaceQueCoincide: la ruta sin barra final coincide con su carpeta, pero no con otra que empiece igual", () => {
     const es = [{ prefijo: "/factura/" }];
     expect(enlaceQueCoincide("/factura", es)).toBe(es[0]);
