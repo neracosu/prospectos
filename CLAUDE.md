@@ -4,6 +4,61 @@ Plataforma de Neri para prospectar por nicho y llevar los proyectos vendidos. Pi
 prospección: cola del día, embudo, propuesta por enlace, seguimientos) en producción en
 `prospectos.neracosu.com`. Entra con PIN.
 
+## Rastro de enlaces a prospectos (desde el 2026-11-06)
+
+Spec: `docs/superpowers/specs/2026-11-06-rastro-enlaces-prospectos-design.md`. Plan:
+`docs/superpowers/plans/2026-11-06-rastro-enlaces-prospectos.md`.
+
+**Qué es.** Lo que hizo el prospecto con cada enlace enviado: aperturas, aparato, lugar aproximado, duración,
+reenvíos por WhatsApp/Telegram/Facebook. Decisión de Neri: las propuestas van siempre como enlace, nunca como PDF
+adjunto. Sin avisos: se ve en el panel.
+
+- **Tablas** (migración escrita a mano, `prisma/migrations/20261107090000_rastro_enlaces`, siembra `candado_rastro` en
+  `Configuracion`). `EnlaceEnviado`: `token` de 22, `host` + `prefijo`, `origen` `manual|plantilla`, único por
+  `(host, prefijo, prospectoId)`. `VisitaEnlace`: `fuente` `log|js`, `tipo` `vista|reenvio|pdf|inicio|fin|clic`,
+  `visitante` = sha256(`ip|ua`) en 16 hex, `huella` única por línea cruda del log, `geoPendiente`, `propia`. La IP se
+  guarda (agrupar, excluir, re-geolocalizar) pero nunca se muestra. La poda a 400 días está prevista en el spec y
+  **todavía no existe en el código**. `LecturaLog`: inode y posición por archivo.
+- **Fuente 1, access-logs** (`src/lib/rastro-lector.ts`, puro en `rastro-contrato.ts`): lee
+  `~/access-logs/<host>-ssl_log` y `<host>` (`RASTRO_DIR_LOGS`; archivados en `~/logs/`, `RASTRO_DIR_ARCHIVO`). Cuenta
+  solo GET con 200/206/304. ⚠️ **El archivo vivo se trunca a diario ~04:12 hora del servidor** y cPanel anexa lo suyo
+  al `.gz` del mes en `~/logs/`. El lector compara inode, tamaño y el byte anterior a la posición; si rotó o encogió,
+  relee los `.gz` del mes anterior y el actual y luego el vivo desde cero. La huella única evita duplicados. Candado
+  `candado_rastro` (`SELECT … FOR UPDATE`) contra pasadas dobles. Un error en un archivo se aísla con
+  `console.error("[rastro] error en …")` y no frena a los demás. `/p/<codigo>` del host del panel se registra solo
+  (`obtenerOCrearEnlacePlantilla`, origen `plantilla`).
+- **Fuente 2, `public/rastro.js`**: etiqueta
+  `<script src="https://prospectos.neracosu.com/rastro.js?v=1" data-enlace="<token>" defer>` en la página del
+  enlace. Manda `inicio`/`fin`/`clic` por `sendBeacon` a `POST /api/rastro/evento` (público, 204 a robots, CORS solo
+  `neracosu.com` y `*.neracosu.com`). `?soyyo=1` marca ese navegador como propio (`localStorage nc_soyyo`) y deja de
+  mandar; `?soyyo=0` lo deshace. El origen se toma como en `medir.js` (`?de=`, `utm_source`, `fbclid`, referer ajeno).
+- **Cron** (todavía por instalar al escribir esto; la línea está en el plan):
+  `*/10 * * * * bash -c 'set -a; . ~/.config/prospectos/env; set +a; cd ~/public_html/prospectos.neracosu.com && node_modules/.bin/tsx scripts/rastro-leer.mts >> ~/.config/prospectos/rastro.log 2>&1'`
+  y el día 3 de cada mes `20 4 3 * *` lo mismo con `scripts/actualizar-geo.mts` (log `geo.log`). Solo imprime si hubo
+  visitas nuevas. `--sin-geo` no geolocaliza.
+- **Geolocalización** (`src/lib/rastro-geo.ts`): base DB-IP Lite en `~/.config/prospectos/geo/dbip-city-lite.mmdb`
+  (`RASTRO_MMDB`), **fuera del repo**, ~130 MB, atribución CC BY 4.0. `actualizar-geo.mts` baja el `.gz` del mes (o el
+  anterior si da 404), exige >50 MB y que 8.8.8.8 resuelva, y rota dejando `.anterior`. ⚠️ **El panel nunca carga el
+  `.mmdb`**: solo los scripts (no importar `rastro-geo` desde rutas, acciones ni páginas). Por eso las visitas recién
+  llegadas dicen «ubicación: en unos minutos» hasta la siguiente pasada.
+- **Importar hacia atrás**: `node_modules/.bin/tsx scripts/rastro-leer.mts --importar --enlace <id> [--desde AAAA-MM-DD] [--aplicar]`.
+  Sin `--aplicar` es ensayo: cuenta lo que coincide sin escribir (puede incluir lo ya guardado). `--desde` se lee como
+  medianoche de Caracas. En la ficha, el botón «cargar lo archivado» hace lo mismo (`importarArchivadosAccion`).
+- **Visitas propias**: lista de IPs en Ajustes › Rastro de enlaces (`rastro_ips_propias`) y el visitante (IP+UA) de
+  cualquier sesión del panel en los últimos 30 días (`rastro_visitantes_sesion`). «Es mío» en la ficha reclasifica
+  (`marcarVisitanteMio`); «Mostrar las mías» es `?mias=1`.
+- **Lo que se ve**: bloque «Lo que hicieron con lo enviado» (`src/componentes/RastroBloque.tsx`) en `/leads/[id]` y
+  `/prospectos/[id]`: agregar enlace, copiar etiqueta, actualizar, cargar lo archivado, quitar
+  (`src/acciones/rastro.ts`). En el tablero, la línea `lead__rastro` sale de `resumenesParaTablero` (etiqueta del enlace
+  abierto de último; personas y reenvíos sumando todos los enlaces).
+- **Pruebas**: `tests/rastro*.test.ts`, `tests/acciones-rastro.test.ts`, `tests/leads.test.ts`
+  (`npm test` y `PROSPECTOS_TEST_DB=1 npm test`). Recorrido a 390 px: `scripts/verificar-flujo-rastro.mts` contra el
+  clon (`~/dev-clon-prospectos`, `next dev -p 3021`, base de tests; se niega a correr si `DATABASE_URL` no es de
+  tests). ⚠️ Tras cada migración el clon necesita `npx prisma generate`.
+- **Pendientes menores conocidos (2026-11-06)**: el visitante que solo reenvió sale como «aparato desconocido»; las IPs
+  inválidas en Ajustes se descartan sin aviso; `esIpPrivada` no cubre `::ffff:`; si el `.gz` de una rotación falla al
+  leerse, se pierden esas líneas (queda el aviso en `rastro.log`).
+
 ## Sin nombres de proyectos ni conteos de trabajos (regla de Neri, 2026-10-31)
 
 «No deberíamos hablar directamente de otros proyectos en las propuestas, por ejemplo adastram… solo que tenemos experiencia
