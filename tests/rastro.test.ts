@@ -83,6 +83,24 @@ describe.runIf(DB_HABILITADA)("rastro: enlaces, visitas, propios y visitante de 
     expect(esPropia("203.0.113.99", visitanteDe("203.0.113.99", UA_PROSPECTO), pr)).toBe(true);
   });
 
+  it("reenvio (vista previa) desde una IP con sesion del panel en las ultimas 24 h es propio; el navegador de otro no", async () => {
+    const e = await enlace();
+    const ahora = new Date();
+    await anotarVisitanteSesion("198.51.100.7", UA_NERI, new Date(ahora.getTime() - 2 * 3600_000));
+    await anotarVisitanteSesion("198.51.100.8", UA_NERI, new Date(ahora.getTime() - 3 * 86400_000));
+    const mapaIps = JSON.parse(await leerConfig(CLAVES.rastroIpsSesion)) as Record<string, string>;
+    expect(Object.keys(mapaIps).sort()).toEqual(["198.51.100.7", "198.51.100.8"]);
+    const pr = await cargarPropios(ahora);
+    const WA = "WhatsApp/2.23.20.0";
+    await insertarVisitas([
+      visita(e.id, { huella: "s1", tipo: "reenvio", ip: "198.51.100.7", ua: WA, visitante: visitanteDe("198.51.100.7", WA), aparato: "", detalle: "whatsapp", ocurrioEn: ahora }),
+      visita(e.id, { huella: "s2", tipo: "vista", ip: "198.51.100.7", ua: UA_PROSPECTO, visitante: visitanteDe("198.51.100.7", UA_PROSPECTO), ocurrioEn: ahora }),
+      visita(e.id, { huella: "s3", tipo: "reenvio", ip: "198.51.100.8", ua: WA, visitante: visitanteDe("198.51.100.8", WA), aparato: "", detalle: "whatsapp", ocurrioEn: ahora }),
+    ], pr);
+    const filas = await prisma.visitaEnlace.findMany({ orderBy: { huella: "asc" } });
+    expect(filas.map((f) => [f.huella, f.propia])).toEqual([["s1", true], ["s2", false], ["s3", false]]);
+  });
+
   it("cargarPropios olvida visitantes de sesion de hace mas de 30 dias, salvo los marcados a mano", async () => {
     const viejo = new Date("2026-09-01T12:00:00Z");
     await anotarVisitanteSesion("198.51.100.7", UA_NERI, viejo);
@@ -115,11 +133,14 @@ describe.runIf(DB_HABILITADA)("rastro: enlaces, visitas, propios y visitante de 
     expect(mapa[visitanteDe("198.51.100.7", UA_NERI)]).toBeUndefined();
     expect(mapa[visitanteDe("198.51.100.7", "UA-0")]).toBeDefined();
     expect(mapa[visitanteDe("198.51.100.7", "UA-59")]).toBeDefined();
+    // la IP comparte la cadencia: una sola entrada, refrescada con la ultima escritura
+    const ips = JSON.parse(await leerConfig(CLAVES.rastroIpsSesion)) as Record<string, string>;
+    expect(Object.keys(ips)).toEqual(["198.51.100.7"]);
   });
 
   it("guardarIpsPropias filtra basura, quita repetidas y reclasifica visitas viejas", async () => {
     const e = await enlace();
-    await insertarVisitas([visita(e.id, { ip: "203.0.113.99", huella: "a1" }), visita(e.id, { ip: "203.0.113.5", huella: "a2" })], { ips: new Set(), visitantes: new Set() });
+    await insertarVisitas([visita(e.id, { ip: "203.0.113.99", huella: "a1" }), visita(e.id, { ip: "203.0.113.5", huella: "a2" })], { ips: new Set(), visitantes: new Set(), ipsSesion: new Map() });
     await guardarIpsPropias(["203.0.113.99", " 203.0.113.99 ", "2001:db8::1", "no-ip", "1.2.3", "<b>"]);
     expect(await leerIpsPropias()).toEqual(["203.0.113.99", "2001:db8::1"]);
     const filas = await prisma.visitaEnlace.findMany({ orderBy: { huella: "asc" } });
@@ -129,17 +150,17 @@ describe.runIf(DB_HABILITADA)("rastro: enlaces, visitas, propios y visitante de 
   it("insertarVisitas salta huellas repetidas y marca propias; marcarVisitantePropio reclasifica", async () => {
     const e = (await registrarEnlace({ prospectoId: p.id, url: "https://demo-ejemplo.neracosu.com/factura/", etiqueta: "Demo" })) as { ok: true; enlace: EnlaceFila };
     const v = (huella: string, visitante = "v1"): VisitaNueva => ({ enlaceId: e.enlace.id, fuente: "log", tipo: "vista", visitante, ip: "203.0.113.5", ua: UA_PROSPECTO, aparato: "iPhone", pais: "", ciudad: "", red: "", geoPendiente: true, ruta: "/factura/", detalle: "", origen: "", segundos: null, scroll: null, huella, ocurrioEn: new Date() });
-    expect(await insertarVisitas([v("h1"), v("h1"), v("h2", "v2")], { ips: new Set(), visitantes: new Set() })).toBe(2);
+    expect(await insertarVisitas([v("h1"), v("h1"), v("h2", "v2")], { ips: new Set(), visitantes: new Set(), ipsSesion: new Map() })).toBe(2);
     expect(await marcarVisitantePropio("v2")).toBe(1);
     expect((await visitasDe(p.id)).map((x) => [x.visitante, x.propia])).toEqual(expect.arrayContaining([["v1", false], ["v2", true]]));
     // otra corrida con la misma huella no inserta; una visita de visitante propio sale propia
-    expect(await insertarVisitas([v("h1"), v("h3", "v2")], { ips: new Set(), visitantes: new Set(["v2"]) })).toBe(1);
+    expect(await insertarVisitas([v("h1"), v("h3", "v2")], { ips: new Set(), visitantes: new Set(["v2"]), ipsSesion: new Map() })).toBe(1);
     expect((await prisma.visitaEnlace.findUnique({ where: { huella: "h3" } }))?.propia).toBe(true);
   });
 
   it("insertarVisitas recorta campos largos para no romper el modo estricto", async () => {
     const e = await enlace();
-    expect(await insertarVisitas([visita(e.id, { huella: "l1", ua: "u".repeat(500), origen: "o".repeat(300), ruta: "/" + "r".repeat(300), detalle: "d".repeat(80), aparato: "a".repeat(90), pais: "p".repeat(90), ciudad: "c".repeat(90) })], { ips: new Set(), visitantes: new Set() })).toBe(1);
+    expect(await insertarVisitas([visita(e.id, { huella: "l1", ua: "u".repeat(500), origen: "o".repeat(300), ruta: "/" + "r".repeat(300), detalle: "d".repeat(80), aparato: "a".repeat(90), pais: "p".repeat(90), ciudad: "c".repeat(90) })], { ips: new Set(), visitantes: new Set(), ipsSesion: new Map() })).toBe(1);
     const f = (await prisma.visitaEnlace.findFirst())!;
     expect([f.ua.length, f.origen.length, f.ruta.length, f.detalle.length, f.aparato.length, f.pais.length, f.ciudad.length]).toEqual([300, 120, 200, 40, 60, 60, 80]);
   });
@@ -149,7 +170,7 @@ describe.runIf(DB_HABILITADA)("rastro: enlaces, visitas, propios y visitante de 
     await insertarVisitas([
       visita(e.id, { huella: "t1", ocurrioEn: new Date("2026-11-05T10:00:00Z") }),
       visita(e.id, { huella: "t2", ocurrioEn: new Date("2026-11-06T10:00:00Z"), fuente: "js", tipo: "inicio" }),
-    ], { ips: new Set(), visitantes: new Set() });
+    ], { ips: new Set(), visitantes: new Set(), ipsSesion: new Map() });
     const vs = await visitasDe(p.id);
     expect(vs.map((x) => x.ocurrioEn.toISOString())).toEqual(["2026-11-06T10:00:00.000Z", "2026-11-05T10:00:00.000Z"]);
     expect(vs[0]).toMatchObject({ etiqueta: "Demo · factura", fuente: "js", tipo: "inicio", enlaceId: e.id });
@@ -165,7 +186,7 @@ describe.runIf(DB_HABILITADA)("rastro: enlaces, visitas, propios y visitante de 
       visita(viejo.id, { huella: "r1", visitante: "v1", ocurrioEn: new Date("2026-11-06T09:00:00Z") }),
       visita(e.id, { huella: "r2", visitante: "neri", ip: "198.51.100.7", ocurrioEn: new Date("2026-11-06T11:30:00Z") }),
       visita(e.id, { huella: "r3", visitante: "v1", tipo: "reenvio", ocurrioEn: new Date("2026-11-06T11:50:00Z") }),
-    ], { ips: new Set(), visitantes: new Set(["neri"]) });
+    ], { ips: new Set(), visitantes: new Set(["neri"]), ipsSesion: new Map() });
     const otro = await crearProspectoDePrueba(nichoId);
     const nuevo = await crearProspectoDePrueba(nichoId);
     await enlace("https://demo-ejemplo.neracosu.com/panel/", "Propuesta", nuevo.id, new Date("2026-11-06T10:00:00Z"));
@@ -186,7 +207,7 @@ describe.runIf(DB_HABILITADA)("rastro: enlaces, visitas, propios y visitante de 
       visita(b.id, { huella: "s2", visitante: "v1", fuente: "js", tipo: "inicio", ocurrioEn: new Date("2026-11-06T11:10:00Z") }),
       visita(b.id, { huella: "s3", visitante: "v2", ocurrioEn: new Date("2026-11-06T11:20:00Z") }),
       visita(b.id, { huella: "s4", visitante: "v3", tipo: "pdf", ocurrioEn: new Date("2026-11-06T11:59:00Z") }),
-    ], { ips: new Set(), visitantes: new Set() });
+    ], { ips: new Set(), visitantes: new Set(), ipsSesion: new Map() });
     expect((await resumenesParaTablero([p.id], ahora)).get(p.id)).toBe("Vio la demo hace 40 min · 2 personas");
   });
 
@@ -197,13 +218,13 @@ describe.runIf(DB_HABILITADA)("rastro: enlaces, visitas, propios y visitante de 
     await insertarVisitas([
       visita(prop.id, { huella: "w1", visitante: "v1", ocurrioEn: new Date("2026-11-05T12:00:00Z") }),
       visita(demo.id, { huella: "w2", visitante: "v1", ocurrioEn: new Date("2026-11-06T11:00:00Z") }),
-    ], { ips: new Set(), visitantes: new Set() });
+    ], { ips: new Set(), visitantes: new Set(), ipsSesion: new Map() });
     // otro prospecto: solo visitas propias y un reenvio propio -> sin abrir, nombra el enviado mas reciente
     const q = await crearProspectoDePrueba(nichoId);
     const q1 = await enlace("https://demo-ejemplo.neracosu.com/q1/", "Propuesta", q.id, new Date("2026-11-04T12:00:00Z"));
     await enlace("https://demo-ejemplo.neracosu.com/q2/", "Demo · q2", q.id, new Date("2026-11-05T12:00:00Z"));
     await insertarVisitas([visita(q1.id, { huella: "w3", visitante: "neri", ocurrioEn: new Date("2026-11-06T11:00:00Z") }),
-      visita(q1.id, { huella: "w4", visitante: "neri", tipo: "reenvio", ocurrioEn: new Date("2026-11-06T11:00:00Z") })], { ips: new Set(), visitantes: new Set(["neri"]) });
+      visita(q1.id, { huella: "w4", visitante: "neri", tipo: "reenvio", ocurrioEn: new Date("2026-11-06T11:00:00Z") })], { ips: new Set(), visitantes: new Set(["neri"]), ipsSesion: new Map() });
     const m = await resumenesParaTablero([p.id, q.id], ahora);
     expect(m.get(p.id)).toBe("Vio la demo hace 1 h");
     expect(m.get(q.id)).toBe("Sin abrir · enviada hace 1 d");

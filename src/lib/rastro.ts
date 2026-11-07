@@ -10,11 +10,14 @@ import {
 
 export type EnlaceFila = { id: number; prospectoId: number; etiqueta: string; host: string; prefijo: string; token: string; origen: string; activo: boolean; enviadoEn: Date };
 export type VisitaNueva = Omit<VisitaFila, "id" | "etiqueta" | "propia"> & { ip: string; ua: string; huella?: string };
-export type Propios = { ips: Set<string>; visitantes: Set<string> };
+// ipsSesion: IP -> ultima sesion del panel desde ella (solo decide en reenvios: ver esPropia)
+export type Propios = { ips: Set<string>; visitantes: Set<string>; ipsSesion: Map<string, Date> };
 
 const HOST_PANEL = "prospectos.neracosu.com";
 const DIAS_SESION_PROPIA = 30;
 const MAX_VISITANTES_SESION = 60;
+const MAX_IPS_SESION = 60;
+const VENTANA_REENVIO_PROPIO_MS = 24 * 3600_000;
 const UNA_HORA = 3600_000;
 // Fecha lejana: el visitante marcado a mano no caduca con los 30 dias.
 const FECHA_PERMANENTE = "2099-01-01T00:00:00.000Z";
@@ -89,18 +92,30 @@ export async function obtenerOCrearEnlacePlantilla(codigo: string): Promise<Enla
 
 // ---- propios (Neri y su equipo no cuentan como visita del prospecto) ----
 
-export function esPropia(ip: string, visitante: string, p: Propios): boolean {
-  return p.ips.has(ip) || p.visitantes.has(visitante);
+// Regla 3: WhatsApp arma la vista previa desde el telefono del REMITENTE, con un UA que no es el del navegador.
+// Un reenvio desde una IP con sesion del panel a menos de 24 h es Neri enviando. Solo reenvios: un UA de vista
+// previa nunca es el navegador de un prospecto, asi una IP compartida (CGNAT) casi no pesa.
+export function esPropia(ip: string, visitante: string, p: Propios, v?: { tipo: string; ocurrioEn: Date }): boolean {
+  if (p.ips.has(ip) || p.visitantes.has(visitante)) return true;
+  if (v?.tipo !== "reenvio") return false;
+  const sesion = p.ipsSesion.get(ip);
+  return !!sesion && Math.abs(v.ocurrioEn.getTime() - sesion.getTime()) <= VENTANA_REENVIO_PROPIO_MS;
 }
 
 async function leerJson<T>(clave: string, vacio: T): Promise<T> {
   try { return JSON.parse(await leerConfig(clave)) as T; } catch { return vacio; }
 }
 
-async function leerVisitantesSesion(): Promise<Record<string, string>> {
-  const m = await leerJson<unknown>(CLAVES.rastroVisitantesSesion, {});
+async function leerMapaFechas(clave: string): Promise<Record<string, string>> {
+  const m = await leerJson<unknown>(clave, {});
   return m && typeof m === "object" && !Array.isArray(m) ? (m as Record<string, string>) : {};
 }
+const leerVisitantesSesion = () => leerMapaFechas(CLAVES.rastroVisitantesSesion);
+const leerIpsSesion = () => leerMapaFechas(CLAVES.rastroIpsSesion);
+
+// Los mas recientes primero, con tope
+const recortar = (mapa: Record<string, string>, tope: number) =>
+  Object.fromEntries(Object.entries(mapa).sort((a, b) => Date.parse(b[1]) - Date.parse(a[1])).slice(0, tope));
 
 export async function leerIpsPropias(): Promise<string[]> {
   const l = await leerJson<unknown>(CLAVES.rastroIpsPropias, []);
@@ -114,20 +129,32 @@ export async function cargarPropios(ahora: Date = new Date()): Promise<Propios> 
     const t = Date.parse(iso);
     if (Number.isFinite(t) && (t >= desde || new Date(t).getUTCFullYear() >= 2099)) visitantes.add(v);
   }
-  return { ips: new Set(await leerIpsPropias()), visitantes };
+  const ipsSesion = new Map<string, Date>();
+  for (const [ip, iso] of Object.entries(await leerIpsSesion())) {
+    const t = Date.parse(iso);
+    if (Number.isFinite(t)) ipsSesion.set(ip, new Date(t));
+  }
+  return { ips: new Set(await leerIpsPropias()), visitantes, ipsSesion };
 }
 
 // Lo llama sesionActual en cada pagina del panel: quien entra al panel es propio.
-// Leer-modificar-escribir sin bloqueo: perder una anotacion entre dos sesiones simultaneas no importa.
+// Anota el visitante (IP+UA) y la IP sola. Leer-modificar-escribir sin bloqueo: perder una anotacion entre dos
+// sesiones simultaneas no importa.
 export async function anotarVisitanteSesion(ip: string, ua: string, ahora: Date = new Date()): Promise<void> {
   const visitante = visitanteDe(ip, ua);
-  const mapa = await leerVisitantesSesion();
-  const previa = Date.parse(mapa[visitante] ?? "");
+  const [visitantes, ips] = await Promise.all([leerVisitantesSesion(), leerIpsSesion()]);
   // Anotado hace menos de una hora (o marcado a mano con fecha 2099): no se escribe.
-  if (Number.isFinite(previa) && ahora.getTime() - previa < UNA_HORA) return;
-  mapa[visitante] = ahora.toISOString();
-  const entradas = Object.entries(mapa).sort((a, b) => Date.parse(b[1]) - Date.parse(a[1])).slice(0, MAX_VISITANTES_SESION);
-  await guardarConfig(CLAVES.rastroVisitantesSesion, JSON.stringify(Object.fromEntries(entradas)));
+  const fresca = (iso: string | undefined) => { const t = Date.parse(iso ?? ""); return Number.isFinite(t) && ahora.getTime() - t < UNA_HORA; };
+  const cambiaVisitante = !fresca(visitantes[visitante]);
+  const cambiaIp = ip !== "" && ip !== "desconocida" && !fresca(ips[ip]);
+  if (cambiaVisitante) {
+    visitantes[visitante] = ahora.toISOString();
+    await guardarConfig(CLAVES.rastroVisitantesSesion, JSON.stringify(recortar(visitantes, MAX_VISITANTES_SESION)));
+  }
+  if (cambiaIp) {
+    ips[ip] = ahora.toISOString();
+    await guardarConfig(CLAVES.rastroIpsSesion, JSON.stringify(recortar(ips, MAX_IPS_SESION)));
+  }
 }
 
 export async function marcarVisitantePropio(visitante: string): Promise<number> {
@@ -157,7 +184,7 @@ export async function insertarVisitas(vs: VisitaNueva[], propios: Propios): Prom
       enlaceId: v.enlaceId, fuente: v.fuente, tipo: v.tipo, visitante: v.visitante, ip: corto(v.ip, 45), ua: corto(v.ua, 300),
       aparato: corto(v.aparato, 60), pais: corto(v.pais, 60), ciudad: corto(v.ciudad, 80), red: v.red, geoPendiente: v.geoPendiente,
       ruta: corto(v.ruta, 200), detalle: corto(v.detalle, 40), origen: corto(v.origen, 120), segundos: v.segundos, scroll: v.scroll,
-      huella: v.huella, ocurrioEn: v.ocurrioEn, propia: esPropia(v.ip, v.visitante, propios),
+      huella: v.huella, ocurrioEn: v.ocurrioEn, propia: esPropia(v.ip, v.visitante, propios, v),
     })),
   });
   return r.count;
