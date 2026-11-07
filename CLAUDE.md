@@ -39,7 +39,7 @@ adjunto. Sin avisos: se ve en el panel.
   enlace. Manda `inicio`/`fin`/`clic` por `sendBeacon` a `POST /api/rastro/evento` (público, 204 a robots, CORS solo
   `neracosu.com` y `*.neracosu.com`). `?soyyo=1` marca ese navegador como propio (`localStorage nc_soyyo`) y deja de
   mandar; `?soyyo=0` lo deshace. El origen se toma como en `medir.js` (`?de=`, `utm_source`, `fbclid`, referer ajeno).
-- **Cron** (todavía por instalar al escribir esto; la línea está en el plan):
+- **Cron** (instalado el 2026-11-06 en el crontab de `neracosu`; respaldo previo en `~/backups/rastro-20261106/`):
   `*/10 * * * * bash -c 'set -a; . ~/.config/prospectos/env; set +a; cd ~/public_html/prospectos.neracosu.com && node_modules/.bin/tsx scripts/rastro-leer.mts >> ~/.config/prospectos/rastro.log 2>&1'`
   y el día 3 de cada mes `20 4 3 * *` lo mismo con `scripts/actualizar-geo.mts` (log `geo.log`). Solo imprime si hubo
   visitas nuevas. `--sin-geo` no geolocaliza.
