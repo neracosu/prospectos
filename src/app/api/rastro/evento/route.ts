@@ -1,4 +1,4 @@
-import { clasificarUa, normalizarEventoJs } from "@/lib/rastro-contrato";
+import { clasificarUa, esIpDeMeta, normalizarEventoJs } from "@/lib/rastro-contrato";
 import { registrarEventoJs } from "@/lib/rastro";
 import { permitirIntento } from "@/lib/rate-limit";
 import { ipDesdeCabeceras } from "@/lib/ip";
@@ -16,6 +16,8 @@ export async function POST(req: Request) {
   const ua = req.headers.get("user-agent") ?? "";
   if (clasificarUa(ua).clase === "robot") return fin(204);
   const ip = ipDesdeCabeceras(req.headers.get("x-forwarded-for"), req.headers.get("x-real-ip"));
+  // La vista previa de Meta tambien corre el script con UA de navegador: no es el prospecto
+  if (esIpDeMeta(ip)) return fin(204);
   if (!permitirIntento(`rastro:${ip}`, 120, 60_000)) return fin(429);
   try {
     const e = normalizarEventoJs(await leerJson(req, 2_000));

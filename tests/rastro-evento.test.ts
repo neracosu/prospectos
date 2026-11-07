@@ -97,6 +97,14 @@ describe.runIf(DB_HABILITADA)("POST /api/rastro/evento", () => {
     expect(await prisma.visitaEnlace.count()).toBe(0);
   });
 
+  it("un evento desde una IP de Meta recibe 204 sin guardar", async () => {
+    const b = { token, tipo: "inicio", ruta: "/factura/" };
+    for (const ip of ["57.141.16.113", "173.252.95.5", "2a03:2880:f12f::1"]) expect((await POST(peticion(b, { ip }))).status).toBe(204);
+    expect(await prisma.visitaEnlace.count()).toBe(0);
+    expect((await POST(peticion(b, { ip: "203.0.113.5" }))).status).toBe(204);
+    expect(await prisma.visitaEnlace.count()).toBe(1);
+  });
+
   it("acepta subdominios https de neracosu.com y responde el preflight", async () => {
     const o = "https://demo-ejemplo.neracosu.com";
     const r = await POST(peticion({ token, tipo: "inicio", ruta: "/factura/" }, { origin: o }));
