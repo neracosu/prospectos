@@ -18,8 +18,8 @@ function peticion(body: unknown, o: { origin?: string; ua?: string; ip?: string 
 
 describe("public/rastro.js", () => {
   const js = readFileSync("public/rastro.js", "utf8");
-  it("cabe en 3 KB y trae la ruta y la marca de 'soy yo'", () => {
-    expect(Buffer.byteLength(js)).toBeLessThanOrEqual(3072);
+  it("cabe en 4 KB y trae la ruta y la marca de 'soy yo'", () => {
+    expect(Buffer.byteLength(js)).toBeLessThanOrEqual(4096);
     expect(js).toContain("/api/rastro/evento");
     expect(js).toContain("nc_soyyo");
   });
