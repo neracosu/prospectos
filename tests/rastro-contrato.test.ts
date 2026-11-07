@@ -124,3 +124,55 @@ describe("resumenes", () => {
     expect(textoLugar({ pais: "", ciudad: "", red: "", geoPendiente: false })).toBe("ubicación desconocida");
   });
 });
+
+describe("armarLineaTiempo: bordes de la fusion", () => {
+  it("un fin sin apertura no lanza ni crea fila", () => {
+    const lt = armarLineaTiempo([base({ fuente: "js", tipo: "fin", segundos: 5, scroll: 10 })]);
+    expect(lt.dias).toEqual([]);
+  });
+  it("un clic despues de una vuelta va a la vuelta", () => {
+    const f = armarLineaTiempo([
+      base({ id: 1, ocurrioEn: t("13:00") }), base({ id: 2, ocurrioEn: t("13:30") }),
+      base({ id: 3, fuente: "js", tipo: "clic", detalle: "pdf", ocurrioEn: t("13:31") }),
+    ]).dias[0].filas;
+    expect(f.map((a) => [a.clase, a.clics])).toEqual([["vuelta", ["pdf"]], ["apertura", []]]);
+  });
+  it("un inicio solo es una apertura", () => {
+    const f = armarLineaTiempo([base({ fuente: "js", tipo: "inicio", origen: "instagram.com" })]).dias[0].filas;
+    expect(f.map((a) => a.clase)).toEqual(["apertura"]);
+    expect(f[0].origen).toBe("instagram.com");
+  });
+  it("un clic sin apertura es su propia fila", () => {
+    const f = armarLineaTiempo([base({ fuente: "js", tipo: "clic", detalle: "whatsapp" })]).dias[0].filas;
+    expect(f.map((a) => a.clase)).toEqual(["clic"]);
+    expect(f[0].detalle).toBe("whatsapp");
+  });
+  it("cruzar la medianoche de Caracas da dos dias, el mas reciente primero", () => {
+    const dias = armarLineaTiempo([
+      base({ id: 1, ocurrioEn: new Date("2026-11-05T23:30:00.000-04:00") }),
+      base({ id: 2, visitante: "v2", ocurrioEn: new Date("2026-11-06T00:30:00.000-04:00") }),
+    ]).dias;
+    expect(dias.map((d) => [d.dia, d.filas.length])).toEqual([["2026-11-06", 1], ["2026-11-05", 1]]);
+  });
+});
+describe("haceCuanto y textos: limites", () => {
+  const ahora = new Date("2026-11-20T12:00:00.000Z");
+  const hace = (s: number) => haceCuanto(new Date(ahora.getTime() - s * 1000), ahora);
+  it("fronteras", () => {
+    expect(hace(59)).toBe("hace un momento");
+    expect(hace(60)).toBe("hace 1 min");
+    expect(hace(3599)).toBe("hace 59 min");
+    expect(hace(3600)).toBe("hace 1 h");
+    expect(hace(86400)).toBe("hace 1 d");
+    expect(hace(7 * 86400)).toBe("hace 1 sem");
+  });
+  it("textoLugar con solo pais o con red", () => {
+    expect(textoLugar({ pais: "Venezuela", ciudad: "", red: "", geoPendiente: false })).toBe("Venezuela");
+    expect(textoLugar({ pais: "Venezuela", ciudad: "Caracas", red: "vpn", geoPendiente: false })).toBe("desde una VPN");
+  });
+  it("resumenTarjeta de demo y de una sola persona", () => {
+    const s = resumenTarjeta({ etiqueta: "Demo · factura", enviadoEn: t("12:00"), ultimaApertura: t("13:28"), visitantes: 1, reenvio: false }, t("15:28"));
+    expect(s).toBe("Vio la demo hace 2 h");
+    expect(s).not.toContain("personas");
+  });
+});
