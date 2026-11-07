@@ -191,6 +191,14 @@ export async function insertarVisitas(vs: VisitaNueva[], propios: Propios): Prom
   return r.count;
 }
 
+const DIAS_PODA = 400;
+
+// Spec §2a: las visitas se guardan 400 dias. La corre el script del cron una vez por pasada.
+export async function podarVisitasViejas(ahora: Date = new Date()): Promise<number> {
+  const limite = new Date(ahora.getTime() - DIAS_PODA * 86400_000);
+  return (await prisma.visitaEnlace.deleteMany({ where: { ocurrioEn: { lt: limite } } })).count;
+}
+
 export async function visitasDe(prospectoId: number, limite = 500): Promise<VisitaFila[]> {
   const filas = await prisma.visitaEnlace.findMany({
     where: { enlace: { prospectoId } },

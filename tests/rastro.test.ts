@@ -6,7 +6,7 @@ import { leerConfig, CLAVES } from "@/lib/configuracion";
 import {
   registrarEnlace, listarEnlaces, enlacesActivosPorHost, desactivarEnlace, obtenerOCrearEnlacePlantilla, insertarVisitas, esPropia,
   cargarPropios, anotarVisitanteSesion, marcarVisitantePropio, guardarIpsPropias, leerIpsPropias, visitasDe, resumenesParaTablero,
-  registrarEventoJs, type EnlaceFila, type VisitaNueva,
+  registrarEventoJs, podarVisitasViejas, type EnlaceFila, type VisitaNueva,
 } from "@/lib/rastro";
 
 const UA_NERI = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36";
@@ -156,6 +156,16 @@ describe.runIf(DB_HABILITADA)("rastro: enlaces, visitas, propios y visitante de 
     // otra corrida con la misma huella no inserta; una visita de visitante propio sale propia
     expect(await insertarVisitas([v("h1"), v("h3", "v2")], { ips: new Set(), visitantes: new Set(["v2"]), ipsSesion: new Map() })).toBe(1);
     expect((await prisma.visitaEnlace.findUnique({ where: { huella: "h3" } }))?.propia).toBe(true);
+  });
+
+  it("podarVisitasViejas borra las de mas de 400 dias y deja el resto", async () => {
+    const e = await enlace();
+    const ahora = new Date("2026-11-06T12:00:00Z");
+    const dias = (n: number) => new Date(ahora.getTime() - n * 86400_000);
+    await insertarVisitas([visita(e.id, { huella: "p1", ocurrioEn: dias(401) }), visita(e.id, { huella: "p2", ocurrioEn: dias(399) })], { ips: new Set(), visitantes: new Set(), ipsSesion: new Map() });
+    expect(await podarVisitasViejas(ahora)).toBe(1);
+    expect((await prisma.visitaEnlace.findMany()).map((f) => f.huella)).toEqual(["p2"]);
+    expect(await podarVisitasViejas(ahora)).toBe(0);
   });
 
   it("insertarVisitas recorta campos largos para no romper el modo estricto", async () => {
