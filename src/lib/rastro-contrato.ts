@@ -118,6 +118,10 @@ export function esIpDeMeta(ip: string): boolean {
 
 const hash16 = (s: string) => createHash("sha256").update(s).digest("hex").slice(0, 16);
 export const visitanteDe = (ip: string, ua: string) => hash16(`${ip}|${ua}`);
+// Apps que appDeReenvio puede devolver: su visitante (visitanteDe("reenvio", app)) es de todos los prospectos a la vez.
+const APPS_REENVIO = ["whatsapp", "facebook", "telegram", "twitter", "slack", "discord", "linkedin", "instagram", "imessage", "otro"];
+const VISITANTES_REENVIO = new Set(APPS_REENVIO.map((a) => visitanteDe("reenvio", a)));
+export const esVisitanteDeReenvio = (visitante: string) => VISITANTES_REENVIO.has(visitante);
 export const huellaDe = (linea: string) => hash16(linea);
 
 const RE_ASSET = /\.(css|js|mjs|png|jpe?g|gif|webp|svg|json|woff2?|ttf|ico|map|txt|xml|avif)$/i;

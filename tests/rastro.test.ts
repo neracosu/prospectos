@@ -189,17 +189,17 @@ describe.runIf(DB_HABILITADA)("rastro: enlaces, visitas, propios y visitante de 
     const sin = { ips: new Set<string>(), visitantes: new Set<string>(), ipsSesion: new Map<string, Date>() };
     await insertarVisitas([
       visita(e.id, { huella: "r1", visitante: vIphone, aparato: "iPhone · iOS 18.7 · Safari", ocurrioEn: new Date("2026-11-06T10:00:00Z") }),
-      visita(e.id, { huella: "r2", tipo: "reenvio", ip: "203.0.113.5", ua: WA, visitante: visitanteDe("203.0.113.5", WA), aparato: "", detalle: "whatsapp", ocurrioEn: new Date("2026-11-06T10:05:00Z") }),
-      visita(e.id, { huella: "r3", tipo: "reenvio", ip: "198.51.100.40", ua: WA, visitante: visitanteDe("198.51.100.40", WA), aparato: "", detalle: "whatsapp", ocurrioEn: new Date("2026-11-06T10:06:00Z") }),
+      visita(e.id, { huella: "r2", tipo: "reenvio", ip: "203.0.113.5", ua: WA, visitante: visitanteDe("reenvio", "whatsapp"), aparato: "", detalle: "whatsapp", ocurrioEn: new Date("2026-11-06T10:05:00Z") }),
+      visita(e.id, { huella: "r3", tipo: "reenvio", ip: "198.51.100.40", ua: WA, visitante: visitanteDe("reenvio", "whatsapp"), aparato: "", detalle: "whatsapp", ocurrioEn: new Date("2026-11-06T10:06:00Z") }),
     ], sin);
     const vs = await visitasDe(p.id);
     const r2 = vs.find((x) => x.ocurrioEn.toISOString() === "2026-11-06T10:05:00.000Z")!;
     const r3 = vs.find((x) => x.ocurrioEn.toISOString() === "2026-11-06T10:06:00.000Z")!;
     expect(r2).toMatchObject({ tipo: "reenvio", visitante: vIphone, aparato: "iPhone · iOS 18.7 · Safari" });
-    expect(r3).toMatchObject({ tipo: "reenvio", visitante: visitanteDe("198.51.100.40", WA), aparato: "" });
+    expect(r3).toMatchObject({ tipo: "reenvio", visitante: visitanteDe("reenvio", "whatsapp"), aparato: "" });
     expect(r2).not.toHaveProperty("ip");
     // en la base no cambia nada
-    expect((await prisma.visitaEnlace.findUnique({ where: { huella: "r2" } }))?.visitante).toBe(visitanteDe("203.0.113.5", WA));
+    expect((await prisma.visitaEnlace.findUnique({ where: { huella: "r2" } }))?.visitante).toBe(visitanteDe("reenvio", "whatsapp"));
   });
 
   it("«Es mío» sobre el visitante de un reenvio con alias marca tambien el reenvio de su IP", async () => {
@@ -209,8 +209,8 @@ describe.runIf(DB_HABILITADA)("rastro: enlaces, visitas, propios y visitante de 
     const sin = { ips: new Set<string>(), visitantes: new Set<string>(), ipsSesion: new Map<string, Date>() };
     await insertarVisitas([
       visita(e.id, { huella: "m1", visitante: vIphone, ocurrioEn: new Date("2026-11-06T10:00:00Z") }),
-      visita(e.id, { huella: "m2", tipo: "reenvio", ip: "203.0.113.5", ua: WA, visitante: visitanteDe("203.0.113.5", WA), aparato: "", detalle: "whatsapp", ocurrioEn: new Date("2026-11-06T10:05:00Z") }),
-      visita(e.id, { huella: "m3", tipo: "reenvio", ip: "198.51.100.40", ua: WA, visitante: visitanteDe("198.51.100.40", WA), aparato: "", detalle: "whatsapp", ocurrioEn: new Date("2026-11-06T10:06:00Z") }),
+      visita(e.id, { huella: "m2", tipo: "reenvio", ip: "203.0.113.5", ua: WA, visitante: visitanteDe("reenvio", "whatsapp"), aparato: "", detalle: "whatsapp", ocurrioEn: new Date("2026-11-06T10:05:00Z") }),
+      visita(e.id, { huella: "m3", tipo: "reenvio", ip: "198.51.100.40", ua: WA, visitante: visitanteDe("reenvio", "whatsapp"), aparato: "", detalle: "whatsapp", ocurrioEn: new Date("2026-11-06T10:06:00Z") }),
     ], sin);
     expect((await visitasDe(p.id)).find((x) => x.tipo === "reenvio" && x.visitante === vIphone)).toBeDefined();
     expect(await marcarVisitantePropio(vIphone)).toBe(2);
@@ -228,10 +228,20 @@ describe.runIf(DB_HABILITADA)("rastro: enlaces, visitas, propios y visitante de 
       visita(e.id, { huella: "n1", ip: "203.0.113.7", ua: UA_NERI, visitante: vNeri, ocurrioEn: new Date("2026-11-06T10:00:00Z") }),
     ], { ips: new Set<string>(), visitantes: new Set([vNeri]), ipsSesion: new Map<string, Date>() });
     await insertarVisitas([
-      visita(e.id, { huella: "n2", tipo: "reenvio", ip: "203.0.113.7", ua: WA, visitante: visitanteDe("203.0.113.7", WA), aparato: "", detalle: "whatsapp", ocurrioEn: new Date("2026-11-06T10:05:00Z") }),
+      visita(e.id, { huella: "n2", tipo: "reenvio", ip: "203.0.113.7", ua: WA, visitante: visitanteDe("reenvio", "whatsapp"), aparato: "", detalle: "whatsapp", ocurrioEn: new Date("2026-11-06T10:05:00Z") }),
     ], { ips: new Set<string>(), visitantes: new Set<string>(), ipsSesion: new Map<string, Date>() });
     const r = (await visitasDe(p.id)).find((x) => x.tipo === "reenvio")!;
-    expect(r).toMatchObject({ propia: false, visitante: visitanteDe("203.0.113.7", WA), aparato: "" });
+    expect(r).toMatchObject({ propia: false, visitante: visitanteDe("reenvio", "whatsapp"), aparato: "" });
+  });
+
+  it("«Es mío» no acepta el visitante de una app de reenvio (marcaria todos los reenvios de todos)", async () => {
+    const e = await enlace();
+    const vApp = visitanteDe("reenvio", "whatsapp");
+    await insertarVisitas([visita(e.id, { huella: "k1", tipo: "reenvio", ip: "198.51.100.40", ua: "WhatsApp/2.23.20.0", visitante: vApp, aparato: "", detalle: "whatsapp" })],
+      { ips: new Set<string>(), visitantes: new Set<string>(), ipsSesion: new Map<string, Date>() });
+    expect(await marcarVisitantePropio(vApp)).toBe(0);
+    expect((await prisma.visitaEnlace.findUnique({ where: { huella: "k1" } }))?.propia).toBe(false);
+    expect((await cargarPropios()).visitantes.has(vApp)).toBe(false);
   });
 
   it("visitasDe trae la etiqueta del enlace, mas reciente primero, con limite", async () => {
@@ -254,7 +264,7 @@ describe.runIf(DB_HABILITADA)("rastro: enlaces, visitas, propios y visitante de 
     await insertarVisitas([
       visita(viejo.id, { huella: "r1", visitante: "v1", ocurrioEn: new Date("2026-11-06T09:00:00Z") }),
       visita(e.id, { huella: "r2", visitante: "neri", ip: "198.51.100.7", ocurrioEn: new Date("2026-11-06T11:30:00Z") }),
-      visita(e.id, { huella: "r3", visitante: "v1", tipo: "reenvio", ocurrioEn: new Date("2026-11-06T11:50:00Z") }),
+      visita(viejo.id, { huella: "r3", visitante: "v1", tipo: "reenvio", ocurrioEn: new Date("2026-11-06T11:50:00Z") }),
     ], { ips: new Set(), visitantes: new Set(["neri"]), ipsSesion: new Map() });
     const otro = await crearProspectoDePrueba(nichoId);
     const nuevo = await crearProspectoDePrueba(nichoId);
@@ -265,6 +275,22 @@ describe.runIf(DB_HABILITADA)("rastro: enlaces, visitas, propios y visitante de 
     expect(m.has(otro.id)).toBe(false);
     expect(m.get(nuevo.id)).toBe("Sin abrir · enviada hace 2 h");
     expect((await resumenesParaTablero([], ahora)).size).toBe(0);
+  });
+
+  it("resumenesParaTablero: la rafaga del envio antes de la primera apertura no es «la reenvió»", async () => {
+    const ahora = new Date("2026-11-01T18:00:00Z");
+    const e = await enlace("https://demo-ejemplo.neracosu.com/propuesta/", "Propuesta", p.id, new Date("2026-11-01T17:30:00Z"));
+    const vApp = visitanteDe("reenvio", "facebook");
+    const FB = "facebookexternalhit/1.1";
+    await insertarVisitas([
+      ...["173.252.95.5", "69.171.249.10", "31.13.115.7"].map((ip, i) => visita(e.id, { huella: `b${i}`, tipo: "reenvio", ip, ua: FB, visitante: vApp, aparato: "", detalle: "facebook", ocurrioEn: new Date(`2026-11-01T17:31:0${i}Z`) })),
+      visita(e.id, { huella: "b9", visitante: "v1", ocurrioEn: new Date("2026-11-01T17:40:00Z") }),
+    ], { ips: new Set(), visitantes: new Set(), ipsSesion: new Map() });
+    expect((await resumenesParaTablero([p.id], ahora)).get(p.id)).toBe("Vio la propuesta hace 20 min");
+    // un reenvio despues de la apertura si cuenta
+    await insertarVisitas([visita(e.id, { huella: "b10", tipo: "reenvio", ip: "203.0.113.5", ua: "WhatsApp/2.23.20.0", visitante: visitanteDe("reenvio", "whatsapp"), aparato: "", detalle: "whatsapp", ocurrioEn: new Date("2026-11-01T17:50:00Z") })],
+      { ips: new Set(), visitantes: new Set(), ipsSesion: new Map() });
+    expect((await resumenesParaTablero([p.id], ahora)).get(p.id)).toBe("Vio la propuesta hace 20 min · la reenvió");
   });
 
   it("resumenesParaTablero cuenta personas distintas entre todos los enlaces", async () => {

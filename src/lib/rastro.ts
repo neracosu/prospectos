@@ -4,7 +4,7 @@ import { prisma } from "@/lib/db";
 import { generarCodigo, CODIGO_VALIDO } from "@/lib/codigo";
 import { leerConfig, guardarConfig, CLAVES } from "@/lib/configuracion";
 import {
-  descomponerUrl, visitanteDe, resumirAparato, resumenTarjeta,
+  descomponerUrl, visitanteDe, resumirAparato, resumenTarjeta, esVisitanteDeReenvio,
   type VisitaFila, type EventoJsNormal,
 } from "@/lib/rastro-contrato";
 
@@ -161,6 +161,8 @@ export async function anotarVisitanteSesion(ip: string, ua: string, ahora: Date 
 }
 
 export async function marcarVisitantePropio(visitante: string): Promise<number> {
+  // El visitante de un reenvio sin alias es la app (WhatsApp, Facebook...): marcarlo volveria propios todos los reenvios
+  if (esVisitanteDeReenvio(visitante)) return 0;
   const mapa = await leerVisitantesSesion();
   mapa[visitante] = FECHA_PERMANENTE;
   await guardarConfig(CLAVES.rastroVisitantesSesion, JSON.stringify(mapa));
@@ -212,9 +214,10 @@ export async function visitasDe(prospectoId: number, limite = 500): Promise<Visi
     take: limite,
     include: { enlace: { select: { etiqueta: true } } },
   });
-  // Alias del reenvio: la vista previa sale de la misma IP que el navegador de quien reenvio. Un reenvio cuyo
-  // visitante no abrio nada en este prospecto toma el visitante y el aparato de una fila no-reenvio con su IP
-  // (la mas reciente). Solo en lo devuelto: la base no cambia.
+  // Alias del reenvio: la vista previa sale de la misma IP que el navegador de quien reenvio. El visitante guardado
+  // de un reenvio es la app (no abre nada), asi que toma el visitante y el aparato de una fila no-reenvio con su IP
+  // (la mas reciente): en la practica, WhatsApp o Telegram desde el telefono de alguien; las IPs de Meta no tienen
+  // vistas (el lector las descarta). Solo en lo devuelto: la base no cambia.
   const abrieron = new Set(filas.filter((f) => f.tipo === "vista" || f.tipo === "inicio").map((f) => f.visitante));
   const porIp = new Map<string, { visitante: string; aparato: string }>();
   // Solo de filas no propias: un reenvio ajeno no se disfraza de visitante de Neri.
@@ -244,8 +247,18 @@ export async function resumenesParaTablero(prospectoIds: number[], ahora: Date =
     by: ["enlaceId", "visitante", "tipo"],
     where: { enlaceId: { in: enlaces.map((e) => e.id) }, propia: false, tipo: { in: ["vista", "inicio", "reenvio"] } },
     _max: { ocurrioEn: true },
+    _min: { ocurrioEn: true },
   });
   const porId = new Map(enlaces.map((e) => [e.id, e]));
+  // Regla del envio (como armarLineaTiempo): un reenvio cuenta solo si su ultimo es posterior a la primera apertura
+  // no propia de su enlace. La rafaga de vistas previas de Neri al enviar es anterior a toda apertura.
+  const primeraApertura = new Map<number, Date>();
+  for (const g of grupos) {
+    const t = g._min.ocurrioEn;
+    if (g.tipo === "reenvio" || !t) continue;
+    const previa = primeraApertura.get(g.enlaceId);
+    if (!previa || t < previa) primeraApertura.set(g.enlaceId, t);
+  }
   type Acumulado = { enlace: (typeof enlaces)[number]; ultimaApertura: Date | null; visitantes: Set<string>; reenvio: boolean };
   const datos = new Map<number, Acumulado>();
   // Los enlaces vienen del mas reciente al mas viejo: el primero de cada prospecto es el de "Sin abrir".
@@ -253,7 +266,11 @@ export async function resumenesParaTablero(prospectoIds: number[], ahora: Date =
   for (const g of grupos) {
     const e = porId.get(g.enlaceId)!;
     const d = datos.get(e.prospectoId)!;
-    if (g.tipo === "reenvio") { d.reenvio = true; continue; }
+    if (g.tipo === "reenvio") {
+      const primera = primeraApertura.get(g.enlaceId);
+      if (primera && g._max.ocurrioEn && g._max.ocurrioEn > primera) d.reenvio = true;
+      continue;
+    }
     d.visitantes.add(g.visitante);
     const t = g._max.ocurrioEn;
     if (t && (!d.ultimaApertura || t > d.ultimaApertura)) { d.ultimaApertura = t; d.enlace = e; }
