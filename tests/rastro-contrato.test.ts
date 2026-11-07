@@ -293,6 +293,10 @@ describe("armarLineaTiempo: vistas de los rastreadores de Meta (14b)", () => {
     expect(lt.visitantes.map((v) => v.visitante)).toEqual(["aws1"]);
     expect(lt.dias[0].filas.map((f) => f.clase)).toEqual(["apertura", "envio"]);
   });
+  it("una vista previa propia no absorbe la vista de otro", () => {
+    const propias = rafaga.map((r) => ({ ...r, propia: true }));
+    expect(resumirEnlace([...propias, aws(1, "13:31:10")], 1)).toEqual({ visitantes: 1, aperturas: 1, reenvios: 0, pdfs: 0 });
+  });
   it("una vista 10 min despues de la rafaga es una apertura real", () => {
     const vs = [...rafaga, aws(1, "13:41:00")];
     expect(resumirEnlace(vs, 1)).toEqual({ visitantes: 1, aperturas: 1, reenvios: 0, pdfs: 0 });

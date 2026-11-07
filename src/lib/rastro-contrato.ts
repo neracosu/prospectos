@@ -227,7 +227,8 @@ const esEnvio = (v: VisitaFila, primeras: Map<number, number>) => {
 };
 
 const VENTANA_RASTREADOR_MS = 120_000;
-const esPreviaDeMeta = (v: VisitaFila) => v.tipo === "reenvio" && (v.detalle === "facebook" || v.detalle === "instagram");
+// Solo vistas previas no propias: la de Neri no convierte la vista de otro en un reenvio ajeno
+const esPreviaDeMeta = (v: VisitaFila) => v.tipo === "reenvio" && !v.propia && (v.detalle === "facebook" || v.detalle === "instagram");
 
 // Meta tambien pide la pagina desde IPs de AWS con UA de navegador Android y sin correr js. Una vista de log no propia
 // a <= 120 s de una vista previa facebook/instagram del mismo enlace, de un visitante que no tiene nada mas que vistas

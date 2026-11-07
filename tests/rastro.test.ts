@@ -308,6 +308,31 @@ describe.runIf(DB_HABILITADA)("rastro: enlaces, visitas, propios y visitante de 
     expect((await resumenesParaTablero([p.id], ahora)).get(p.id)).toBe("Vio la propuesta hace 20 min");
   });
 
+  it("resumenesParaTablero: la ventana es por vista previa, no del primer al ultimo reenvio del enlace", async () => {
+    const ahora = new Date("2026-11-01T13:00:00Z");
+    const e = await enlace("https://demo-ejemplo.neracosu.com/propuesta/", "Propuesta", p.id, new Date("2026-11-01T08:00:00Z"));
+    const vApp = visitanteDe("reenvio", "facebook");
+    const sin = { ips: new Set<string>(), visitantes: new Set<string>(), ipsSesion: new Map<string, Date>() };
+    const previa = (h: string, hora: string) => visita(e.id, { huella: h, tipo: "reenvio", ip: "173.252.95.5", ua: "facebookexternalhit/1.1", visitante: vApp, aparato: "", detalle: "facebook", ocurrioEn: new Date(hora) });
+    await insertarVisitas([previa("d1", "2026-11-01T09:00:00Z"), previa("d2", "2026-11-01T12:00:00Z"),
+      visita(e.id, { huella: "d3", visitante: "aws", ip: "198.51.100.77", ocurrioEn: new Date("2026-11-01T09:01:00Z") })], sin);
+    expect((await resumenesParaTablero([p.id], ahora)).get(p.id)).toBe("Sin abrir · enviada hace 5 h");
+    await insertarVisitas([visita(e.id, { huella: "d4", visitante: "sinjs", ip: "198.51.100.78", ocurrioEn: new Date("2026-11-01T10:30:00Z") })], sin);
+    expect((await resumenesParaTablero([p.id], ahora)).get(p.id)).toBe("Vio la propuesta hace 2 h · la reenvió");
+  });
+
+  it("resumenesParaTablero: un visitante con pdf no se absorbe", async () => {
+    const ahora = new Date("2026-11-01T10:00:00Z");
+    const e = await enlace("https://demo-ejemplo.neracosu.com/propuesta/", "Propuesta", p.id, new Date("2026-11-01T08:00:00Z"));
+    const sin = { ips: new Set<string>(), visitantes: new Set<string>(), ipsSesion: new Map<string, Date>() };
+    await insertarVisitas([
+      visita(e.id, { huella: "f1", tipo: "reenvio", ip: "173.252.95.5", ua: "facebookexternalhit/1.1", visitante: visitanteDe("reenvio", "facebook"), aparato: "", detalle: "facebook", ocurrioEn: new Date("2026-11-01T09:00:00Z") }),
+      visita(e.id, { huella: "f2", visitante: "conpdf", ocurrioEn: new Date("2026-11-01T09:01:00Z") }),
+      visita(e.id, { huella: "f3", visitante: "conpdf", tipo: "pdf", ocurrioEn: new Date("2026-11-01T09:01:30Z") }),
+    ], sin);
+    expect((await resumenesParaTablero([p.id], ahora)).get(p.id)).toBe("Vio la propuesta hace 59 min");
+  });
+
   it("resumenesParaTablero cuenta personas distintas entre todos los enlaces", async () => {
     const ahora = new Date("2026-11-06T12:00:00Z");
     const a = await enlace("https://demo-ejemplo.neracosu.com/a/", "Demo · a", p.id, new Date("2026-11-01T12:00:00Z"));

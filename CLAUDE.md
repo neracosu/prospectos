@@ -74,7 +74,9 @@ adjunto. Sin avisos: se ve en el panel.
   visitante, no suma en «reenviado» ni en el «la reenvió» del tablero. (14b) Meta también pide la página desde IPs de AWS con UA Android
   sin correr js: una vista de log sin `inicio` a ≤ 120 s de una vista previa facebook/instagram del mismo enlace, de un
   visitante que no tiene nada más, se absorbe en esa vista previa (`absorberRastreadores`; en el tablero, aproximado por
-  grupos): no es apertura, ni visitante, ni primera apertura.
+  grupos): no es apertura, ni visitante, ni primera apertura. Punto ciego conocido: un prospecto real que abre a menos
+  de 2 min de un envío por Instagram/Facebook en una página donde `rastro.js` no corrió (CSP, red o página sin la
+  etiqueta) se absorbe como parte del envío.
 - **Lo que se ve**: bloque «Lo que hicieron con lo enviado» (`src/componentes/RastroBloque.tsx`) en `/leads/[id]` y
   `/prospectos/[id]`: agregar enlace, copiar etiqueta, actualizar, cargar lo archivado, quitar
   (`src/acciones/rastro.ts`). En el tablero, la línea `lead__rastro` sale de `resumenesParaTablero` (etiqueta del enlace

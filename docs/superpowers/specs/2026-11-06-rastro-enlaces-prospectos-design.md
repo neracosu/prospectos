@@ -266,8 +266,11 @@ el log del propio panel (`prospectos.neracosu.com-ssl_log*`): todo visitante con
 > 4. **(14b) Vistas sin js de los rastreadores de Meta** (IPs de AWS, UA Android): una vista de log no propia sin
 >    `inicio` js, a ≤ 120 s de una vista previa facebook/instagram del mismo enlace y de un visitante sin ninguna otra
 >    fila fuera de esa ventana, se absorbe en esa vista previa (`absorberRastreadores`): no es apertura, no crea
->    visitante ni cuenta como primera apertura. El tablero lo aproxima con los grupos (visitante sin `inicio`/`fin`/`clic`
->    y su grupo `vista` entero dentro de la ventana de un grupo de reenvío facebook/instagram).
+>    visitante ni cuenta como primera apertura. El tablero lo aproxima con los grupos (visitante sin `inicio`, `fin`, `clic`
+>    ni `pdf`, con el primer y el último instante de su grupo `vista` a ≤ 120 s de alguna fila de vista previa
+>    facebook/instagram no propia del mismo enlace). Punto ciego conocido: un prospecto real que abre a menos de 2 min
+>    de un envío por Instagram/Facebook en una página donde `rastro.js` no corrió (CSP, red o página sin la etiqueta)
+>    se absorbe como parte del envío.
 
 ### 5. Cuándo se lee el log
 

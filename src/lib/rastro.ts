@@ -245,22 +245,26 @@ export async function resumenesParaTablero(prospectoIds: number[], ahora: Date =
   if (!enlaces.length) return m;
   const grupos = await prisma.visitaEnlace.groupBy({
     by: ["enlaceId", "visitante", "tipo", "detalle"],
-    where: { enlaceId: { in: enlaces.map((e) => e.id) }, propia: false, tipo: { in: ["vista", "inicio", "fin", "clic", "reenvio"] } },
+    where: { enlaceId: { in: enlaces.map((e) => e.id) }, propia: false, tipo: { in: ["vista", "inicio", "fin", "clic", "pdf", "reenvio"] } },
     _max: { ocurrioEn: true },
     _min: { ocurrioEn: true },
   });
   const porId = new Map(enlaces.map((e) => [e.id, e]));
-  // Rastreadores de Meta (aproximacion de absorberRastreadores): un grupo vista de un visitante sin js (ni inicio,
-  // ni fin, ni clic) que cae entero a <= 120 s de las vistas previas facebook/instagram del mismo enlace no es apertura.
-  const conJs = new Set(grupos.filter((g) => g.tipo !== "vista" && g.tipo !== "reenvio").map((g) => g.visitante));
-  const previasMeta = grupos.filter((g) => g.tipo === "reenvio" && (g.detalle === "facebook" || g.detalle === "instagram"));
+  // Rastreadores de Meta (aproximacion de absorberRastreadores): un grupo vista de un visitante sin otra evidencia
+  // (inicio, fin, clic o pdf) cuyo primer y ultimo instante caen a <= 120 s de alguna vista previa facebook/instagram
+  // no propia del mismo enlace no es apertura. Se miden contra cada fila de vista previa (son pocas), no contra el
+  // grupo: el visitante de la app es uno solo por enlace y su _min.._max puede abarcar dias.
+  const previasMeta = await prisma.visitaEnlace.findMany({
+    where: { enlaceId: { in: enlaces.map((e) => e.id) }, propia: false, tipo: "reenvio", detalle: { in: ["facebook", "instagram"] } },
+    select: { enlaceId: true, ocurrioEn: true },
+  });
+  const conEvidencia = new Set(grupos.filter((g) => g.tipo !== "vista" && g.tipo !== "reenvio").map((g) => g.visitante));
   const VENTANA_RASTREADOR_MS = 120_000;
-  const esRastreador = (g: (typeof grupos)[number]) => {
-    if (g.tipo !== "vista" || conJs.has(g.visitante) || !g._min.ocurrioEn || !g._max.ocurrioEn) return false;
-    const [a, b] = [g._min.ocurrioEn.getTime(), g._max.ocurrioEn.getTime()];
-    return previasMeta.some((r) => r.enlaceId === g.enlaceId && r._min.ocurrioEn && r._max.ocurrioEn
-      && a >= r._min.ocurrioEn.getTime() - VENTANA_RASTREADOR_MS && b <= r._max.ocurrioEn.getTime() + VENTANA_RASTREADOR_MS);
-  };
+  const cercaDePrevia = (enlaceId: number, t: Date) =>
+    previasMeta.some((r) => r.enlaceId === enlaceId && Math.abs(r.ocurrioEn.getTime() - t.getTime()) <= VENTANA_RASTREADOR_MS);
+  const esRastreador = (g: (typeof grupos)[number]) =>
+    g.tipo === "vista" && !conEvidencia.has(g.visitante) && !!g._min.ocurrioEn && !!g._max.ocurrioEn
+    && cercaDePrevia(g.enlaceId, g._min.ocurrioEn) && cercaDePrevia(g.enlaceId, g._max.ocurrioEn);
   const aperturas = grupos.filter((g) => (g.tipo === "vista" || g.tipo === "inicio") && !esRastreador(g));
   // Regla del envio (como armarLineaTiempo): un reenvio cuenta solo si su ultimo es posterior a la primera apertura
   // no propia de su enlace. La rafaga de vistas previas de Neri al enviar es anterior a toda apertura.
