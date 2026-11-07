@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { gzipSync } from "node:zlib";
 import { prisma } from "@/lib/db";
 import { DB_HABILITADA, limpiarBase, sembrarBasico, crearProspectoDePrueba } from "./ayuda-db";
-import { registrarEnlace, type EnlaceFila } from "@/lib/rastro";
+import { registrarEnlace, guardarIpsPropias, obtenerOCrearEnlacePlantilla, type EnlaceFila } from "@/lib/rastro";
 import { parsearLinea } from "@/lib/rastro-contrato";
 import { leerLogs, importarArchivados, visitasDeLinea } from "@/lib/rastro-lector";
 
@@ -193,6 +193,31 @@ describe.runIf(DB_HABILITADA)("rastro-lector: access-logs a visitas", () => {
     writeFileSync(join(dirLogs, `${PANEL}-ssl_log`), texto([L("198.51.100.20", "06/Nov/2026:10:00:00 -0400", `GET /p/${p.codigo} HTTP/2.0`, 200, "-", ROBOT)]));
     expect((await leerLogs({ dirLogs, dirArchivo })).visitas).toBe(0);
     expect(await prisma.enlaceEnviado.count({ where: { host: PANEL } })).toBe(0);
+  });
+
+  it("una linea propia de /p/<codigo> no crea el enlace plantilla; si ya existe, se atribuye como propia", async () => {
+    await guardarIpsPropias(["203.0.113.5"]);
+    const linea = L("203.0.113.5", "06/Nov/2026:10:00:00 -0400", `GET /p/${p.codigo} HTTP/2.0`, 200, "-", IPHONE);
+    writeFileSync(join(dirLogs, `${PANEL}-ssl_log`), texto([linea]));
+    expect((await leerLogs({ dirLogs, dirArchivo })).visitas).toBe(0);
+    expect(await prisma.enlaceEnviado.count({ where: { host: PANEL } })).toBe(0);
+    const e = (await obtenerOCrearEnlacePlantilla(p.codigo))!;
+    appendFileSync(join(dirLogs, `${PANEL}-ssl_log`), texto([L("203.0.113.5", "06/Nov/2026:10:05:00 -0400", `GET /p/${p.codigo} HTTP/2.0`, 200, "-", IPHONE)]));
+    expect((await leerLogs({ dirLogs, dirArchivo })).visitas).toBe(1);
+    expect((await prisma.visitaEnlace.findFirst({ where: { enlaceId: e.id } }))?.propia).toBe(true);
+  });
+
+  it("importarArchivados en ensayo no crea el enlace plantilla, pero cuenta lo que importaria", async () => {
+    writeFileSync(join(dirArchivo, `${PANEL}-ssl_log-Oct-2026.gz`), gzipSync(texto([
+      L("203.0.113.5", "20/Oct/2026:10:00:00 -0400", `GET /p/${p.codigo} HTTP/2.0`, 200, "-", IPHONE),
+      L("203.0.113.5", "20/Oct/2026:10:01:00 -0400", `GET /p/${"x".repeat(22)} HTTP/2.0`, 200, "-", IPHONE),
+    ])));
+    expect((await importarArchivados({ host: PANEL, dirArchivo, ensayo: true })).visitas).toBe(1);
+    expect(await prisma.enlaceEnviado.count({ where: { host: PANEL } })).toBe(0);
+    expect(await prisma.visitaEnlace.count()).toBe(0);
+    // aplicado: crea la fila y guarda la visita
+    expect((await importarArchivados({ host: PANEL, dirArchivo })).visitas).toBe(1);
+    expect(await prisma.enlaceEnviado.count({ where: { host: PANEL } })).toBe(1);
   });
 
   it("soloPrefijo + desdeCero: lee el vivo entero para un enlace y no mueve la posicion", async () => {

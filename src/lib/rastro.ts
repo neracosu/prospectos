@@ -70,14 +70,15 @@ export async function desactivarEnlace(id: number): Promise<void> {
 }
 
 // La propuesta /p/<codigo> se rastrea sola: la fila se crea la primera vez que hace falta.
-export async function obtenerOCrearEnlacePlantilla(codigo: string): Promise<EnlaceFila | null> {
+// Con crear: false solo busca (el ensayo del importador y las lineas propias no crean nada).
+export async function obtenerOCrearEnlacePlantilla(codigo: string, o: { crear?: boolean } = {}): Promise<EnlaceFila | null> {
   if (!CODIGO_VALIDO.test(codigo)) return null;
   const prospecto = await prisma.prospecto.findUnique({ where: { codigo }, select: { id: true } });
   if (!prospecto) return null;
   const clave = { host: HOST_PANEL, prefijo: `/p/${codigo}`, prospectoId: prospecto.id };
   const leer = () => prisma.enlaceEnviado.findUnique({ where: { host_prefijo_prospectoId: clave }, select: SELECT_ENLACE });
   const existe = await leer();
-  if (existe) return existe;
+  if (existe || o.crear === false) return existe;
   const enviado = await prisma.evento.findFirst({ where: { prospectoId: prospecto.id, tipo: "enviado" }, orderBy: { creadoEn: "asc" }, select: { creadoEn: true } });
   try {
     return await prisma.enlaceEnviado.create({

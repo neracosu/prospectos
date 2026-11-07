@@ -13,7 +13,7 @@ import {
   type LineaLog,
 } from "@/lib/rastro-contrato";
 import {
-  enlacesActivosPorHost, obtenerOCrearEnlacePlantilla, insertarVisitas, cargarPropios,
+  enlacesActivosPorHost, obtenerOCrearEnlacePlantilla, insertarVisitas, cargarPropios, esPropia,
   type EnlaceFila, type VisitaNueva, type Propios,
 } from "@/lib/rastro";
 
@@ -64,7 +64,8 @@ class Procesador {
   lineas = 0;
   visitas = 0;
   private lote: VisitaNueva[] = [];
-  private plantillas = new Map<string, EnlaceFila | null>();
+  // codigo -> fila (o null) y si ya se intento crearla
+  private plantillas = new Map<string, { enlace: EnlaceFila | null; conCrear: boolean }>();
   readonly enlacesConVisita = new Set<number>();
 
   constructor(private enlaces: Map<string, EnlaceFila[]>, private propios: Propios, private filtro: Filtro = {}) {}
@@ -74,9 +75,16 @@ class Procesador {
     return this.filtro.prefijo === undefined ? todos : todos.filter((e) => e.prefijo === this.filtro.prefijo);
   }
 
-  private async plantilla(codigo: string): Promise<EnlaceFila | null> {
-    if (!this.plantillas.has(codigo)) this.plantillas.set(codigo, await obtenerOCrearEnlacePlantilla(codigo));
-    return this.plantillas.get(codigo)!;
+  private async plantilla(codigo: string, crear: boolean): Promise<EnlaceFila | null> {
+    const previa = this.plantillas.get(codigo);
+    if (previa && (previa.enlace || previa.conCrear || !crear)) return previa.enlace;
+    const enlace = await obtenerOCrearEnlacePlantilla(codigo, { crear });
+    this.plantillas.set(codigo, { enlace, conCrear: crear });
+    return enlace;
+  }
+
+  private async existeProspecto(codigo: string): Promise<boolean> {
+    return (await prisma.prospecto.count({ where: { codigo } })) > 0;
   }
 
   async linea(host: string, crudo: string): Promise<void> {
@@ -88,12 +96,19 @@ class Procesador {
     let v = visitasDeLinea(l, this.enlacesDe(host), crudo);
     if (!v && host === HOST_PANEL) {
       // La propuesta /p/<codigo> no se registra a mano: se prueba con un enlace provisional y solo si
-      // la linea cuenta (no es robot, ni 404, ni POST) se busca o crea el enlace de verdad.
+      // la linea cuenta (no es robot, ni 404, ni POST) se busca el enlace de verdad. Se crea solo si la linea
+      // no es propia (Neri mirando su propio /p/ no prueba que se envio) y nunca en un ensayo.
       const m = PATRON_P.exec(rutaPagina(l.ruta) ?? "");
       const prefijo = m ? `/p/${m[1]}` : "";
-      if (m && (this.filtro.prefijo === undefined || this.filtro.prefijo === prefijo) && visitasDeLinea(l, [{ id: 0, prefijo }], crudo)) {
-        const e = await this.plantilla(m[1]);
-        if (e?.activo) v = visitasDeLinea(l, [e], crudo);
+      const provisional = m && (this.filtro.prefijo === undefined || this.filtro.prefijo === prefijo) ? visitasDeLinea(l, [{ id: 0, prefijo }], crudo) : null;
+      if (m && provisional) {
+        const propia = esPropia(provisional.ip, provisional.visitante, this.propios, provisional);
+        const e = await this.plantilla(m[1], !propia && !this.filtro.ensayo);
+        if (e) {
+          if (e.activo) v = visitasDeLinea(l, [e], crudo);
+        } else if (this.filtro.ensayo && !propia && (await this.existeProspecto(m[1]))) {
+          v = provisional; // el ensayo cuenta lo que importaria sin crear la fila
+        }
       }
     }
     if (!v) return;

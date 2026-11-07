@@ -38,9 +38,9 @@ async function encontrarProspecto(codigo: string) {
 // de la misma IP (refrescos o reintentos del propio navegador no deben sumar
 // aperturas nuevas cada vez). El texto guarda la IP solo para deduplicar; la
 // ficha del prospecto la oculta (no imprime el texto de eventos "abierto").
-async function registrarAbiertoSiHaceFalta(prospectoId: number, req: Request): Promise<void> {
+async function registrarAbiertoSiHaceFalta(prospectoId: number, req: Request, conSesion: boolean): Promise<void> {
   if (BOT_UA.test(req.headers.get("user-agent") ?? "")) return;
-  if (await tieneSesion()) return;
+  if (conSesion) return;
   try {
     const ip = await ipCliente();
     const desde = new Date(Date.now() - MINUTOS_DEDUPE * 60_000);
@@ -65,14 +65,18 @@ export async function GET(req: Request, ctx: { params: Promise<{ codigo: string 
   if (!permitirIntento(`p:${await ipCliente()}`, 60, 60_000)) return new Response("No encontrado", { status: 404 });
   const p = await encontrarProspecto(codigo);
   if (!p) return new Response("No encontrado", { status: 404 });
-  await registrarAbiertoSiHaceFalta(p.id, req);
-  // El enlace se crea aunque pida un bot de vista previa: prueba que se envio. Si falla, la propuesta sale sin rastro.
+  const conSesion = await tieneSesion();
+  await registrarAbiertoSiHaceFalta(p.id, req, conSesion);
+  // El enlace se crea aunque pida un bot de vista previa: prueba que se envio. Con sesion (Neri revisando antes
+  // de enviar) no se crea ni se pone el script. Si falla, la propuesta sale sin rastro.
   let scriptRastro = "";
-  try {
-    const enlace = await obtenerOCrearEnlacePlantilla(codigo);
-    if (enlace) scriptRastro = etiquetaScript(enlace.token, process.env.PROSPECTOS_URL_PUBLICA ?? "https://prospectos.neracosu.com");
-  } catch (err) {
-    console.error("enlace rastro", codigo, err);
+  if (!conSesion) {
+    try {
+      const enlace = await obtenerOCrearEnlacePlantilla(codigo);
+      if (enlace) scriptRastro = etiquetaScript(enlace.token, process.env.PROSPECTOS_URL_PUBLICA ?? "https://prospectos.neracosu.com");
+    } catch (err) {
+      console.error("enlace rastro", codigo, err);
+    }
   }
   try {
     // Si llega desde el correo (?e=<token>), el PDF hereda el token para que su descarga tambien cuente.

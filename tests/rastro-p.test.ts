@@ -1,5 +1,6 @@
 import { vi } from "vitest";
-vi.mock("@/lib/sesion-ligera", () => ({ tieneSesion: async () => false }));
+const estado = vi.hoisted(() => ({ sesion: false }));
+vi.mock("@/lib/sesion-ligera", () => ({ tieneSesion: async () => estado.sesion }));
 vi.mock("@/lib/ip", () => ({ ipCliente: async () => "203.0.113.9" }));
 
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
@@ -27,6 +28,22 @@ describe.runIf(DB_HABILITADA)("GET /p/<codigo> y el rastro", () => {
     for (const html of [await r1.text(), await r2.text()]) {
       expect(html).toContain(`data-enlace="${filas[0].token}"`);
       expect(html).toMatch(/rastro\.js\?v=1" data-enlace="[^"]+" defer><\/script><\/body>/);
+    }
+  });
+
+  it("con sesion del panel (Neri revisando antes de enviar) sirve la propuesta sin rastro y sin crear la fila", async () => {
+    const p = await crearProspectoDePrueba(nichoId);
+    estado.sesion = true;
+    try {
+      const r = await GET(pedir(p.codigo, TELEFONO), ctx(p.codigo));
+      expect(r.status).toBe(200);
+      const html = await r.text();
+      expect(html).toContain(p.nombre);
+      expect(html).not.toContain("rastro.js");
+      expect(await prisma.enlaceEnviado.count({ where: { prospectoId: p.id } })).toBe(0);
+      expect(await prisma.evento.count({ where: { prospectoId: p.id, tipo: "abierto" } })).toBe(0);
+    } finally {
+      estado.sesion = false;
     }
   });
 
