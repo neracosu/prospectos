@@ -1,6 +1,7 @@
 // src/lib/rastro-contrato.ts — rastro de enlaces a prospectos. Puro: parsea el access-log, clasifica user-agents
 // y calcula visitante, huella y prefijos. Sin I/O ni base de datos, para probarlo sin nada levantado.
 import { createHash } from "node:crypto";
+import { hoyCaracas } from "@/lib/fecha-caracas";
 
 export type LineaLog = { ip: string; fecha: Date; metodo: string; ruta: string; estado: number; referer: string; ua: string };
 
@@ -124,4 +125,134 @@ export const PATRON_P = /^\/p\/([A-Za-z0-9_-]{22})(\/pdf)?$/;
 
 export function etiquetaScript(token: string, base = "https://prospectos.neracosu.com"): string {
   return `<script src="${base}/rastro.js?v=1" data-enlace="${token}" defer></script>`;
+}
+
+// ---- linea de tiempo fundida (log + js) y resumenes ----
+
+export type VisitaFila = { id: number; enlaceId: number; etiqueta: string; fuente: "log" | "js"; tipo: string; visitante: string; aparato: string; pais: string; ciudad: string; red: string; geoPendiente: boolean; ruta: string; detalle: string; origen: string; segundos: number | null; scroll: number | null; propia: boolean; ocurrioEn: Date };
+export type Apertura = { clase: "apertura" | "vuelta" | "reenvio" | "pdf" | "clic"; enlaceId: number; etiqueta: string; visitante: string; ruta: string; ocurrioEn: Date; segundos: number | null; scroll: number | null; origen: string; detalle: string; clics: string[] };
+export type Visitante = { visitante: string; numero: number; aparato: string; lugar: string; red: string; propio: boolean };
+export type LineaTiempo = { visitantes: Visitante[]; dias: { dia: string; filas: Apertura[] }[] };
+
+const VENTANA_PAR_MS = 90_000;     // vista (log) + inicio (js) del mismo visitante y ruta
+const VENTANA_RECARGA_MS = 60_000; // recargas y reenvios repetidos
+
+export function textoLugar(v: { pais: string; ciudad: string; red: string; geoPendiente: boolean }): string {
+  if (v.red) return "desde una VPN";
+  if (v.pais && v.ciudad) return `${v.pais}, ${v.ciudad}`;
+  if (v.pais) return v.pais;
+  if (v.ciudad) return v.ciudad;
+  return v.geoPendiente ? "ubicación: en unos minutos" : "ubicación desconocida";
+}
+
+type Abierta = { fila: Apertura; ultimoPorFuente: Partial<Record<"log" | "js", number>> };
+
+function armarVisitantes(orden: VisitaFila[]): Visitante[] {
+  const porId = new Map<string, VisitaFila[]>();
+  for (const v of orden) {
+    const l = porId.get(v.visitante);
+    if (l) l.push(v); else porId.set(v.visitante, [v]);
+  }
+  return [...porId.entries()].map(([visitante, vs], i) => {
+    const conGeo = [...vs].reverse().find((x) => x.pais || x.ciudad || x.red);
+    const ref = conGeo ?? vs[vs.length - 1];
+    return { visitante, numero: i + 1, aparato: vs[vs.length - 1].aparato, lugar: textoLugar(ref), red: ref.red, propio: vs.some((x) => x.propia) };
+  });
+}
+
+export function armarLineaTiempo(visitas: VisitaFila[], o: { conPropias?: boolean } = {}): LineaTiempo {
+  const orden = visitas.filter((v) => o.conPropias || !v.propia)
+    .sort((a, b) => a.ocurrioEn.getTime() - b.ocurrioEn.getTime() || a.id - b.id);
+  const filas: Apertura[] = [];
+  const abiertas = new Map<string, Abierta>();   // visitante|ruta -> apertura vigente
+  const yaAbrio = new Set<string>();
+  const ultimoReenvio = new Map<string, number>();
+  const nueva = (clase: Apertura["clase"], v: VisitaFila): Apertura => {
+    const f: Apertura = { clase, enlaceId: v.enlaceId, etiqueta: v.etiqueta, visitante: v.visitante, ruta: v.ruta, ocurrioEn: v.ocurrioEn, segundos: v.segundos, scroll: v.scroll, origen: v.origen, detalle: v.detalle, clics: [] };
+    filas.push(f);
+    return f;
+  };
+
+  for (const v of orden) {
+    const clave = `${v.visitante}|${v.ruta}`;
+    const ms = v.ocurrioEn.getTime();
+    const ab = abiertas.get(clave);
+    if (v.tipo === "vista" || v.tipo === "inicio") {
+      const previo = ab?.ultimoPorFuente[v.fuente];
+      const mismaApertura = ab && (previo === undefined ? ms - ab.fila.ocurrioEn.getTime() <= VENTANA_PAR_MS : ms - previo <= VENTANA_RECARGA_MS);
+      if (ab && mismaApertura) {
+        ab.ultimoPorFuente[v.fuente] = ms;
+        if (v.origen && !ab.fila.origen) ab.fila.origen = v.origen;
+      } else {
+        const fila = nueva(yaAbrio.has(clave) ? "vuelta" : "apertura", v);
+        yaAbrio.add(clave);
+        abiertas.set(clave, { fila, ultimoPorFuente: { [v.fuente]: ms } });
+      }
+    } else if (v.tipo === "fin") {
+      if (ab) {
+        if (v.segundos !== null) ab.fila.segundos = v.segundos;
+        if (v.scroll !== null) ab.fila.scroll = v.scroll;
+      }
+    } else if (v.tipo === "clic") {
+      if (ab) ab.fila.clics.push(v.detalle); else nueva("clic", v);
+    } else if (v.tipo === "reenvio") {
+      const previo = ultimoReenvio.get(clave);
+      ultimoReenvio.set(clave, ms);
+      if (previo === undefined || ms - previo > VENTANA_RECARGA_MS) nueva("reenvio", v);
+    } else if (v.tipo === "pdf") {
+      nueva("pdf", v);
+    }
+  }
+
+  const recientesPrimero = [...filas].sort((a, b) => a.ocurrioEn.getTime() - b.ocurrioEn.getTime()).reverse();
+  const dias: LineaTiempo["dias"] = [];
+  for (const f of recientesPrimero) {
+    const dia = hoyCaracas(f.ocurrioEn);
+    const ultimo = dias[dias.length - 1];
+    if (ultimo && ultimo.dia === dia) ultimo.filas.push(f); else dias.push({ dia, filas: [f] });
+  }
+  return { visitantes: armarVisitantes(orden), dias };
+}
+
+export type ResumenEnlace = { visitantes: number; aperturas: number; reenvios: number; pdfs: number };
+
+export function resumirEnlace(visitas: VisitaFila[], enlaceId: number): ResumenEnlace {
+  const filas = armarLineaTiempo(visitas.filter((v) => v.enlaceId === enlaceId)).dias.flatMap((d) => d.filas);
+  const aperturas = filas.filter((f) => f.clase === "apertura" || f.clase === "vuelta");
+  return {
+    visitantes: new Set(aperturas.map((f) => f.visitante)).size,
+    aperturas: aperturas.length,
+    reenvios: filas.filter((f) => f.clase === "reenvio").length,
+    pdfs: filas.filter((f) => f.clase === "pdf").length,
+  };
+}
+
+const plural = (n: number, uno: string, varios: string) => `${n} ${n === 1 ? uno : varios}`;
+
+export function textoResumenEnlace(r: ResumenEnlace): string {
+  const partes: string[] = [];
+  if (r.aperturas > 0) partes.push(plural(r.visitantes, "visitante", "visitantes"), plural(r.aperturas, "apertura", "aperturas"));
+  if (r.reenvios > 0) partes.push(`reenviado ${plural(r.reenvios, "vez", "veces")}`);
+  if (r.pdfs > 0) partes.push(`PDF bajado ${plural(r.pdfs, "vez", "veces")}`);
+  return partes.length ? partes.join(" · ") : "Sin abrir";
+}
+
+export function haceCuanto(desde: Date, ahora: Date): string {
+  const s = (ahora.getTime() - desde.getTime()) / 1000;
+  if (s < 60) return "hace un momento";
+  if (s < 3600) return `hace ${Math.floor(s / 60)} min`;
+  if (s < 86400) return `hace ${Math.floor(s / 3600)} h`;
+  if (s < 7 * 86400) return `hace ${Math.floor(s / 86400)} d`;
+  return `hace ${Math.floor(s / (7 * 86400))} sem`;
+}
+
+export type DatosTarjeta = { etiqueta: string; enviadoEn: Date; ultimaApertura: Date | null; visitantes: number; reenvio: boolean };
+
+export function resumenTarjeta(d: DatosTarjeta, ahora: Date): string {
+  if (!d.ultimaApertura) return `Sin abrir · enviada ${haceCuanto(d.enviadoEn, ahora)}`;
+  const que = d.etiqueta.startsWith("Demo") ? "demo" : d.etiqueta.toLowerCase();
+  const partes = [`Vio la ${que} ${haceCuanto(d.ultimaApertura, ahora)}`];
+  if (d.reenvio) partes.push("la reenvió");
+  if (d.visitantes > 1) partes.push(`${d.visitantes} personas`);
+  return partes.join(" · ");
 }

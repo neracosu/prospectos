@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   parsearLinea, clasificarUa, resumirAparato, visitanteDe, huellaDe, rutaPagina, esPdf, descomponerUrl, enlaceQueCoincide, PATRON_P, etiquetaScript,
+  armarLineaTiempo, textoLugar, resumirEnlace, textoResumenEnlace, resumenTarjeta, haceCuanto, type VisitaFila,
 } from "@/lib/rastro-contrato";
 
 const L = (ip: string, fecha: string, req: string, estado: number, ref: string, ua: string) => `${ip} - - [${fecha}] "${req}" ${estado} 1234 "${ref}" "${ua}"`;
@@ -83,5 +84,43 @@ describe("rutas y prefijos", () => {
     expect("/p/AAAAAAAAAAAAAAAAAAAAAA".match(PATRON_P)?.[1]).toBe("A".repeat(22));
     expect("/p/AAAAAAAAAAAAAAAAAAAAAA/pdf".match(PATRON_P)?.[2]).toBe("/pdf");
     expect(etiquetaScript("t".repeat(22))).toBe(`<script src="https://prospectos.neracosu.com/rastro.js?v=1" data-enlace="${"t".repeat(22)}" defer></script>`);
+  });
+});
+
+const t = (s: string) => new Date(`2026-11-06T${s}:00.000-04:00`);
+const base = (x: Partial<VisitaFila>): VisitaFila => ({ id: 1, enlaceId: 1, etiqueta: "Demo · factura", fuente: "log", tipo: "vista", visitante: "v1", aparato: "iPhone · iOS 18 · Safari", pais: "Venezuela", ciudad: "Caracas", red: "", geoPendiente: false, ruta: "/factura/", detalle: "", origen: "", segundos: null, scroll: null, propia: false, ocurrioEn: t("13:08"), ...x });
+describe("armarLineaTiempo", () => {
+  it("funde log+js, pone duracion, cuenta vuelta y reenvio, numera visitantes", () => {
+    const lt = armarLineaTiempo([
+      base({ id: 1 }), base({ id: 2, fuente: "js", tipo: "inicio", origen: "instagram.com", ocurrioEn: t("13:08") }),
+      base({ id: 3, fuente: "js", tipo: "fin", segundos: 130, scroll: 90, ocurrioEn: t("13:10") }),
+      base({ id: 4, fuente: "js", tipo: "clic", detalle: "pdf", ocurrioEn: t("13:09") }),
+      base({ id: 5, tipo: "reenvio", detalle: "whatsapp", ocurrioEn: t("13:11") }), base({ id: 6, tipo: "reenvio", detalle: "whatsapp", ocurrioEn: t("13:11") }),
+      base({ id: 7, visitante: "v2", aparato: "iPhone · iOS 18.7 · Safari", red: "vpn", ocurrioEn: t("13:28") }),
+      base({ id: 8, ocurrioEn: t("13:29") }),
+      base({ id: 9, visitante: "neri", propia: true, ocurrioEn: t("11:45") }),
+    ]);
+    expect(lt.visitantes.map((v) => [v.numero, v.visitante])).toEqual([[1, "v1"], [2, "v2"]]);
+    expect(lt.visitantes[1].lugar).toBe("desde una VPN");
+    const f = lt.dias[0].filas; expect(lt.dias[0].dia).toBe("2026-11-06");
+    expect(f.map((a) => a.clase)).toEqual(["vuelta", "apertura", "reenvio", "apertura"]);   // 13:29 v1, 13:28 v2, 13:11, 13:08
+    const primera = f[3]; expect(primera.segundos).toBe(130); expect(primera.scroll).toBe(90); expect(primera.origen).toBe("instagram.com"); expect(primera.clics).toEqual(["pdf"]);
+    expect(armarLineaTiempo([base({ id: 9, visitante: "neri", propia: true })], { conPropias: true }).dias[0].filas).toHaveLength(1);
+  });
+});
+describe("resumenes", () => {
+  it("enlace y tarjeta", () => {
+    const vs = [base({ id: 1 }), base({ id: 2, tipo: "reenvio", detalle: "whatsapp", ocurrioEn: t("13:11") }), base({ id: 3, visitante: "v2", ocurrioEn: t("13:28") }), base({ id: 4, tipo: "pdf", ocurrioEn: t("13:30") }), base({ id: 5, propia: true, visitante: "n" })];
+    expect(textoResumenEnlace(resumirEnlace(vs, 1))).toBe("2 visitantes · 2 aperturas · reenviado 1 vez · PDF bajado 1 vez");
+    expect(textoResumenEnlace(resumirEnlace([], 1))).toBe("Sin abrir");
+    const ahora = t("15:28");
+    expect(resumenTarjeta({ etiqueta: "Propuesta", enviadoEn: t("12:00"), ultimaApertura: t("13:28"), visitantes: 3, reenvio: true }, ahora)).toBe("Vio la propuesta hace 2 h · la reenvió · 3 personas");
+    expect(resumenTarjeta({ etiqueta: "Demo · factura", enviadoEn: new Date("2026-11-05T15:00:00-04:00"), ultimaApertura: null, visitantes: 0, reenvio: false }, ahora)).toBe("Sin abrir · enviada hace 1 d");
+    expect(haceCuanto(t("15:23"), ahora)).toBe("hace 5 min");
+  });
+  it("textoLugar", () => {
+    expect(textoLugar({ pais: "Venezuela", ciudad: "Caracas", red: "", geoPendiente: false })).toBe("Venezuela, Caracas");
+    expect(textoLugar({ pais: "", ciudad: "", red: "", geoPendiente: true })).toBe("ubicación: en unos minutos");
+    expect(textoLugar({ pais: "", ciudad: "", red: "", geoPendiente: false })).toBe("ubicación desconocida");
   });
 });
