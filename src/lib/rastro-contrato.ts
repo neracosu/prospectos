@@ -43,7 +43,7 @@ function appDeReenvio(ua: string): string | null {
   return null;
 }
 
-const RE_ROBOT = /bot\b|\bcrawl|spider|headlesschrome|\bcurl|python-requests|go-http|atalaya-monitor|claudebot|getdomaindata|semrush|lighthouse/i;
+const RE_ROBOT = /bot\b|\bcrawl|spider|headlesschrome|\bcurl(?![a-z])|python-requests|go-http|atalaya-monitor|claudebot|getdomaindata|semrush|lighthouse/i;
 
 function enAppDe(ua: string): boolean {
   if (/iPhone|iPad/.test(ua) && !ua.includes("Safari/")) return true;
