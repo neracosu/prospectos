@@ -74,7 +74,7 @@ export function fraseDePromo(hoy: string): string {
 }
 // <!--si:ve-->…<!--fin:ve--> y <!--si:co-->…<!--fin:co--> (6-oct-2026): lo que solo vale en un pais (pago movil y tasa
 // del dia en Venezuela; Wompi y pesos en Colombia). Se deja el del pais del prospecto; sin decirlo es Venezuela.
-export type ExtraPropuesta = { ciudad?: string; rubro?: string; conWeb?: boolean; fecha?: string; hoy?: string; pais?: "VE" | "CO"; gancho?: string; paraPdf?: boolean; plantilla?: string };
+export type ExtraPropuesta = { ciudad?: string; rubro?: string; conWeb?: boolean; fecha?: string; hoy?: string; pais?: "VE" | "CO"; gancho?: string; paraPdf?: boolean; plantilla?: string; scriptRastro?: string };
 // Como el gancho reemplaza al parrafo generico de web, cabe en el A4 en todas las plantillas salvo hoteles-estadia
 // (no tiene bloques de web que ceder y su hoja 2 no tiene holgura, ni con 40 caracteres; medido el 29-oct-2026).
 // Esa lleva el gancho en el correo y en la propuesta en linea, pero no en el PDF (`paraPdf: true`). `plantilla` es el slug del nicho (con o sin «-co»).
@@ -130,5 +130,5 @@ export function renderPropuesta(plantilla: string, nombre: string, urlPdf: strin
   const corte = cuerpo.lastIndexOf("</style>") + "</style>".length;
   const cabecera = cuerpo.slice(0, corte);
   const resto = cuerpo.slice(corte);
-  return `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex, nofollow">${cabecera}</head><body>${resto}${SCRIPT_DESCARGA}</body></html>`;
+  return `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex, nofollow">${cabecera}</head><body>${resto}${SCRIPT_DESCARGA}${extra.scriptRastro ?? ""}</body></html>`;
 }

@@ -125,4 +125,11 @@ describe("renderPropuesta", () => {
     expect(webUsable(true, "desconocida")).toBe(true);
     expect(webUsable(false, "viva")).toBe(false);
   });
+
+  it("inserta el script de rastro antes de </body> y no lo inserta si no viene", () => {
+    const p = '<title>x</title><style></style><div class="documento"><button class="boton" id="descargar-pdf" type="button">PDF</button></div>';
+    const tag = '<script src="https://prospectos.neracosu.com/rastro.js?v=1" data-enlace="t" defer></script>';
+    expect(renderPropuesta(p, "Negocio", "/p/x/pdf", { scriptRastro: tag })).toMatch(/rastro\.js\?v=1" data-enlace="t" defer><\/script><\/body>/);
+    expect(renderPropuesta(p, "Negocio", "/p/x/pdf")).not.toContain("rastro.js");
+  });
 });

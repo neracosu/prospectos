@@ -8,6 +8,8 @@ import { renderPropuesta, webUsable } from "@/lib/propuesta-contrato";
 import { CODIGO_VALIDO } from "@/lib/codigo";
 import { TOKEN_VALIDO } from "@/lib/correos";
 import { leerFicha } from "@/lib/fichas";
+import { obtenerOCrearEnlacePlantilla } from "@/lib/rastro";
+import { etiquetaScript } from "@/lib/rastro-contrato";
 
 const MINUTOS_DEDUPE = 30;
 
@@ -64,11 +66,19 @@ export async function GET(req: Request, ctx: { params: Promise<{ codigo: string 
   const p = await encontrarProspecto(codigo);
   if (!p) return new Response("No encontrado", { status: 404 });
   await registrarAbiertoSiHaceFalta(p.id, req);
+  // El enlace se crea aunque pida un bot de vista previa: prueba que se envio. Si falla, la propuesta sale sin rastro.
+  let scriptRastro = "";
+  try {
+    const enlace = await obtenerOCrearEnlacePlantilla(codigo);
+    if (enlace) scriptRastro = etiquetaScript(enlace.token, process.env.PROSPECTOS_URL_PUBLICA ?? "https://prospectos.neracosu.com");
+  } catch (err) {
+    console.error("enlace rastro", codigo, err);
+  }
   try {
     // Si llega desde el correo (?e=<token>), el PDF hereda el token para que su descarga tambien cuente.
     const e = new URL(req.url).searchParams.get("e") ?? "";
     const urlPdf = TOKEN_VALIDO.test(e) ? `/p/${codigo}/pdf?e=${e}` : `/p/${codigo}/pdf`;
-    const html = renderPropuesta(p.plantilla, p.nombre, urlPdf, p.extra);
+    const html = renderPropuesta(p.plantilla, p.nombre, urlPdf, { ...p.extra, scriptRastro });
     return new Response(html, { headers: encabezados() });
   } catch (err) {
     // Una plantilla sin los marcadores esperados no debe tumbar la ruta
