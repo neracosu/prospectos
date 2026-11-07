@@ -339,6 +339,8 @@ button, input, select, textarea { font: inherit; }
 .lead__valor { color: var(--verde); font-weight: 600; font-variant-numeric: tabular-nums; font-size: 14px; }
 .lead__meta { font-size: 13px; }
 .lead__paso { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 10px; font-size: 14px; }
+.lead__rastro { font-size: 13px; }
+.lead__rastro--reenvio { color: var(--ambar); }
 .lead__paso > span:first-child { overflow-wrap: anywhere; }
 .lead__fecha { color: var(--tinta-suave); font-size: 13px; }
 .lead__fecha--vencido { color: var(--rojo); font-weight: 600; }

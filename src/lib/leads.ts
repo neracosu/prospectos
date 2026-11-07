@@ -4,12 +4,14 @@ import { prisma } from "@/lib/db";
 import type { Etapa } from "@/lib/embudo-contrato";
 import { estadoDe, type EstadoHoy } from "@/lib/inicio-contrato";
 import type { FuenteLead } from "@/lib/leads-contrato";
+import { resumenesParaTablero } from "@/lib/rastro";
 import type { Rol } from "@/lib/navegacion-contrato";
 
 export type LeadTarjeta = {
   id: number; nombre: string; ciudad: string; nichoNombre: string; etapa: Etapa; fuenteLead: string; valorEstimado: number | null;
   proximoPaso: string; proximoSeguimiento: string | null; whatsapp: string; instagram: string; correo: string; propuestaUrl: string;
   estadoPaso: EstadoHoy | "";
+  rastro: string;
 };
 export type ColumnaLeads = { etapa: Etapa; leads: LeadTarjeta[]; valor: number };
 export type FiltrosLeads = { rol: Rol; fuente?: FuenteLead; nichoId?: number; q?: string; etapa?: Etapa };
@@ -35,12 +37,12 @@ function whereDe(f: FiltrosLeads): Prisma.ProspectoWhereInput {
   };
 }
 
-function aTarjeta(f: Prisma.ProspectoGetPayload<{ select: typeof SELECT }>, hoy: string): LeadTarjeta {
+function aTarjeta(f: Prisma.ProspectoGetPayload<{ select: typeof SELECT }>, hoy: string, rastro = ""): LeadTarjeta {
   return {
     id: f.id, nombre: f.nombre, ciudad: f.ciudad, nichoNombre: f.nicho.nombre, etapa: f.etapa as Etapa, fuenteLead: f.fuenteLead,
     valorEstimado: f.valorEstimado === null ? null : Number(f.valorEstimado), proximoPaso: f.proximoPaso, proximoSeguimiento: f.proximoSeguimiento,
     whatsapp: f.whatsapp, instagram: f.instagram, correo: f.email, propuestaUrl: f.propuestaUrl,
-    estadoPaso: f.proximoSeguimiento ? estadoDe(f.proximoSeguimiento, hoy) : "",
+    estadoPaso: f.proximoSeguimiento ? estadoDe(f.proximoSeguimiento, hoy) : "", rastro,
   };
 }
 
@@ -58,7 +60,8 @@ export async function listarLeads(f: FiltrosLeads, hoy: string): Promise<{ colum
     prisma.prospecto.findMany({ where: { ...where, etapa: f.etapa ?? { in: COLUMNAS } }, select: SELECT, take: 1000 }),
     prisma.prospecto.count({ where: { ...where, etapa: "descartado" } }),
   ]);
-  const tarjetas = filas.map((x) => aTarjeta(x, hoy));
+  const rastro = await resumenesParaTablero(filas.map((f) => f.id));
+  const tarjetas = filas.map((x) => aTarjeta(x, hoy, rastro.get(x.id) ?? ""));
   const columnas = COLUMNAS.map((etapa) => {
     const leads = tarjetas.filter((l) => l.etapa === etapa).sort(ordenar);
     return { etapa, leads, valor: leads.reduce((s, l) => s + (l.valorEstimado ?? 0), 0) };
@@ -68,10 +71,13 @@ export async function listarLeads(f: FiltrosLeads, hoy: string): Promise<{ colum
 
 export async function listarDescartados(f: FiltrosLeads, hoy: string): Promise<LeadTarjeta[]> {
   const filas = await prisma.prospecto.findMany({ where: { ...whereDe(f), etapa: "descartado" }, select: SELECT, orderBy: { nombre: "asc" }, take: 200 });
-  return filas.map((x) => aTarjeta(x, hoy));
+  const rastro = await resumenesParaTablero(filas.map((f) => f.id));
+  return filas.map((x) => aTarjeta(x, hoy, rastro.get(x.id) ?? ""));
 }
 
 export async function fichaLead(id: number, hoy: string): Promise<LeadTarjeta | null> {
   const f = await prisma.prospecto.findUnique({ where: { id }, select: SELECT });
-  return f ? aTarjeta(f, hoy) : null;
+  if (!f) return null;
+  const rastro = await resumenesParaTablero([id]);
+  return aTarjeta(f, hoy, rastro.get(id) ?? "");
 }

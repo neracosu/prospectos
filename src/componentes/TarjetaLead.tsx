@@ -48,6 +48,7 @@ export function TarjetaLead({ lead, compacta = false, conValor = true, arrastrab
           {lead.proximoSeguimiento && <span className={`lead__fecha lead__fecha--${lead.estadoPaso}`}>{lead.estadoPaso === "hoy" ? "Hoy" : lead.estadoPaso === "vencido" ? `Vencido ${fechaCorta(lead.proximoSeguimiento)}` : fechaCorta(lead.proximoSeguimiento)}</span>}
         </div>
       )}
+      {lead.rastro && <div className={`lead__rastro suave${/reenvi/.test(lead.rastro) ? " lead__rastro--reenvio" : ""}`}>{lead.rastro}</div>}
       {!compacta && (
         <div className="lead__acciones">
           {wa && <a className="boton boton--primario mini" href={`https://wa.me/${wa}`} target="_blank" rel="noopener noreferrer">WhatsApp</a>}
